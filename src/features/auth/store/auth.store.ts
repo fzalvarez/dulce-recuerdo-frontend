@@ -1,0 +1,77 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { jwtDecode } from "jwt-decode";
+
+interface JwtPayload {
+  exp: number;
+  sub?: string;
+  name?: string;
+  userId?: string;
+}
+
+interface AuthState {
+  token: string | null;
+  hasHydrated: boolean;
+  setToken: (token: string | null) => void;
+  isTokenExpired: () => boolean;
+  getUserEmail: () => string;
+  getUserName: () => string;
+  logout: () => void;
+  setHasHydrated: (value: boolean) => void;
+  clearStore: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      token: null,
+      hasHydrated: false,
+
+      setToken: (token) => set({ token }),
+
+      isTokenExpired: () => {
+        const token = get().token;
+        if (!token) return true;
+        try {
+          const decoded = jwtDecode<JwtPayload>(token);
+          return Date.now() >= decoded.exp * 1000;
+        } catch {
+          return true;
+        }
+      },
+
+      getUserEmail: () => {
+        const token = get().token;
+        if (!token) return "";
+        try {
+          return jwtDecode<JwtPayload>(token).sub ?? "";
+        } catch {
+          return "";
+        }
+      },
+
+      getUserName: () => {
+        const token = get().token;
+        if (!token) return "";
+        try {
+          return jwtDecode<JwtPayload>(token).name ?? "";
+        } catch {
+          return "";
+        }
+      },
+
+      logout: () => get().clearStore(),
+
+      setHasHydrated: (value) => set({ hasHydrated: value }),
+
+      clearStore: () => set({ token: null }),
+    }),
+    {
+      name: "auth-storage",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+      partialize: (state) => ({ token: state.token }),
+    }
+  )
+);

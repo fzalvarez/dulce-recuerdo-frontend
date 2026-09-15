@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-50" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opción A: Sidebar Izquierdo Clásico &amp; Canvas Desahogado | Dulce Recuerdo</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#1433A5',
+              dark: '#0e2373',
+              light: '#eff3ff'
+            },
+            operational: '#2CAF3E',
+            footer: '#0F0F0F'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Blueprint Wireframe Guide Patterns -->
+<style data-purpose="wireframe-patterns">
+    .blueprint-grid {
+      background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    .dashed-wireframe {
+      background-image: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 10px, #f1f5f9 10px, #f1f5f9 20px);
+    }
+  </style>
+</head>
+<body class="h-full font-sans text-slate-700 antialiased flex flex-col bg-[#F6F8FB] overflow-x-hidden">
+<!-- Main Application Wrapper (Sidebar + Core Layout) -->
+<div class="flex-1 flex w-full min-h-0">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-[260px] bg-white border-r border-slate-200 flex flex-col flex-shrink-0 z-20 select-none" data-purpose="sidebar">
+<!-- Brand & Isotipo Header -->
+<div class="h-16 flex items-center px-5 border-b border-slate-100 gap-3">
+<div class="w-10 h-10 flex-shrink-0 flex items-center justify-center p-0.5 rounded-lg bg-slate-50 border border-slate-200">
+<img alt="Isotipo Dulce Recuerdo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQ-I-VTWP6PotHJPikrSWb3-ZEdu7KUeJmxABOYSEy-bGqBz8rcvg59m5-v4nK3bxOCpztxrRBItukygpuJ4ayRQZYFLrkDCV5dtOnGjqyAUs9QFgrNVSSR7r-S8a3R2nlpojZ_I9784FjhSpQtvaw0Hg7-X2UKMqQ0oxHzjFfJFnc5pwwjKIp6CiQqdYeK5WuawVDied_jrDAbvEypMmsaP_5NBLBOOXPD7J16U7cdB5jRqH9D8lpsCbNRkSIzlFvGQ"/>
+</div>
+<div class="flex flex-col">
+<span class="font-bold text-base tracking-tight text-slate-900 leading-tight">Dulce Recuerdo</span>
+<span class="text-[10px] font-medium tracking-wider uppercase text-[#1433A5]">Panel de Control</span>
+</div>
+</div>
+<!-- Navigation Menu (Structural Wireframe Items) -->
+<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" data-purpose="sidebar-navigation">
+<!-- Section: Principal -->
+<p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Módulos de Servicio</p>
+<!-- Nav Item: Casos & Servicios -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-slate-600 hover:text-[#1433A5] hover:bg-[#eff3ff] transition-colors group" href="#">
+<svg class="w-5 h-5 text-slate-400 group-hover:text-[#1433A5]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Casos &amp; Servicios</span>
+</a>
+<!-- Nav Item: Agenda & Rutas -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-slate-600 hover:text-[#1433A5] hover:bg-[#eff3ff] transition-colors group" href="#">
+<svg class="w-5 h-5 text-slate-400 group-hover:text-[#1433A5]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M6.75 3v2.25M17.25 3v2.253M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Agenda &amp; Rutas</span>
+</a>
+<!-- Nav Item: Convenios Veterinarios -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-slate-600 hover:text-[#1433A5] hover:bg-[#eff3ff] transition-colors group" href="#">
+<svg class="w-5 h-5 text-slate-400 group-hover:text-[#1433A5]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Convenios Veterinarios</span>
+</a>
+<div class="pt-4 pb-1">
+<p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Sistema &amp; Parametrización</p>
+</div>
+<!-- Nav Item: Administración & CRUDs (Active State Demo) -->
+<a class="flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-semibold text-[#1433A5] bg-[#eff3ff] border border-blue-100/80 shadow-xs group" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-5 h-5 text-[#1433A5]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Admin &amp; CRUDs</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-[#1433A5]"></span>
+</a>
+<!-- Nav Item: Configuración del Sistema -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-slate-600 hover:text-[#1433A5] hover:bg-[#eff3ff] transition-colors group" href="#">
+<svg class="w-5 h-5 text-slate-400 group-hover:text-[#1433A5]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.27.1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.27-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Configuración</span>
+</a>
+</nav>
+<!-- Sidebar Footer: System Status & Operator Wireframe Box -->
+<div class="p-3 border-t border-slate-100 bg-slate-50/70 space-y-2" data-purpose="sidebar-status-footer">
+<div class="flex items-center justify-between px-2 py-1 text-xs">
+<span class="text-slate-500 font-medium">Servidor Base</span>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-100 animate-pulse"></span>
+<span class="text-[11px] font-semibold text-emerald-700">En Línea</span>
+</div>
+</div>
+<div class="flex items-center gap-2.5 p-2 rounded-lg bg-white border border-slate-200">
+<div class="w-8 h-8 rounded bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs font-bold uppercase">
+            OP
+          </div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="text-xs font-semibold text-slate-800 truncate">Operador Activo</span>
+<span class="text-[10px] text-slate-400 truncate">admin@dulcerecuerdo.pe</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- Central & Content Canvas Wrapper -->
+<div class="flex-1 flex flex-col min-w-0">
+<!-- BEGIN: TopHeader -->
+<header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between gap-4 sticky top-0 z-10" data-purpose="top-header">
+<!-- Global Universal Search Bar (Wireframe Container) -->
+<div class="flex-1 max-w-xl">
+<div class="relative flex items-center">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<input class="w-full pl-10 pr-4 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-600 placeholder-slate-400 focus:outline-none cursor-default" placeholder="Búsqueda rápida universal (Casos, Expedientes, Clientes, Veterinarias)..." readonly="" type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2.5 flex items-center">
+<kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-white border border-slate-200 rounded shadow-2xs">Ctrl + K</kbd>
+</div>
+</div>
+</div>
+<!-- Header Actions & Status Pill -->
+<div class="flex items-center gap-3.5 flex-shrink-0">
+<!-- Operational Pill -->
+<div class="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs font-semibold text-emerald-800">Crematorio: Activo • Guardias OK</span>
+</div>
+<!-- Quick Wireframe Action Button -->
+<button class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-[#2CAF3E] hover:bg-emerald-600 rounded-lg shadow-xs transition-colors" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Nuevo Caso</span>
+</button>
+<!-- User Profile Avatar Placeholder -->
+<div class="h-8 w-px bg-slate-200"></div>
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold">
+              DR
+            </div>
+</div>
+</div>
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: MainContentCanvas -->
+<main class="flex-1 p-6 lg:p-8 flex flex-col gap-6 overflow-y-auto" data-purpose="workspace-canvas">
+<!-- Breadcrumbs Navigation Component -->
+<nav aria-label="Breadcrumb" class="flex items-center text-xs font-medium text-slate-400 gap-2 select-none" data-purpose="breadcrumbs">
+<span class="hover:text-slate-600 cursor-pointer">Sistema Dulce Recuerdo</span>
+<svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="hover:text-slate-600 cursor-pointer">Administración</span>
+<svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[#1433A5] font-semibold bg-[#eff3ff] px-2 py-0.5 rounded border border-blue-100">Gestión de Catálogos &amp; CRUDs</span>
+</nav>
+<!-- Module Header & Tooling Bar (Empty & Structural) -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1" data-purpose="module-action-header">
+<div>
+<h1 class="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
+              Opción A: Sidebar Izquierdo Clásico &amp; Canvas Desahogado
+            </h1>
+<p class="text-xs text-slate-500 mt-0.5">
+              Estructura blueprint pura para módulos administrativos, tablas anchas y control de catálogos sin condensación.
+            </p>
+</div>
+<!-- Action Controls Placeholders -->
+<div class="flex items-center gap-3">
+<!-- Filter Outline Control -->
+<div class="h-9 px-3 rounded-lg border border-slate-300 bg-white flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 shadow-2xs">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Filtros Rápidos</span>
+</div>
+<!-- Add New Record Button Wireframe Blueprint -->
+<div class="h-9 px-4 rounded-lg bg-[#1433A5] text-white flex items-center gap-2 text-xs font-semibold shadow-2xs cursor-pointer hover:bg-brand-dark transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Añadir Registro</span>
+</div>
+</div>
+</div>
+<!-- Wireframe Blueprint Canvas Zone (100% Desahogado, Cero Contenido Falso) -->
+<div class="flex-1 min-h-[460px] bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col p-6 relative overflow-hidden" data-purpose="pure-wireframe-container">
+<!-- Decorative Architectural Grid Background -->
+<div class="absolute inset-0 blueprint-grid opacity-30 pointer-events-none"></div>
+<!-- Top Helper Indicator for Technical Blueprint -->
+<div class="flex items-center justify-between border-b border-slate-200/80 pb-4 mb-6 z-10">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full border-2 border-[#1433A5]"></span>
+<span class="text-xs font-bold uppercase tracking-wider text-[#1433A5]">Contenedor Principal de Vistas CRUD</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+              Width: 100% (Fluido sin scroll horizontal) | Padding: 24px-32px
+            </div>
+</div>
+<!-- Skeletal Blueprint Sub-Containers -->
+<div class="flex-1 flex flex-col gap-4 z-10">
+<!-- Skeletal Filter Strip Container -->
+<div class="h-14 w-full rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-between px-4 bg-slate-50/50">
+<div class="flex items-center gap-3">
+<div class="w-24 h-4 bg-slate-200/70 rounded"></div>
+<div class="w-36 h-4 bg-slate-200/50 rounded"></div>
+<div class="w-28 h-4 bg-slate-200/50 rounded"></div>
+</div>
+<div class="text-[11px] font-mono text-slate-400">
+                [ ZONA DE FILTROS &amp; BÚSQUEDA ESPECÍFICA ]
+              </div>
+</div>
+<!-- Skeletal Main Data Grid Box (Spacious Canvas) -->
+<div class="flex-1 w-full rounded-lg border-2 border-dashed border-slate-200 dashed-wireframe flex flex-col items-center justify-center p-8 text-center min-h-[280px]">
+<div class="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 mb-3">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24">
+<path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Área de Datos / Grid Amplio sin Scroll Horizontal
+              </h2>
+<p class="text-xs text-slate-400 max-w-md">
+                Espacio preparado para la renderización de tablas de expedientes, gestión de urnas, roles o bitácora de cremación con lectura descansada y altura variable.
+              </p>
+<!-- Skeleton table headers preview blueprint lines -->
+<div class="w-full max-w-2xl mt-6 space-y-2.5">
+<div class="h-8 w-full bg-white border border-slate-200 rounded flex items-center px-3 gap-4">
+<div class="w-16 h-2.5 bg-slate-200 rounded"></div>
+<div class="w-32 h-2.5 bg-slate-200 rounded"></div>
+<div class="w-48 h-2.5 bg-slate-200 rounded"></div>
+<div class="ml-auto w-20 h-2.5 bg-slate-200 rounded"></div>
+</div>
+<div class="h-10 w-full bg-white/70 border border-slate-200 rounded flex items-center px-3 gap-4">
+<div class="w-12 h-2 bg-slate-100 rounded"></div>
+<div class="w-28 h-2 bg-slate-100 rounded"></div>
+<div class="w-40 h-2 bg-slate-100 rounded"></div>
+<div class="ml-auto w-16 h-2 bg-slate-100 rounded"></div>
+</div>
+<div class="h-10 w-full bg-white/70 border border-slate-200 rounded flex items-center px-3 gap-4">
+<div class="w-12 h-2 bg-slate-100 rounded"></div>
+<div class="w-28 h-2 bg-slate-100 rounded"></div>
+<div class="w-40 h-2 bg-slate-100 rounded"></div>
+<div class="ml-auto w-16 h-2 bg-slate-100 rounded"></div>
+</div>
+</div>
+</div>
+<!-- Skeletal Pagination Footer Strip -->
+<div class="h-12 w-full rounded-lg border border-slate-200 bg-white flex items-center justify-between px-4">
+<span class="text-[11px] text-slate-400 font-mono">Mostrando 0 de 0 registros</span>
+<div class="flex items-center gap-1.5">
+<div class="w-7 h-7 bg-slate-100 rounded border border-slate-200"></div>
+<div class="w-7 h-7 bg-slate-100 rounded border border-slate-200"></div>
+<div class="w-7 h-7 bg-slate-100 rounded border border-slate-200"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- END: MainContentCanvas -->
+<!-- BEGIN: ApplicationFooter -->
+<footer class="bg-[#0F0F0F] text-slate-400 border-t border-black px-6 py-3 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 z-10 select-none" data-purpose="app-footer">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#1433A5]"></span>
+<span class="font-semibold text-slate-200">Dulce Recuerdo</span>
+<span class="text-slate-600">•</span>
+<span class="text-slate-400">Plataforma de Cremación y Gestión v2.4</span>
+</div>
+<div class="flex items-center gap-4 text-slate-400">
+<span class="hover:text-white transition-colors cursor-pointer">Protocolo de Operación</span>
+<span>•</span>
+<span class="hover:text-white transition-colors cursor-pointer">Soporte TI</span>
+<span>•</span>
+<span class="text-slate-500 font-mono text-[11px]">© 2025</span>
+</div>
+</footer>
+<!-- END: ApplicationFooter -->
+</div>
+</div>
+</body></html>

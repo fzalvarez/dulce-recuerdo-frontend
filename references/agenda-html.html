@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"surface-container":"#f0edec","on-tertiary-container":"#ff8e6b","secondary-fixed-dim":"#b7c8e1","primary":"#001e7d","on-tertiary":"#ffffff","on-primary":"#ffffff","on-tertiary-fixed-variant":"#832604","surface-tint":"#3b54c4","outline":"#757685","inverse-on-surface":"#f3f0ef","on-surface-variant":"#444653","tertiary-fixed":"#ffdbd0","outline-variant":"#c5c5d5","on-primary-container":"#97a8ff","on-error":"#ffffff","secondary":"#505f76","on-error-container":"#93000a","inverse-primary":"#b9c3ff","on-primary-fixed":"#001257","surface-bright":"#fcf9f8","on-secondary":"#ffffff","primary-fixed":"#dde1ff","surface-variant":"#e5e2e1","primary-container":"#1433a5","surface-dim":"#dcd9d9","on-secondary-fixed":"#0b1c30","primary-fixed-dim":"#b9c3ff","on-tertiary-fixed":"#3a0a00","tertiary":"#551300","surface-container-lowest":"#ffffff","on-background":"#1c1b1b","surface-container-high":"#ebe7e7","surface-container-highest":"#e5e2e1","secondary-fixed":"#d3e4fe","on-secondary-container":"#54647a","error-container":"#ffdad6","background":"#fcf9f8","error":"#ba1a1a","on-surface":"#1c1b1b","secondary-container":"#d0e1fb","surface":"#fcf9f8","on-secondary-fixed-variant":"#38485d","tertiary-fixed-dim":"#ffb59f","surface-container-low":"#f6f3f2","on-primary-fixed-variant":"#1d3aab","tertiary-container":"#7b2000","inverse-surface":"#313030"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","space-xs":"0.25rem","space-xl":"2.5rem","space-lg":"1.5rem","space-md":"1rem","margin":"2rem","gutter":"1.5rem"},"fontFamily":{"body-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"headline-xl-mobile":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"headline-xl":["Plus Jakarta Sans"],"label-lg":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"]},"fontSize":{"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"headline-xl-mobile":["26px",{"lineHeight":"34px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"headline-xl":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest border-r border-outline-variant/30 z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-16 flex items-center px-space-md gap-space-sm border-b border-outline-variant/20"><div class="h-9 w-9 shrink-0">https://lh3.googleusercontent.com/aida/AEtjO1X8LHqX1L3StTHbc73xQ3X8gIAoIxSn5hDkOXVffw0jBQc9Gk8rROYO1Y2Gsy1f9Ak4YAi2Pss3ZorZDRsUbbkBro-vvfOUQoavjGKlwJ2EwyHoXmPyR5gE7Qch_25UuLD41o-pmIF1zWCvVJTvsdcqpHdZXNm7gOso0fcjZd_PW6rk3R_S5LqtAPj_nBKSokn4SrJRim1VktH7qJ1T_WCqbWXGupWxT72iD78y5bUKv8Vuwb8qTlBRIaI</div><div class="flex flex-col min-w-0"><span class="font-headline-sm text-headline-sm text-on-surface truncate leading-tight">Dulce Recuerdo</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate">Gestión Administrativa</span></div></div><div class="px-space-md py-space-sm"><span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Operaciones Clínicas</span></div><nav class="flex flex-col gap-1 px-space-sm"><a class="flex items-center gap-3 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="casos" href="#"><span class="material-symbols-outlined text-[20px]">folder_special</span><span class="font-body-md text-body-md">Casos</span></a><a class="flex items-center gap-3 px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary font-semibold transition-all shadow-sm" data-path="agenda-y-operaciones" href="#"><span class="material-symbols-outlined text-[20px]">calendar_today</span><span class="font-body-md text-body-md">Agenda y Operaciones</span></a><a class="flex items-center gap-3 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="clientes-y-mascotas" href="#"><span class="material-symbols-outlined text-[20px]">pets</span><span class="font-body-md text-body-md">Clientes y Mascotas</span></a><a class="flex items-center gap-3 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="entregas" href="#"><span class="material-symbols-outlined text-[20px]">local_shipping</span><span class="font-body-md text-body-md">Entregas</span></a><a class="flex items-center gap-3 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="reportes" href="#"><span class="material-symbols-outlined text-[20px]">bar_chart</span><span class="font-body-md text-body-md">Reportes</span></a></nav></div><div class="p-space-md border-t border-outline-variant/20 flex flex-col gap-2"><div class="flex items-center gap-2 px-space-sm py-1.5 rounded-md bg-surface-container-low"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-label-sm text-label-sm text-on-surface-variant">Soporte Empático Activo</span></div><div class="text-center"><span class="font-label-sm text-label-sm text-outline">© 2024 Dulce Recuerdo</span></div></div></aside><div class="pl-64 flex flex-col min-h-screen"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/30 z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-md flex-1 max-w-lg"><div class="relative w-full"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span><input class="w-full h-10 pl-9 pr-4 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface placeholder:text-outline font-body-md text-body-md focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all" placeholder="Buscar caso, cliente o mascota..." type="text"/></div></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant/20"><span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span><span class="font-label-md text-label-md text-on-surface-variant">Turno Guardia: Activo</span></div><button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg flex items-center gap-2 shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] hover:opacity-95 active:scale-[0.98] transition-all" type="button"><span class="material-symbols-outlined text-[18px]">add</span><span>Nuevo Caso</span></button><div class="h-6 w-px bg-outline-variant/30"></div><div class="flex items-center gap-3 pl-1"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="hidden xl:flex flex-col text-left"><span class="font-label-md text-label-md text-on-surface leading-tight">Lic. Mariana Silva</span><span class="font-label-sm text-label-sm text-outline leading-tight">Coordinación General</span></div></div></div></header><main class="w-full pt-16 flex-1 bg-surface px-space-lg py-space-md"><div class="flex flex-col w-full pb-space-xl">
+<!-- 1. Encabezado de la Agenda: Muy amplio, respirado, tipografía grande -->
+<header class="flex flex-col gap-space-lg mb-space-lg">
+<!-- Fila Superior: Título principal, bajada y Botón de Acción -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col max-w-2xl">
+<h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight">Agenda</h1>
+<p class="font-body-lg text-body-lg text-secondary mt-1">
+          Programación horaria de servicios, ceremonias y acompañamientos del día.
+        </p>
+</div>
+<div class="flex items-center gap-3 self-start lg:self-auto">
+<button class="h-10 px-5 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg flex items-center gap-2 shadow-sm hover:opacity-95 active:scale-[0.98] transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span>Programar Servicio</span>
+</button>
+</div>
+</div>
+<!-- Fila de Control: Navegación de Fechas, Conmutador de Vistas y Resumen de Estado -->
+<div class="flex flex-wrap items-center justify-between gap-4 p-space-md rounded-xl bg-surface-container-lowest shadow-sm border border-outline-variant/20">
+<!-- Selector de Fecha -->
+<div class="flex items-center gap-2">
+<div class="flex items-center bg-surface-container-low rounded-lg p-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:text-on-surface hover:bg-surface-container-lowest transition-colors" title="Día anterior" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="px-3 py-1 text-secondary hover:text-on-surface font-label-md text-label-md transition-colors" type="button">
+            Hoy
+          </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:text-on-surface hover:bg-surface-container-lowest transition-colors" title="Día siguiente" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<div class="flex items-center gap-2 ml-2">
+<span class="material-symbols-outlined text-primary-container text-[22px]">calendar_month</span>
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight" id="date-range-display">Martes, 24 de Octubre de 2024</span>
+</div>
+</div>
+<!-- Alternador de Vistas & Resumen rápido -->
+<div class="flex flex-wrap items-center gap-4">
+<!-- Indicador de Resumen Diario / Período -->
+<div class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-surface-container-low text-secondary font-label-md text-label-md" id="stats-badge">
+<span class="font-semibold text-on-surface">4 servicios</span>
+<span>•</span>
+<span class="text-on-surface">1 realizado</span>
+<span>•</span>
+<span class="text-on-surface">1 en curso</span>
+<span>•</span>
+<span class="text-secondary">0 conflictos</span>
+</div>
+<!-- Conmutador de Escala Temporal (Día, 3 días, Semana) -->
+<div class="flex items-center bg-surface-container-low p-1 rounded-xl border border-outline-variant/30 shadow-inner" id="view-tabs">
+<button class="px-4 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold shadow-sm transition-all flex items-center gap-1.5" id="tab-dia" onclick="switchView('dia')" type="button">
+<span class="material-symbols-outlined text-[16px]">view_day</span>
+<span>Día</span>
+</button>
+<button class="px-4 py-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-lowest/70 font-label-md text-label-md font-medium transition-all flex items-center gap-1.5" id="tab-3dias" onclick="switchView('3dias')" type="button">
+<span class="material-symbols-outlined text-[16px]">view_column</span>
+<span>3 días</span>
+</button>
+<button class="px-4 py-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-lowest/70 font-label-md text-label-md font-medium transition-all flex items-center gap-1.5" id="tab-semana" onclick="switchView('semana')" type="button">
+<span class="material-symbols-outlined text-[16px]">calendar_view_week</span>
+<span>Semana</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- 2. Distribución Principal: Vistas Interactivas (aprox. 65-70%) + Detalle Fijo (aprox. 30-35%) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- CONTENEDOR DE LAS 3 VISTAS (8 columnas) -->
+<div class="lg:col-span-8 flex flex-col gap-space-md">
+<!-- ==================== VISTA 1: DÍA ==================== -->
+<div class="view-panel flex flex-col gap-space-sm bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-outline-variant/20 transition-opacity duration-200" id="view-container-dia">
+<div class="flex items-center justify-between pb-space-sm mb-2 border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">schedule</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Línea de Tiempo del Turno</span>
+</div>
+<span class="font-label-md text-label-md text-secondary">Jornada 09:00 - 19:00 hrs</span>
+</div>
+<!-- Bloque 09:00 - Libre -->
+<div class="group flex items-start gap-4 min-h-[85px] pt-2 pb-3 transition-colors">
+<div class="w-16 shrink-0 pt-0.5 text-right">
+<span class="font-label-lg text-label-lg text-secondary">09:00</span>
+</div>
+<div class="flex-1 min-h-[64px] rounded-lg p-space-md bg-surface-container-low/50 border border-dashed border-outline-variant/40 flex items-center justify-between">
+<span class="font-body-md text-body-md text-outline italic">Horario libre para coordinación o desinfección de salas</span>
+<button class="opacity-0 group-hover:opacity-100 px-3 py-1 rounded bg-surface-container-lowest shadow-sm text-secondary font-label-sm text-label-sm hover:text-primary-container transition-all" type="button">
+          + Asignar
+        </button>
+</div>
+</div>
+<!-- Bloque 10:00 - 11:30 | Realizado (Verde) -->
+<div class="flex items-start gap-4 min-h-[110px] pt-2 pb-3">
+<div class="w-16 shrink-0 pt-1 text-right">
+<span class="font-label-lg text-label-lg font-semibold text-on-surface">10:00</span>
+<span class="block font-label-sm text-label-sm text-secondary">11:30</span>
+</div>
+<div class="event-item cursor-pointer flex-1 rounded-xl p-space-md bg-surface-container-lowest border border-outline-variant/20 hover:border-primary-container/40 shadow-sm hover:shadow-md transition-all" onclick="selectEvent('luna')">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+<div class="flex items-center gap-2.5">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#1F7A2C] bg-[#2CAF3E]/10">
+<span class="w-2 h-2 rounded-full bg-[#2CAF3E]"></span>
+              Realizado
+            </span>
+<span class="font-label-sm text-label-sm text-secondary">Caso #REC-2024-086</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">Duración: 90 min</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Recojo y Traslado a Sede Central</h3>
+<div class="flex flex-wrap items-center gap-y-1 gap-x-4 font-body-md text-body-md text-secondary">
+<span class="flex items-center gap-1 font-medium text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-container">pets</span>
+              Luna (Felino Común)
+            </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">pin_drop</span>
+              Domicilio Miraflores → Sede Central
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloque 12:00 - Transición libre -->
+<div class="group flex items-start gap-4 min-h-[75px] py-1">
+<div class="w-16 shrink-0 pt-0.5 text-right">
+<span class="font-label-lg text-label-lg text-secondary">12:00</span>
+</div>
+<div class="flex-1 min-h-[56px] rounded-lg p-space-md bg-surface-container-low/40 border border-dashed border-outline-variant/40 flex items-center justify-between">
+<span class="font-body-md text-body-md text-outline">Intervalo operativo de mantenimiento y sanitización</span>
+<button class="opacity-0 group-hover:opacity-100 px-3 py-1 rounded bg-surface-container-lowest shadow-sm text-secondary font-label-sm text-label-sm hover:text-primary-container transition-all" type="button">
+          + Asignar
+        </button>
+</div>
+</div>
+<!-- Bloque 13:40 - 15:00 | Realizado (Verde) -->
+<div class="flex items-start gap-4 min-h-[110px] pt-2 pb-3">
+<div class="w-16 shrink-0 pt-1 text-right">
+<span class="font-label-lg text-label-lg font-semibold text-on-surface">13:40</span>
+<span class="block font-label-sm text-label-sm text-secondary">15:00</span>
+</div>
+<div class="event-item cursor-pointer flex-1 rounded-xl p-space-md bg-surface-container-lowest border border-outline-variant/20 hover:border-primary-container/40 shadow-sm hover:shadow-md transition-all" onclick="selectEvent('lucas-manto')">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+<div class="flex items-center gap-2.5">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#1F7A2C] bg-[#2CAF3E]/10">
+<span class="w-2 h-2 rounded-full bg-[#2CAF3E]"></span>
+              Realizado
+            </span>
+<span class="font-label-sm text-label-sm text-secondary">Caso #REC-2024-089</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">Duración: 80 min</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Acondicionamiento y Manto</h3>
+<div class="flex flex-wrap items-center gap-y-1 gap-x-4 font-body-md text-body-md text-secondary">
+<span class="flex items-center gap-1 font-medium text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-container">pets</span>
+              Lucas (Golden Retriever)
+            </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">meeting_room</span>
+              Sala de Preparación Técnica
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloque 16:30 - 17:30 | SELECCIONADO / ACTIVO (Ámbar + Resalte Primario) -->
+<div class="flex items-start gap-4 min-h-[125px] pt-2 pb-3">
+<div class="w-16 shrink-0 pt-1 text-right">
+<span class="font-label-lg text-label-lg font-bold text-primary-container">16:30</span>
+<span class="block font-label-sm text-label-sm text-secondary">17:30</span>
+<span class="inline-block mt-1 px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-fixed text-[10px] font-bold uppercase tracking-wider">Activo</span>
+</div>
+<div class="event-item cursor-pointer flex-1 rounded-xl p-space-lg bg-surface-container-low border-2 border-primary-container/40 shadow-md relative" onclick="selectEvent('lucas-ceremonia')">
+<div class="absolute left-0 top-3 bottom-3 w-1.5 bg-primary-container rounded-r"></div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+<div class="flex items-center gap-2.5">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#9A6708] bg-[#E29B12]/15">
+<span class="w-2 h-2 rounded-full bg-[#E29B12]"></span>
+              En preparación / Próximo
+            </span>
+<span class="font-label-sm text-label-sm text-secondary">Caso #REC-2024-089</span>
+</div>
+<div class="flex items-center gap-1 text-primary-container font-label-md text-label-md font-semibold">
+<span>Seleccionado para revisión</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<h3 class="font-headline-md text-headline-md text-on-surface">Ceremonia de Despedida con Testigos</h3>
+<div class="flex flex-wrap items-center gap-y-1 gap-x-5 font-body-md text-body-md text-secondary">
+<span class="flex items-center gap-1.5 text-on-surface">
+<span class="material-symbols-outlined text-primary-container text-[18px]">pets</span>
+<strong>Lucas</strong> (Golden Retriever)
+            </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">place</span>
+              Sala Serena (Sede Central)
+            </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">group</span>
+              Acompañamiento familiar presencial
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloque 18:00 - 18:45 | Programado neutro -->
+<div class="flex items-start gap-4 min-h-[110px] pt-2 pb-3">
+<div class="w-16 shrink-0 pt-1 text-right">
+<span class="font-label-lg text-label-lg font-semibold text-on-surface">18:00</span>
+<span class="block font-label-sm text-label-sm text-secondary">18:45</span>
+</div>
+<div class="event-item cursor-pointer flex-1 rounded-xl p-space-md bg-surface-container-lowest border border-outline-variant/20 hover:border-primary-container/40 shadow-sm hover:shadow-md transition-all" onclick="selectEvent('mia-entrega')">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+<div class="flex items-center gap-2.5">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-secondary bg-surface-container">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+              Programado
+            </span>
+<span class="font-label-sm text-label-sm text-secondary">Caso #REC-2024-088</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">Duración: 45 min</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Entrega de Urna y Muestras de Memoria</h3>
+<div class="flex flex-wrap items-center gap-y-1 gap-x-4 font-body-md text-body-md text-secondary">
+<span class="flex items-center gap-1 font-medium text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-container">pets</span>
+              Mía (Siamés)
+            </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">desk</span>
+              Recepción Principal (Módulo de Entrega Solemne)
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloque 19:00 - Franja Disponible -->
+<div class="group flex items-start gap-4 min-h-[80px] pt-2 pb-1">
+<div class="w-16 shrink-0 pt-0.5 text-right">
+<span class="font-label-lg text-label-lg text-secondary">19:00</span>
+</div>
+<div class="flex-1 min-h-[64px] rounded-lg p-space-md bg-surface-container-low/40 border border-dashed border-outline-variant/40 flex items-center justify-between">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-outline text-[20px]">event_available</span>
+<span class="font-body-md text-body-md text-secondary">Horario libre para programación de nuevo servicio</span>
+</div>
+<button class="h-8 px-3 rounded-lg bg-surface-container-lowest text-primary-container font-label-sm text-label-sm shadow-sm hover:bg-surface-container transition-all" type="button">
+          + Agendar en 19:00
+        </button>
+</div>
+</div>
+</div>
+<!-- ==================== VISTA 2: 3 DÍAS ==================== -->
+<div class="view-panel hidden flex flex-col gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-outline-variant/20 transition-opacity duration-200" id="view-container-3dias">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]">view_column</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Planificación de 3 Días</span>
+</div>
+<span class="font-label-md text-label-md text-secondary">9 servicios programados en total</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md items-start">
+<!-- Columna 1: Martes 24 Oct (Hoy) -->
+<div class="flex flex-col gap-3 rounded-xl bg-surface-container-low/50 p-space-md border border-outline-variant/20">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Martes 24 Oct</span>
+<span class="block font-label-sm text-label-sm text-primary-container font-semibold uppercase tracking-wider">Hoy</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-container/10 text-primary-container font-label-md text-label-md font-bold">4 servicios</span>
+</div>
+<!-- Tarjeta Hoy 1 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('luna')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">10:00 - 11:30</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-[#1F7A2C] bg-[#2CAF3E]/10">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2CAF3E]"></span> Realizado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Recojo y Traslado</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Luna</strong> (Felino) • Caso #086
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Tutor: Roberto Gómez</div>
+</div>
+<!-- Tarjeta Hoy 2 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('lucas-manto')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">13:40 - 15:00</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-[#1F7A2C] bg-[#2CAF3E]/10">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2CAF3E]"></span> Realizado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Acondicionamiento y Manto</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Lucas</strong> (Golden) • Caso #089
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Sala de Preparación Técnica</div>
+</div>
+<!-- Tarjeta Hoy 3 (Seleccionada) -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-low shadow-sm hover:shadow-md border-2 border-primary-container/40 relative transition-all" onclick="selectEvent('lucas-ceremonia')">
+<div class="absolute left-0 top-2.5 bottom-2.5 w-1 bg-primary-container rounded-r"></div>
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-primary-container">16:30 - 17:30</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-[#9A6708] bg-[#E29B12]/15">
+<span class="w-1.5 h-1.5 rounded-full bg-[#E29B12]"></span> Próximo
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Ceremonia de Despedida</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Lucas</strong> (Golden) • Caso #089
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Tutora: Valeria Mendoza • Sala Serena</div>
+</div>
+<!-- Tarjeta Hoy 4 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('mia-entrega')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">18:00 - 18:45</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-secondary bg-surface-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Programado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Entrega de Urna y Recuerdos</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Mía</strong> (Siamés) • Caso #088
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Recepción Principal</div>
+</div>
+</div>
+<!-- Columna 2: Miércoles 25 Oct -->
+<div class="flex flex-col gap-3 rounded-xl bg-surface-container-low/50 p-space-md border border-outline-variant/20">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Miércoles 25 Oct</span>
+<span class="block font-label-sm text-label-sm text-secondary">Mañana</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-secondary font-label-md text-label-md font-bold">3 servicios</span>
+</div>
+<!-- Miércoles 1 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('max-recojo')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">10:00 - 11:15</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-secondary bg-surface-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Programado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Recojo Especializado</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Max</strong> (Boxer) • Caso #091
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Clínica San Borja → Sede Central</div>
+</div>
+<!-- Miércoles 2 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('coco-ceremonia')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">12:30 - 13:45</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-[#9A6708] bg-[#E29B12]/15">
+<span class="w-1.5 h-1.5 rounded-full bg-[#E29B12]"></span> Confirmado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Ceremonia Familiar</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Coco</strong> (Poodle) • Caso #092
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Tutora: Sofía Castro • Sala Armonía</div>
+</div>
+<!-- Miércoles 3 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('simon-entrega')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">16:00 - 17:00</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-secondary bg-surface-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Programado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Entrega a Domicilio</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Simón</strong> (Persa) • Caso #090
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Tutor: Andrés Paredes • San Isidro</div>
+</div>
+</div>
+<!-- Columna 3: Jueves 26 Oct -->
+<div class="flex flex-col gap-3 rounded-xl bg-surface-container-low/50 p-space-md border border-outline-variant/20">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Jueves 26 Oct</span>
+<span class="block font-label-sm text-label-sm text-secondary">Pasado mañana</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-secondary font-label-md text-label-md font-bold">2 servicios</span>
+</div>
+<!-- Jueves 1 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('nala-manto')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">11:30 - 13:00</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-secondary bg-surface-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Programado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Acondicionamiento y Manto</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Nala</strong> (Pastor Alemán) • Caso #094
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Sala Técnica Especializada</div>
+</div>
+<!-- Jueves 2 -->
+<div class="event-card cursor-pointer p-3.5 rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md border border-outline-variant/20 transition-all hover:border-primary-container/40" onclick="selectEvent('rocky-ceremonia')">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-md text-label-md font-bold text-on-surface">15:00 - 16:15</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-secondary bg-surface-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Confirmado
+            </span>
+</div>
+<h4 class="font-label-lg text-label-lg font-semibold text-on-surface mb-1">Ceremonia Íntima</h4>
+<div class="text-secondary font-body-sm text-body-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[15px] text-primary-container">pets</span>
+<strong>Rocky</strong> (Mestizo) • Caso #095
+          </div>
+<div class="text-outline font-label-sm text-label-sm">Tutora: Elena Rivas • Sala Serena</div>
+</div>
+<!-- Botón Rápido Disponible -->
+<div class="mt-2 border border-dashed border-outline-variant/50 rounded-lg p-3 text-center bg-surface-container-lowest/50 hover:bg-surface-container-lowest cursor-pointer transition-colors">
+<button class="font-label-md text-label-md text-primary-container font-semibold flex items-center justify-center gap-1.5 w-full" type="button">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>Agendar en Jueves</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== VISTA 3: SEMANA ==================== -->
+<div class="view-panel hidden flex flex-col gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-outline-variant/20 transition-opacity duration-200" id="view-container-semana">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]">calendar_view_week</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Panorama Semanal (Lunes a Domingo)</span>
+</div>
+<span class="font-label-md text-label-md text-secondary">16 servicios planificados</span>
+</div>
+<!-- Grid de 7 Días Amplia y Respirada -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 items-start">
+<!-- Lun 23 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-secondary uppercase font-semibold">Lun 23</span>
+<span class="text-[11px] font-bold text-outline">3 concluidos</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('luna')">
+<div class="text-[11px] font-bold text-on-surface">09:30 • Toby</div>
+<div class="text-[10px] text-[#1F7A2C] font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#2CAF3E]"></span> Realizado</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('luna')">
+<div class="text-[11px] font-bold text-on-surface">14:00 • Kira</div>
+<div class="text-[10px] text-[#1F7A2C] font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#2CAF3E]"></span> Realizado</div>
+</div>
+</div>
+<!-- Mar 24 (Hoy - Resaltado) -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-primary-container/5 border-2 border-primary-container/30">
+<div class="text-center pb-1 border-b border-primary-container/20">
+<span class="block font-label-sm text-label-sm text-primary-container uppercase font-bold">Mar 24 (Hoy)</span>
+<span class="text-[11px] font-bold text-primary-container">4 activos</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('luna')">
+<div class="text-[11px] font-bold text-on-surface">10:00 • Luna</div>
+<div class="text-[10px] text-[#1F7A2C] font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#2CAF3E]"></span> Realizado</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border-2 border-primary-container text-left transition-all" onclick="selectEvent('lucas-ceremonia')">
+<div class="text-[11px] font-bold text-primary-container">16:30 • Lucas</div>
+<div class="text-[10px] text-[#9A6708] font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#E29B12]"></span> Ceremonia</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('mia-entrega')">
+<div class="text-[11px] font-bold text-on-surface">18:00 • Mía</div>
+<div class="text-[10px] text-secondary font-semibold">Entrega</div>
+</div>
+</div>
+<!-- Mié 25 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-secondary uppercase font-semibold">Mié 25</span>
+<span class="text-[11px] font-bold text-secondary">3 servicios</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('max-recojo')">
+<div class="text-[11px] font-bold text-on-surface">10:00 • Max</div>
+<div class="text-[10px] text-secondary font-semibold">Recojo</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('coco-ceremonia')">
+<div class="text-[11px] font-bold text-on-surface">12:30 • Coco</div>
+<div class="text-[10px] text-[#9A6708] font-semibold">Ceremonia</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('simon-entrega')">
+<div class="text-[11px] font-bold text-on-surface">16:00 • Simón</div>
+<div class="text-[10px] text-secondary font-semibold">Entrega</div>
+</div>
+</div>
+<!-- Jue 26 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-secondary uppercase font-semibold">Jue 26</span>
+<span class="text-[11px] font-bold text-secondary">2 servicios</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('nala-manto')">
+<div class="text-[11px] font-bold text-on-surface">11:30 • Nala</div>
+<div class="text-[10px] text-secondary font-semibold">Manto</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('rocky-ceremonia')">
+<div class="text-[11px] font-bold text-on-surface">15:00 • Rocky</div>
+<div class="text-[10px] text-[#9A6708] font-semibold">Ceremonia</div>
+</div>
+</div>
+<!-- Vie 27 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-secondary uppercase font-semibold">Vie 27</span>
+<span class="text-[11px] font-bold text-secondary">2 servicios</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('simon-entrega')">
+<div class="text-[11px] font-bold text-on-surface">11:00 • Milo</div>
+<div class="text-[10px] text-secondary font-semibold">Recojo</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('coco-ceremonia')">
+<div class="text-[11px] font-bold text-on-surface">17:00 • Thor</div>
+<div class="text-[10px] text-[#9A6708] font-semibold">Ceremonia</div>
+</div>
+</div>
+<!-- Sáb 28 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-secondary uppercase font-semibold">Sáb 28</span>
+<span class="text-[11px] font-bold text-secondary">2 servicios</span>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('lucas-ceremonia')">
+<div class="text-[11px] font-bold text-on-surface">10:30 • Sasha</div>
+<div class="text-[10px] text-[#9A6708] font-semibold">Ceremonia</div>
+</div>
+<div class="event-card cursor-pointer p-2 rounded bg-surface-container-lowest border border-outline-variant/30 text-left hover:border-primary-container/40 transition-all" onclick="selectEvent('mia-entrega')">
+<div class="text-[11px] font-bold text-on-surface">13:00 • Bruno</div>
+<div class="text-[10px] text-secondary font-semibold">Entrega</div>
+</div>
+</div>
+<!-- Dom 29 -->
+<div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-container-low/20 border border-dashed border-outline-variant/40">
+<div class="text-center pb-1 border-b border-outline-variant/20">
+<span class="block font-label-sm text-label-sm text-outline uppercase font-semibold">Dom 29</span>
+<span class="text-[11px] text-outline">Guardia pasiva</span>
+</div>
+<div class="p-3 text-center text-outline font-label-sm text-label-sm italic">
+          Solo emergencias y traslados críticos
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- COLUMNA DERECHA: Panel de Detalle del Evento Seleccionado (aprox. 35% = 4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md sticky top-20">
+<div class="flex flex-col rounded-xl bg-surface-container-lowest p-space-lg shadow-sm border border-outline-variant/20">
+<!-- Cabecera de la Tarjeta de Detalle -->
+<div class="flex items-center justify-between pb-space-sm mb-space-md border-b border-outline-variant/20">
+<span class="font-headline-sm text-headline-sm text-on-surface">Detalle del Servicio en Agenda</span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#9A6708] bg-[#E29B12]/15" id="detail-status-pill">
+<span class="w-2 h-2 rounded-full bg-[#E29B12]"></span>
+<span id="detail-status-text">Confirmado para hoy</span>
+</span>
+</div>
+<!-- Identificación del Caso y Mascota -->
+<div class="flex items-start justify-between p-space-md rounded-lg bg-surface-container-low mb-space-md border border-outline-variant/20">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Mascota &amp; Expediente</span>
+<span class="font-headline-md text-headline-md text-on-surface mt-0.5" id="detail-pet-name">Lucas</span>
+<span class="font-body-sm text-body-sm text-secondary" id="detail-pet-spec">Canino • Golden Retriever (32 kg)</span>
+</div>
+<a class="inline-flex items-center gap-1 font-label-md text-label-md text-primary-container hover:underline font-semibold mt-1" href="#" id="detail-case-link">
+<span id="detail-case-num">Caso #REC-2024-089</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<!-- Atributos Detallados del Servicio -->
+<div class="flex flex-col gap-space-md mb-space-lg">
+<!-- Tipo de servicio -->
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary">Tipo de Servicio</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5" id="detail-service-title">Ceremonia de Despedida con Testigos</span>
+</div>
+<!-- Horario y Duración -->
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary">Horario Programado</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5" id="detail-time">16:30 – 17:30 hrs</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary">Duración Estimada</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5" id="detail-duration">60 minutos</span>
+</div>
+</div>
+<!-- Espacio Físico -->
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary">Espacio Asignado</span>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="material-symbols-outlined text-primary-container text-[18px]">meeting_room</span>
+<span class="font-body-lg text-body-lg text-on-surface font-medium" id="detail-location">Sala Serena (Sede Central)</span>
+</div>
+</div>
+<!-- Familiares / Asistentes -->
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary">Asistencia Familiar</span>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">person</span>
+<span class="font-body-md text-body-md text-on-surface" id="detail-tutor">Tutora: <strong>Valeria Mendoza</strong> • 3 acompañantes</span>
+</div>
+</div>
+<!-- Notas relevantes para el turno -->
+<div class="flex flex-col p-space-md rounded-lg bg-surface-container-low/70 border border-outline-variant/20">
+<div class="flex items-center gap-1.5 text-secondary mb-1">
+<span class="material-symbols-outlined text-[16px]">info</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Indicaciones para el Turno</span>
+</div>
+<p class="font-body-md text-body-md text-secondary leading-relaxed" id="detail-notes">
+  La familia solicitó música ambiental instrumental suave y 15 minutos de silencio previo en sala antes de dar inicio al responso.
+</p>
+</div>
+</div>
+<!-- Botones de Acción Directa -->
+<div class="flex flex-col gap-2.5 pt-space-sm border-t border-outline-variant/20">
+<button class="w-full h-11 px-4 rounded-lg bg-[#2CAF3E] text-white font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-sm hover:opacity-95 active:scale-[0.99] transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span>Marcar como Realizado</span>
+</button>
+<button class="w-full h-10 px-4 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-label-md text-label-md flex items-center justify-center gap-2 shadow-sm hover:bg-surface-container-low transition-all" type="button">
+<span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+<span>Reprogramar Horario</span>
+</button>
+<div class="text-center mt-1">
+<a class="font-label-md text-label-md text-primary-container hover:underline" href="#">
+  Ver caso completo en Mesa de Trabajo →
+</a>
+</div>
+</div>
+</div>
+<!-- Tarjeta informativa de guardia / Acompañamiento discreto -->
+<div class="flex items-center gap-3 p-space-md rounded-xl bg-surface-container-low text-secondary border border-outline-variant/20">
+<span class="material-symbols-outlined text-primary-container text-[22px]">contact_support</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold leading-tight">Guardia de Sala Serena</span>
+<span class="font-body-sm text-body-sm text-secondary">Coordinador de turno: Carlos Vega (Anexo 104)</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Datos interactivos para alimentar dinámicamente el panel de detalle
+  const eventDetails = {
+    'lucas-ceremonia': {
+      statusText: 'Confirmado para hoy',
+      statusType: 'amber',
+      petName: 'Lucas',
+      petSpec: 'Canino • Golden Retriever (32 kg)',
+      caseNum: 'Caso #REC-2024-089',
+      serviceTitle: 'Ceremonia de Despedida con Testigos',
+      time: '16:30 – 17:30 hrs',
+      duration: '60 minutos',
+      location: 'Sala Serena (Sede Central)',
+      tutor: 'Tutora: Valeria Mendoza • 3 acompañantes',
+      notes: 'La familia solicitó música instrumental suave y 15 minutos de silencio previo en sala antes de dar inicio al responso solemne.'
+    },
+    'luna': {
+      statusText: 'Servicio Realizado',
+      statusType: 'green',
+      petName: 'Luna',
+      petSpec: 'Felino • Común Europeo (4.2 kg)',
+      caseNum: 'Caso #REC-2024-086',
+      serviceTitle: 'Recojo y Traslado a Sede Central',
+      time: '10:00 – 11:30 hrs',
+      duration: '90 minutos',
+      location: 'Domicilio Miraflores → Sede Central',
+      tutor: 'Tutor: Roberto Gómez • Tel. 981 234 567',
+      notes: 'Traslado con cuna de descanso térmica y protocolo de preservación inmediata completado con firma de conformidad.'
+    },
+    'lucas-manto': {
+      statusText: 'Servicio Realizado',
+      statusType: 'green',
+      petName: 'Lucas',
+      petSpec: 'Canino • Golden Retriever (32 kg)',
+      caseNum: 'Caso #REC-2024-089',
+      serviceTitle: 'Acondicionamiento y Manto',
+      time: '13:40 – 15:00 hrs',
+      duration: '80 minutos',
+      location: 'Sala de Preparación Técnica',
+      tutor: 'Tutora: Valeria Mendoza',
+      notes: 'Peinado de manto, toma de huellas en arcilla de memoria y colocación de pañuelo floral según solicitud.'
+    },
+    'mia-entrega': {
+      statusText: 'Programado hoy',
+      statusType: 'neutral',
+      petName: 'Mía',
+      petSpec: 'Felino • Siamés Tradicional (3.5 kg)',
+      caseNum: 'Caso #REC-2024-088',
+      serviceTitle: 'Entrega de Urna y Muestras de Memoria',
+      time: '18:00 – 18:45 hrs',
+      duration: '45 minutos',
+      location: 'Recepción Principal (Módulo de Entrega Solemne)',
+      tutor: 'Tutora: Patricia Alarcón',
+      notes: 'Urna de roble tallada con plaqueta grabada, certificado de cremación individual y relicario con muestra de pelaje.'
+    },
+    'max-recojo': {
+      statusText: 'Programado para mañana',
+      statusType: 'neutral',
+      petName: 'Max',
+      petSpec: 'Canino • Bóxer (28 kg)',
+      caseNum: 'Caso #REC-2024-091',
+      serviceTitle: 'Recojo Especializado en Clínica',
+      time: '10:00 – 11:15 hrs',
+      duration: '75 minutos',
+      location: 'Clínica Veterinaria San Borja → Sede Central',
+      tutor: 'Tutor: Dr. Ernesto Morales (Veterinario)',
+      notes: 'Unidad móvil asignada: Móvil 2. Llevar camilla acolchada para canino mediano/grande.'
+    },
+    'coco-ceremonia': {
+      statusText: 'Confirmado para mañana',
+      statusType: 'amber',
+      petName: 'Coco',
+      petSpec: 'Canino • Poodle Toy (4 kg)',
+      caseNum: 'Caso #REC-2024-092',
+      serviceTitle: 'Ceremonia Familiar Íntima',
+      time: '12:30 – 13:45 hrs',
+      duration: '75 minutos',
+      location: 'Sala Armonía (Sede Central)',
+      tutor: 'Tutora: Sofía Castro • 4 asistentes',
+      notes: 'Se preparará altar con proyección digital de fotografías proporcionadas por la familia.'
+    },
+    'simon-entrega': {
+      statusText: 'Programado a Domicilio',
+      statusType: 'neutral',
+      petName: 'Simón',
+      petSpec: 'Felino • Persa Blanco (5 kg)',
+      caseNum: 'Caso #REC-2024-090',
+      serviceTitle: 'Entrega Solemne a Domicilio',
+      time: '16:00 – 17:00 hrs',
+      duration: '60 minutos',
+      location: 'Domicilio San Isidro (Av. Los Eucaliptos)',
+      tutor: 'Tutor: Andrés Paredes',
+      notes: 'Entrega con caja conmemorativa y ramo de flores blancas de despedida.'
+    },
+    'nala-manto': {
+      statusText: 'Programado para Jueves',
+      statusType: 'neutral',
+      petName: 'Nala',
+      petSpec: 'Canino • Pastor Alemán (34 kg)',
+      caseNum: 'Caso #REC-2024-094',
+      serviceTitle: 'Acondicionamiento y Manto',
+      time: '11:30 – 13:00 hrs',
+      duration: '90 minutos',
+      location: 'Sala de Preparación Técnica',
+      tutor: 'Tutor: Daniel Quispe',
+      notes: 'Protocolo completo de preservación estética y preparación para velatorio privado.'
+    },
+    'rocky-ceremonia': {
+      statusText: 'Confirmado Jueves',
+      statusType: 'amber',
+      petName: 'Rocky',
+      petSpec: 'Canino • Mestizo (18 kg)',
+      caseNum: 'Caso #REC-2024-095',
+      serviceTitle: 'Ceremonia Íntima con Familia',
+      time: '15:00 – 16:15 hrs',
+      duration: '75 minutos',
+      location: 'Sala Serena (Sede Central)',
+      tutor: 'Tutora: Elena Rivas • 2 acompañantes',
+      notes: 'Familia solicitó lectura de carta de agradecimiento durante la ceremonia.'
+    }
+  };
+
+  function selectEvent(eventId) {
+    const data = eventDetails[eventId];
+    if (!data) return;
+
+    document.getElementById('detail-pet-name').textContent = data.petName;
+    document.getElementById('detail-pet-spec').textContent = data.petSpec;
+    document.getElementById('detail-case-num').textContent = data.caseNum;
+    document.getElementById('detail-service-title').textContent = data.serviceTitle;
+    document.getElementById('detail-time').textContent = data.time;
+    document.getElementById('detail-duration').textContent = data.duration;
+    document.getElementById('detail-location').textContent = data.location;
+    document.getElementById('detail-tutor').innerHTML = data.tutor;
+    document.getElementById('detail-notes').textContent = data.notes;
+
+    const statusPill = document.getElementById('detail-status-pill');
+    const statusText = document.getElementById('detail-status-text');
+    statusText.textContent = data.statusText;
+
+    if (data.statusType === 'green') {
+      statusPill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#1F7A2C] bg-[#2CAF3E]/10";
+      statusPill.querySelector('span').className = "w-2 h-2 rounded-full bg-[#2CAF3E]";
+    } else if (data.statusType === 'amber') {
+      statusPill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-[#9A6708] bg-[#E29B12]/15";
+      statusPill.querySelector('span').className = "w-2 h-2 rounded-full bg-[#E29B12]";
+    } else {
+      statusPill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold text-secondary bg-surface-container";
+      statusPill.querySelector('span').className = "w-2 h-2 rounded-full bg-secondary";
+    }
+  }
+
+  function switchView(viewKey) {
+    // 1. Alternar contenedores
+    const diaPanel = document.getElementById('view-container-dia');
+    const tresDiasPanel = document.getElementById('view-container-3dias');
+    const semanaPanel = document.getElementById('view-container-semana');
+
+    diaPanel.classList.add('hidden');
+    tresDiasPanel.classList.add('hidden');
+    semanaPanel.classList.add('hidden');
+
+    // 2. Estilos de botones
+    const tabs = ['dia', '3dias', 'semana'];
+    const activeClasses = "px-4 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold shadow-sm transition-all flex items-center gap-1.5";
+    const inactiveClasses = "px-4 py-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-lowest/70 font-label-md text-label-md font-medium transition-all flex items-center gap-1.5";
+
+    tabs.forEach(t => {
+      const btn = document.getElementById('tab-' + t);
+      if (t === viewKey) {
+        btn.className = activeClasses;
+      } else {
+        btn.className = inactiveClasses;
+      }
+    });
+
+    // 3. Modificar texto de fecha y badge resumen
+    const dateDisplay = document.getElementById('date-range-display');
+    const statsBadge = document.getElementById('stats-badge');
+
+    if (viewKey === 'dia') {
+      diaPanel.classList.remove('hidden');
+      dateDisplay.textContent = "Martes, 24 de Octubre de 2024";
+      statsBadge.innerHTML = '<span class="font-semibold text-on-surface">4 servicios</span><span>•</span><span class="text-on-surface">1 realizado</span><span>•</span><span class="text-on-surface">1 en curso</span><span>•</span><span class="text-secondary">0 conflictos</span>';
+    } else if (viewKey === '3dias') {
+      tresDiasPanel.classList.remove('hidden');
+      dateDisplay.textContent = "24 – 26 de Octubre de 2024 (Mar, Mié, Jue)";
+      statsBadge.innerHTML = '<span class="font-semibold text-on-surface">9 servicios</span><span>•</span><span class="text-on-surface">3 días activos</span><span>•</span><span class="text-secondary">Capacidad al 65%</span>';
+    } else if (viewKey === 'semana') {
+      semanaPanel.classList.remove('hidden');
+      dateDisplay.textContent = "Semana del 23 al 29 de Octubre de 2024";
+      statsBadge.innerHTML = '<span class="font-semibold text-on-surface">16 servicios</span><span>•</span><span class="text-on-surface">Semana 43</span><span>•</span><span class="text-[#2CAF3E] font-semibold">100% trazabilidad</span>';
+    }
+  }
+</script>
+</div></main><footer class="w-full bg-surface border-t border-outline-variant/20 py-space-md px-space-lg"><div class="w-full flex flex-col sm:flex-row items-center justify-between text-on-surface-variant font-label-md text-label-md gap-2"><span>Plataforma Administrativa y de Acompañamiento Integral</span><span>Protocolos de Dignidad y Trazabilidad • v2.4.0</span></div></footer></div></body></html>
