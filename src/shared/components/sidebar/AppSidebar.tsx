@@ -2,36 +2,45 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboardIcon,
   BriefcaseIcon,
-  CalendarIcon,
-  TruckIcon,
-  PawPrintIcon,
-  Building2Icon,
-  StethoscopeIcon,
-  LayersIcon,
   FileTextIcon,
-  ClipboardListIcon,
+  CalendarIcon,
+  StethoscopeIcon,
+  TruckIcon,
   CarIcon,
+  Building2Icon,
+  PawPrintIcon,
+  ClipboardListIcon,
+  LayersIcon,
+  PackageIcon,
+  UsersIcon,
   SettingsIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useSidebarStore } from "@/shared/store/sidebar.store";
 
-const SERVICE_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboardIcon, to: "/" },
+// Eutanasia y cremación: pipeline por Caso (evento único, no cliente recurrente).
+const DESPEDIDAS_ITEMS = [
   { label: "Casos & Servicios", icon: BriefcaseIcon, to: "/casos" },
+  { label: "Cotizaciones", icon: FileTextIcon, to: "/cotizaciones" },
   { label: "Agenda & Rutas", icon: CalendarIcon, to: "/agenda" },
+  { label: "Convenios Veterinarios", icon: StethoscopeIcon, to: "/veterinarias" },
   { label: "Entregas", icon: TruckIcon, to: "/entregas" },
 ];
 
-const CATALOG_ITEMS = [
-  { label: "Mascotas", icon: PawPrintIcon, to: "/mascotas" },
+// Atención veterinaria (consulta general y a domicilio): servicio recurrente,
+// aquí sí aplica un catálogo real de Clientes/Mascotas con historial.
+const ATENCION_VETERINARIA_ITEMS = [
   { label: "Clientes", icon: Building2Icon, to: "/clientes" },
-  { label: "Convenios Veterinarios", icon: StethoscopeIcon, to: "/veterinarias" },
-  { label: "Planes", icon: LayersIcon, to: "/planes" },
-  { label: "Cotizaciones", icon: FileTextIcon, to: "/cotizaciones" },
+  { label: "Mascotas", icon: PawPrintIcon, to: "/mascotas" },
+];
+
+const CATALOGO_ITEMS = [
   { label: "Servicios", icon: ClipboardListIcon, to: "/servicios" },
+  { label: "Planes", icon: LayersIcon, to: "/planes" },
+  { label: "Inventario", icon: PackageIcon, to: "/inventario" },
   { label: "Vehículo", icon: CarIcon, to: "/vehiculos" },
+  { label: "Usuarios", icon: UsersIcon, to: "/usuarios" },
 ];
 
 function NavItem({
@@ -111,16 +120,30 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">
-        <p className="px-3 text-label font-semibold uppercase tracking-wider text-slate-400 mb-2">
-          Módulos de Servicio
-        </p>
-        {SERVICE_ITEMS.map((item) => (
-          <NavItem
-            key={item.to}
-            {...item}
-            end={item.to === "/"}
-            onClick={closeMobileSidebar}
-          />
+        <NavItem
+          label="Dashboard"
+          icon={LayoutDashboardIcon}
+          to="/"
+          end
+          onClick={closeMobileSidebar}
+        />
+
+        <div className="pt-4 pb-1">
+          <p className="px-3 text-label font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Despedidas
+          </p>
+        </div>
+        {DESPEDIDAS_ITEMS.map((item) => (
+          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
+        ))}
+
+        <div className="pt-4 pb-1">
+          <p className="px-3 text-label font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Atención Veterinaria
+          </p>
+        </div>
+        {ATENCION_VETERINARIA_ITEMS.map((item) => (
+          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
         ))}
 
         <div className="pt-4 pb-1">
@@ -128,7 +151,7 @@ export function AppSidebar() {
             Catálogos & Administración
           </p>
         </div>
-        {CATALOG_ITEMS.map((item) => (
+        {CATALOGO_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
         ))}
 

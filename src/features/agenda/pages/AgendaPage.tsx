@@ -172,15 +172,87 @@ const EVENTOS: Record<string, EventoDetalle> = {
     tutor: "Tutora: Elena Rivas · 2 acompañantes",
     notes: "Familia solicitó lectura de carta de agradecimiento durante la ceremonia.",
   },
+  "toby-ceremonia": {
+    estado: "realizado",
+    statusTextDetail: "Realizado el Lunes",
+    petName: "Toby",
+    petSpec: "Canino · Shih Tzu (7 kg)",
+    caseNum: "Caso #REC-2024-081",
+    serviceTitle: "Ceremonia Íntima de Despedida",
+    time: "09:30 – 10:15 hrs",
+    duration: "45 minutos",
+    location: "Sala Aurora (Sede Central)",
+    tutor: "Tutora: Marisol Vidal",
+    notes: "Ceremonia breve solicitada por la familia, sin música ni proyección de fotos.",
+  },
+  "kira-entrega": {
+    estado: "realizado",
+    statusTextDetail: "Realizado el Lunes",
+    petName: "Kira",
+    petSpec: "Felino · Angora (3.8 kg)",
+    caseNum: "Caso #REC-2024-083",
+    serviceTitle: "Entrega de Urna y Certificado",
+    time: "14:00 – 14:30 hrs",
+    duration: "30 minutos",
+    location: "Recepción Principal (Sede Central)",
+    tutor: "Tutor: Jorge Salas",
+    notes: "Entrega directa en recepción, sin ceremonia adicional solicitada.",
+  },
+  "milo-recojo": {
+    estado: "programado",
+    statusTextDetail: "Programado para el Viernes",
+    petName: "Milo",
+    petSpec: "Canino · Cocker Spaniel (14 kg)",
+    caseNum: "Caso #REC-2024-097",
+    serviceTitle: "Recojo Especializado a Domicilio",
+    time: "11:00 – 12:00 hrs",
+    duration: "60 minutos",
+    location: "Domicilio Surco",
+    tutor: "Tutora: Ana Flores",
+    notes: "Confirmar acceso vehicular: la tutora reportó obra en la cuadra de acceso.",
+  },
+  "thor-entrega": {
+    estado: "programado",
+    statusTextDetail: "Programado para el Viernes",
+    petName: "Thor",
+    petSpec: "Canino · Rottweiler (40 kg)",
+    caseNum: "Caso #REC-2024-098",
+    serviceTitle: "Entrega de Urna a Domicilio",
+    time: "17:00 – 17:45 hrs",
+    duration: "45 minutos",
+    location: "Domicilio La Molina",
+    tutor: "Tutor: Ricardo Núñez",
+    notes: "Coordinar con Móvil 1. Entrega incluye placa grabada adicional solicitada.",
+  },
+  "sasha-ceremonia": {
+    estado: "confirmado",
+    statusTextDetail: "Confirmado para el Sábado",
+    petName: "Sasha",
+    petSpec: "Canino · Labrador (26 kg)",
+    caseNum: "Caso #REC-2024-099",
+    serviceTitle: "Ceremonia Familiar",
+    time: "10:30 – 11:30 hrs",
+    duration: "60 minutos",
+    location: "Sala Serena (Sede Central)",
+    tutor: "Tutora: Gabriela Ortiz · 5 acompañantes",
+    notes: "Familia numerosa: reservar sala con capacidad ampliada y sillas extra.",
+  },
+  "bruno-entrega": {
+    estado: "programado",
+    statusTextDetail: "Programado para el Sábado",
+    petName: "Bruno",
+    petSpec: "Canino · Beagle (12 kg)",
+    caseNum: "Caso #REC-2024-100",
+    serviceTitle: "Entrega de Relicario",
+    time: "13:00 – 13:30 hrs",
+    duration: "30 minutos",
+    location: "Recepción Principal (Sede Central)",
+    tutor: "Tutor: Luis Campos",
+    notes: "Relicario con muestra de pelaje pendiente de aprobación final de la familia.",
+  },
 };
 
 type Vista = "dia" | "3dias" | "semana";
-
-const VISTA_INFO: Record<Vista, { dateLabel: string; stats: string }> = {
-  dia: { dateLabel: "Martes, 24 de Octubre de 2025", stats: "4 servicios · 1 realizado · 1 en curso · 0 conflictos" },
-  "3dias": { dateLabel: "24 – 26 de Octubre de 2025 (Mar, Mié, Jue)", stats: "9 servicios · 3 días activos · Capacidad al 65%" },
-  semana: { dateLabel: "Semana del 23 al 29 de Octubre de 2025", stats: "16 servicios · Semana 43 · 100% trazabilidad" },
-};
 
 type BloqueDia =
   | { tipo: "libre"; hora: string; mensaje: string; accionLabel: string }
@@ -226,24 +298,97 @@ const COLUMNAS_3DIAS: { dia: string; etiqueta: string; eventos: { id: string; ex
   },
 ];
 
-const SEMANA: { dia: string; hoy?: boolean; resumen?: string; guardia?: boolean; chips: { hora: string; nombre: string; id: string }[] }[] = [
-  { dia: "Lun 23", resumen: "2 concluidos", chips: [{ hora: "09:30", nombre: "Toby", id: "luna" }, { hora: "14:00", nombre: "Kira", id: "luna" }] },
+interface SemanaEventoRef {
+  id: string;
+  hora: string;
+}
+
+interface SemanaDia {
+  diaAbrev: string;
+  fecha: string;
+  hoy?: boolean;
+  guardia?: boolean;
+  eventos: SemanaEventoRef[];
+}
+
+// Cada chip apunta a un registro real en EVENTOS: evita el desface de
+// "nombre mostrado" vs. "detalle real" que aparece al hacer click.
+const SEMANA: SemanaDia[] = [
   {
-    dia: "Mar 24",
-    hoy: true,
-    resumen: "4 activos",
-    chips: [
-      { hora: "10:00", nombre: "Luna", id: "luna" },
-      { hora: "16:30", nombre: "Lucas", id: "lucas-ceremonia" },
-      { hora: "18:00", nombre: "Mía", id: "mia-entrega" },
+    diaAbrev: "Lun",
+    fecha: "23",
+    eventos: [
+      { id: "toby-ceremonia", hora: "09:30" },
+      { id: "kira-entrega", hora: "14:00" },
     ],
   },
-  { dia: "Mié 25", resumen: "3 servicios", chips: [{ hora: "10:00", nombre: "Max", id: "max-recojo" }, { hora: "12:30", nombre: "Coco", id: "coco-ceremonia" }, { hora: "16:00", nombre: "Simón", id: "simon-entrega" }] },
-  { dia: "Jue 26", resumen: "2 servicios", chips: [{ hora: "11:30", nombre: "Nala", id: "nala-manto" }, { hora: "15:00", nombre: "Rocky", id: "rocky-ceremonia" }] },
-  { dia: "Vie 27", resumen: "2 servicios", chips: [{ hora: "11:00", nombre: "Milo", id: "max-recojo" }, { hora: "17:00", nombre: "Thor", id: "coco-ceremonia" }] },
-  { dia: "Sáb 28", resumen: "2 servicios", chips: [{ hora: "10:30", nombre: "Sasha", id: "lucas-ceremonia" }, { hora: "13:00", nombre: "Bruno", id: "mia-entrega" }] },
-  { dia: "Dom 29", guardia: true, chips: [] },
+  {
+    diaAbrev: "Mar",
+    fecha: "24",
+    hoy: true,
+    eventos: [
+      { id: "luna", hora: "10:00" },
+      { id: "lucas-manto", hora: "13:40" },
+      { id: "lucas-ceremonia", hora: "16:30" },
+      { id: "mia-entrega", hora: "18:00" },
+    ],
+  },
+  {
+    diaAbrev: "Mié",
+    fecha: "25",
+    eventos: [
+      { id: "max-recojo", hora: "10:00" },
+      { id: "coco-ceremonia", hora: "12:30" },
+      { id: "simon-entrega", hora: "16:00" },
+    ],
+  },
+  {
+    diaAbrev: "Jue",
+    fecha: "26",
+    eventos: [
+      { id: "nala-manto", hora: "11:30" },
+      { id: "rocky-ceremonia", hora: "15:00" },
+    ],
+  },
+  {
+    diaAbrev: "Vie",
+    fecha: "27",
+    eventos: [
+      { id: "milo-recojo", hora: "11:00" },
+      { id: "thor-entrega", hora: "17:00" },
+    ],
+  },
+  {
+    diaAbrev: "Sáb",
+    fecha: "28",
+    eventos: [
+      { id: "sasha-ceremonia", hora: "10:30" },
+      { id: "bruno-entrega", hora: "13:00" },
+    ],
+  },
+  { diaAbrev: "Dom", fecha: "29", guardia: true, eventos: [] },
 ];
+
+const SEMANA_TOTAL = SEMANA.reduce((acc, dia) => acc + dia.eventos.length, 0);
+
+const SEMANA_CONTEO = SEMANA.reduce((acc, dia) => {
+  dia.eventos.forEach((ev) => {
+    const estado = EVENTOS[ev.id].estado;
+    acc[estado] = (acc[estado] ?? 0) + 1;
+  });
+  return acc;
+}, {} as Record<EstadoEvento, number>);
+
+// El resumen de "semana" se arma con el conteo real de SEMANA_CONTEO para que
+// nunca quede desactualizado respecto a los eventos que realmente se muestran.
+const VISTA_INFO: Record<Vista, { dateLabel: string; stats: string }> = {
+  dia: { dateLabel: "Martes, 24 de Octubre de 2025", stats: "4 servicios · 1 realizado · 1 en curso · 0 conflictos" },
+  "3dias": { dateLabel: "24 – 26 de Octubre de 2025 (Mar, Mié, Jue)", stats: "9 servicios · 3 días activos · Capacidad al 65%" },
+  semana: {
+    dateLabel: "Semana del 23 al 29 de Octubre de 2025",
+    stats: `${SEMANA_TOTAL} servicios · Semana 43 · ${SEMANA_CONTEO.realizado ?? 0} realizados`,
+  },
+};
 
 function EstadoBadge({
   estado,
@@ -288,7 +433,7 @@ export default function AgendaPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Módulos de Servicio" }, { label: "Agenda & Rutas" }]} />
+      <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Agenda & Rutas" }]} />
 
       {/* Encabezado */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -449,7 +594,7 @@ export default function AgendaPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h3 className={cn("font-semibold", activo ? "text-lg text-slate-900" : "text-base text-slate-900")}>
+                        <h3 className="text-sm font-semibold text-slate-900">
                           {ev.serviceTitle}
                         </h3>
                         <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-sm text-slate-500">
@@ -557,75 +702,97 @@ export default function AgendaPage() {
 
           {vista === "semana" && (
             <div className="flex flex-col gap-4 bg-white p-5 lg:p-6 rounded-xl shadow-xs border border-slate-200">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
                   <CalendarRangeIcon className="size-5 text-brand-500" />
                   <span className="text-sm font-semibold text-slate-900">Panorama Semanal (Lunes a Domingo)</span>
                 </div>
-                <span className="text-xs font-medium text-slate-500">16 servicios planificados</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 items-start">
-                {SEMANA.map((col) => (
-                  <div
-                    key={col.dia}
-                    className={cn(
-                      "flex flex-col gap-2 p-2.5 rounded-lg border",
-                      col.hoy
-                        ? "bg-brand-50/60 border-2 border-brand-200"
-                        : col.guardia
-                          ? "bg-slate-50/30 border-dashed border-slate-300"
-                          : "bg-slate-50/60 border-slate-200"
-                    )}
-                  >
-                    <div className={cn("text-center pb-1 border-b", col.hoy ? "border-brand-200" : "border-slate-200")}>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(Object.entries(SEMANA_CONTEO) as [EstadoEvento, number][])
+                    .filter(([, count]) => count > 0)
+                    .map(([estado, count]) => (
                       <span
+                        key={estado}
                         className={cn(
-                          "block text-label uppercase font-semibold",
-                          col.hoy ? "text-brand-500 font-bold" : col.guardia ? "text-slate-400" : "text-slate-500"
+                          "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-label font-semibold",
+                          ESTADO_BADGE[estado].bg,
+                          ESTADO_BADGE[estado].text
                         )}
                       >
-                        {col.dia}
-                        {col.hoy && " (Hoy)"}
+                        <span className={cn("w-1.5 h-1.5 rounded-full", ESTADO_BADGE[estado].dot)} />
+                        {count} {ESTADO_BADGE[estado].label.toLowerCase()}s
                       </span>
-                      <span className={cn("text-label font-bold", col.hoy ? "text-brand-500" : "text-slate-400")}>
-                        {col.guardia ? "Guardia pasiva" : col.resumen}
+                    ))}
+                  <span className="text-xs font-medium text-slate-400 ml-1">{SEMANA_TOTAL} en total</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 items-stretch">
+                {SEMANA.map((dia) => (
+                  <div
+                    key={dia.diaAbrev + dia.fecha}
+                    className={cn(
+                      "flex flex-col rounded-lg border overflow-hidden",
+                      dia.hoy ? "border-brand-300 shadow-sm" : dia.guardia ? "border-dashed border-slate-300" : "border-slate-200"
+                    )}
+                  >
+                    <div className={cn("flex flex-col items-center gap-1 py-2", dia.hoy ? "bg-brand-50" : "bg-slate-50")}>
+                      <span className={cn("text-label uppercase font-semibold", dia.hoy ? "text-brand-500" : "text-slate-400")}>
+                        {dia.diaAbrev}
+                      </span>
+                      <span
+                        className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold",
+                          dia.hoy ? "bg-brand-500 text-white shadow-sm" : "text-slate-700"
+                        )}
+                      >
+                        {dia.fecha}
                       </span>
                     </div>
 
-                    {col.guardia ? (
-                      <p className="p-3 text-center text-slate-400 text-xs italic">
-                        Solo emergencias y traslados críticos
-                      </p>
-                    ) : (
-                      col.chips.map((chip, i) => {
-                        const ev = EVENTOS[chip.id];
-                        const destacado = col.hoy && i === 1;
-                        return (
-                          <button
-                            key={chip.hora + chip.nombre}
-                            onClick={() => setSeleccionadoId(chip.id)}
-                            className={cn(
-                              "text-left p-2 rounded bg-white border transition-all",
-                              destacado ? "border-2 border-brand-500" : "border-slate-200 hover:border-brand-200"
-                            )}
-                          >
-                            <div className={cn("text-label font-bold", destacado ? "text-brand-500" : "text-slate-900")}>
-                              {chip.hora} · {chip.nombre}
-                            </div>
-                            <div
+                    <div className="flex-1 flex flex-col gap-1.5 p-1.5 bg-white min-h-[132px]">
+                      {dia.guardia ? (
+                        <div className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4 text-center rounded-lg border border-dashed border-slate-200">
+                          <LifeBuoyIcon className="size-4 text-slate-300" />
+                          <span className="text-label text-slate-400 font-medium px-2 leading-snug">
+                            Guardia pasiva · solo emergencias
+                          </span>
+                        </div>
+                      ) : dia.eventos.length === 0 ? (
+                        <div className="flex-1 flex items-center justify-center text-label text-slate-300 italic">
+                          Sin servicios
+                        </div>
+                      ) : (
+                        dia.eventos.map((ev) => {
+                          const data = EVENTOS[ev.id];
+                          const badge = ESTADO_BADGE[data.estado];
+                          const activo = ev.id === seleccionadoId;
+                          return (
+                            <button
+                              key={ev.id}
+                              onClick={() => setSeleccionadoId(ev.id)}
                               className={cn(
-                                "text-label font-semibold flex items-center gap-1",
-                                ESTADO_BADGE[ev.estado].text
+                                "text-left p-2 rounded-lg border transition-all",
+                                activo
+                                  ? "border-brand-400 bg-brand-50/60 shadow-sm"
+                                  : "border-slate-200 bg-slate-50/60 hover:border-brand-200 hover:bg-white"
                               )}
                             >
-                              <span className={cn("w-1.5 h-1.5 rounded-full", ESTADO_BADGE[ev.estado].dot)} />
-                              {ESTADO_BADGE[ev.estado].label}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={cn("text-label font-bold", activo ? "text-brand-600" : "text-slate-700")}>
+                                  {ev.hora}
+                                </span>
+                                <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", badge.dot)} />
+                              </div>
+                              <div className="text-label font-semibold text-slate-900 truncate mt-0.5">
+                                {data.petName}
+                              </div>
+                              <div className="text-label text-slate-400 truncate">{data.serviceTitle}</div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -665,7 +832,7 @@ export default function AgendaPage() {
             <div className="flex flex-col gap-4 mb-5">
               <div className="flex flex-col">
                 <span className="text-xs text-slate-500">Tipo de Servicio</span>
-                <span className="text-base font-semibold text-slate-900 mt-0.5">{seleccionado.serviceTitle}</span>
+                <span className="text-sm font-semibold text-slate-900 mt-0.5">{seleccionado.serviceTitle}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

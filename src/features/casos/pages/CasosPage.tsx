@@ -14,11 +14,19 @@ import {
   FileTextIcon,
   PlusIcon,
   DownloadIcon,
+  CalendarIcon,
+  SparklesIcon,
+  FilePenLineIcon,
+  ClipboardPasteIcon,
+  Loader2Icon,
 } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -26,6 +34,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { notifySuccess } from "@/shared/utils";
 
@@ -404,6 +420,17 @@ const VETERINARIA_OPTIONS = [
   { value: "animal-heart", label: "Animal Heart Surco" },
 ];
 
+const SERVICIO_OPTIONS = [
+  "Cremación Individual",
+  "Cremación Individual Estándar",
+  "Cremación + Sala Despedida",
+  "Cremación + Urna Cerámica",
+  "Eutanasia a Domicilio",
+  "Eutanasia en Sede",
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 function BloqueCard({
   icon: Icon,
   titulo,
@@ -418,7 +445,7 @@ function BloqueCard({
   return (
     <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
       <div className="flex items-center justify-between mb-3 gap-2">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
           <Icon className="size-4 text-brand-500" />
           {titulo}
         </h3>
@@ -433,7 +460,7 @@ function CampoDato({ label, value, destacado }: { label: string; value: string; 
   return (
     <div className="p-2.5 bg-slate-50 rounded-lg">
       <span className="text-xs text-slate-400 block">{label}</span>
-      <span className={cn("font-bold text-slate-800", destacado && "text-brand-500")}>{value}</span>
+      <span className={cn("text-sm font-semibold text-slate-900", destacado && "text-brand-500")}>{value}</span>
     </div>
   );
 }
@@ -573,7 +600,7 @@ function MesaTrabajoDrawer({
             ))}
             <div className="flex justify-between pt-2 text-sm font-bold text-slate-900">
               <span>Total Cotizado</span>
-              <span className="text-base text-brand-500 font-extrabold">{detalle.cotizacionTotal}</span>
+              <span className="text-lg text-brand-500 font-bold">{detalle.cotizacionTotal}</span>
             </div>
           </div>
         </BloqueCard>
@@ -625,12 +652,12 @@ function MesaTrabajoDrawer({
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-2.5 bg-slate-50 rounded-lg">
               <span className="text-xs text-slate-400 block">Fecha & Turno</span>
-              <span className="font-bold text-slate-800">{detalle.fechaTurno}</span>
+              <span className="text-sm font-semibold text-slate-900">{detalle.fechaTurno}</span>
               <span className="text-xs text-brand-500 font-semibold block">{detalle.horario}</span>
             </div>
             <div className="p-2.5 bg-slate-50 rounded-lg">
               <span className="text-xs text-slate-400 block">Logística de Recojo</span>
-              <span className="font-bold text-slate-800">{detalle.logistica}</span>
+              <span className="text-sm font-semibold text-slate-900">{detalle.logistica}</span>
               <span className="text-xs text-slate-500 block">{detalle.llegada}</span>
             </div>
           </div>
@@ -725,12 +752,983 @@ function MesaTrabajoDrawer({
   );
 }
 
+type RangoModo =
+  | "semana"
+  | "mes"
+  | "3meses"
+  | "6meses"
+  | "anio"
+  | "mesAMes"
+  | "personalizado"
+  | "todo";
+
+const RANGO_OPTIONS: { value: RangoModo; label: string }[] = [
+  { value: "semana", label: "Última semana" },
+  { value: "mes", label: "Último mes" },
+  { value: "3meses", label: "Últimos 3 meses" },
+  { value: "6meses", label: "Últimos 6 meses" },
+  { value: "anio", label: "Último año" },
+  { value: "mesAMes", label: "De un mes a otro mes" },
+  { value: "personalizado", label: "Rango de fechas personalizado" },
+  { value: "todo", label: "Todo el historial" },
+];
+
+interface ExportForm {
+  modoRango: RangoModo;
+  desde: string;
+  hasta: string;
+  mesDesde: string;
+  mesHasta: string;
+  estado: "todos" | EstadoId;
+  canal: (typeof CANAL_OPTIONS)[number]["value"];
+  veterinaria: string;
+}
+
+const EXPORT_FORM_INICIAL: ExportForm = {
+  modoRango: "mes",
+  desde: "",
+  hasta: "",
+  mesDesde: "",
+  mesHasta: "",
+  estado: "todos",
+  canal: "todos",
+  veterinaria: "todas",
+};
+
+function fmtFecha(d: Date) {
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+// Devuelve el rango de fechas legible para el rango elegido; centralizado para
+// que la vista previa y el mensaje de confirmación nunca queden desincronizados.
+function calcularRango(form: ExportForm): string {
+  const hoy = new Date();
+
+  switch (form.modoRango) {
+    case "todo":
+      return "todo el historial";
+    case "semana": {
+      const desde = new Date(hoy);
+      desde.setDate(hoy.getDate() - 7);
+      return `${fmtFecha(desde)} al ${fmtFecha(hoy)}`;
+    }
+    case "mes": {
+      const desde = new Date(hoy);
+      desde.setMonth(hoy.getMonth() - 1);
+      return `${fmtFecha(desde)} al ${fmtFecha(hoy)}`;
+    }
+    case "3meses": {
+      const desde = new Date(hoy);
+      desde.setMonth(hoy.getMonth() - 3);
+      return `${fmtFecha(desde)} al ${fmtFecha(hoy)}`;
+    }
+    case "6meses": {
+      const desde = new Date(hoy);
+      desde.setMonth(hoy.getMonth() - 6);
+      return `${fmtFecha(desde)} al ${fmtFecha(hoy)}`;
+    }
+    case "anio": {
+      const desde = new Date(hoy);
+      desde.setFullYear(hoy.getFullYear() - 1);
+      return `${fmtFecha(desde)} al ${fmtFecha(hoy)}`;
+    }
+    case "mesAMes": {
+      if (!form.mesDesde || !form.mesHasta) return "selecciona el mes de inicio y de fin";
+      const [y1, m1] = form.mesDesde.split("-").map(Number);
+      const [y2, m2] = form.mesHasta.split("-").map(Number);
+      const desde = new Date(y1, m1 - 1, 1);
+      const hasta = new Date(y2, m2, 0);
+      if (desde > hasta) return "el mes de inicio debe ser anterior al mes de fin";
+      return `${fmtFecha(desde)} al ${fmtFecha(hasta)}`;
+    }
+    case "personalizado": {
+      if (!form.desde || !form.hasta) return "selecciona ambas fechas";
+      const desde = new Date(`${form.desde}T00:00:00`);
+      const hasta = new Date(`${form.hasta}T00:00:00`);
+      if (desde > hasta) return "la fecha de inicio debe ser anterior a la de fin";
+      return `${fmtFecha(desde)} al ${fmtFecha(hasta)}`;
+    }
+  }
+}
+
+function ExportarListaModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [form, setForm] = useState<ExportForm>(EXPORT_FORM_INICIAL);
+  const rangoPreview = calcularRango(form);
+  const rangoIncompleto =
+    (form.modoRango === "mesAMes" && (!form.mesDesde || !form.mesHasta)) ||
+    (form.modoRango === "personalizado" && (!form.desde || !form.hasta)) ||
+    rangoPreview.startsWith("selecciona") ||
+    rangoPreview.startsWith("el mes") ||
+    rangoPreview.startsWith("la fecha");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rangoIncompleto) return;
+    const estadoLabel = ESTADO_OPTIONS.find((o) => o.value === form.estado)?.label ?? "Todos los estados";
+    const canalLabel = CANAL_OPTIONS.find((o) => o.value === form.canal)?.label ?? "Todos los canales";
+    const veterinariaLabel =
+      VETERINARIA_OPTIONS.find((o) => o.value === form.veterinaria)?.label ?? "Todas las aliadas";
+    notifySuccess(
+      `Exportando casos (${rangoPreview}) · ${estadoLabel} · ${canalLabel} · ${veterinariaLabel}...`
+    );
+    onOpenChange(false);
+    setForm(EXPORT_FORM_INICIAL);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+            <DownloadIcon className="size-5" />
+          </div>
+          <DialogTitle>Exportar Lista de Casos</DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          El listado puede ser muy grande — acota el rango de fechas y los filtros antes de generar
+          el archivo.
+        </DialogDescription>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="export-rango">Rango de Fechas</Label>
+            <Select
+              value={form.modoRango}
+              onValueChange={(v) => setForm((f) => ({ ...f, modoRango: v as RangoModo }))}
+            >
+              <SelectTrigger id="export-rango">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RANGO_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {form.modoRango === "mesAMes" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="export-mes-desde">Mes de inicio</Label>
+                <Input
+                  id="export-mes-desde"
+                  type="month"
+                  value={form.mesDesde}
+                  onChange={(e) => setForm((f) => ({ ...f, mesDesde: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="export-mes-hasta">Mes de fin</Label>
+                <Input
+                  id="export-mes-hasta"
+                  type="month"
+                  value={form.mesHasta}
+                  onChange={(e) => setForm((f) => ({ ...f, mesHasta: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {form.modoRango === "personalizado" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="export-desde">Desde</Label>
+                <Input
+                  id="export-desde"
+                  type="date"
+                  value={form.desde}
+                  onChange={(e) => setForm((f) => ({ ...f, desde: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="export-hasta">Hasta</Label>
+                <Input
+                  id="export-hasta"
+                  type="date"
+                  value={form.hasta}
+                  onChange={(e) => setForm((f) => ({ ...f, hasta: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          <p
+            className={cn(
+              "text-xs flex items-center gap-1.5",
+              rangoIncompleto ? "text-amber-600" : "text-slate-400"
+            )}
+          >
+            <CalendarIcon className="size-3.5 shrink-0" />
+            {rangoIncompleto ? `Falta definir el rango: ${rangoPreview}.` : `Se exportará: ${rangoPreview}.`}
+          </p>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="export-estado">Estado</Label>
+            <Select value={form.estado} onValueChange={(v) => setForm((f) => ({ ...f, estado: v as ExportForm["estado"] }))}>
+              <SelectTrigger id="export-estado">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTADO_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="export-canal">Canal</Label>
+            <Select value={form.canal} onValueChange={(v) => setForm((f) => ({ ...f, canal: v as ExportForm["canal"] }))}>
+              <SelectTrigger id="export-canal">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CANAL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="export-veterinaria">Veterinaria</Label>
+            <Select value={form.veterinaria} onValueChange={(v) => setForm((f) => ({ ...f, veterinaria: v }))}>
+              <SelectTrigger id="export-veterinaria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VETERINARIA_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="operational" disabled={rangoIncompleto}>
+              <DownloadIcon className="size-4" />
+              Generar Exportación
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NuevoCasoWhatsappModal({
+  open,
+  onOpenChange,
+  onInterpretado,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onInterpretado: (texto: string) => void;
+}) {
+  const [texto, setTexto] = useState("");
+  const [procesando, setProcesando] = useState(false);
+
+  const handleInterpretar = () => {
+    if (!texto.trim()) return;
+    setProcesando(true);
+    // TODO: reemplazar por la llamada real al servicio de IA que interpreta la conversación.
+    setTimeout(() => {
+      setProcesando(false);
+      onOpenChange(false);
+      const textoCapturado = texto;
+      setTexto("");
+      onInterpretado(textoCapturado);
+    }, 900);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <MessageCircleIcon className="size-5" />
+          </div>
+          <DialogTitle>Nuevo Caso desde WhatsApp</DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          Pega toda la conversación con el tutor. La IA identificará mascota, servicio, dirección y
+          demás datos para pre-llenar el formulario de registro.
+        </DialogDescription>
+
+        <div className="flex flex-col gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="whatsapp-texto">Conversación copiada de WhatsApp</Label>
+            <Textarea
+              id="whatsapp-texto"
+              rows={10}
+              placeholder={
+                'Ej: "Hola, buenas tardes. Mi perrito Max falleció hoy, es un Golden de 26kg. Vivimos en Surco, Av. Primavera 1024..."'
+              }
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+            />
+          </div>
+          <div className="flex items-start gap-1.5 px-3 py-2 rounded-lg bg-slate-50 text-xs text-slate-500">
+            <SparklesIcon className="size-3.5 text-brand-500 shrink-0 mt-0.5" />
+            <span>
+              Es un registro manual asistido: revisa y confirma los datos detectados antes de guardar
+              el caso — reduce errores de tipeo, pero no reemplaza tu verificación.
+            </span>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="operational"
+            disabled={!texto.trim() || procesando}
+            onClick={handleInterpretar}
+          >
+            {procesando ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <SparklesIcon className="size-4" />
+            )}
+            {procesando ? "Interpretando con IA..." : "Interpretar y Continuar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const ESPECIE_OPTIONS = ["Canino", "Felino", "Otro"] as const;
+const SEXO_OPTIONS = ["Macho", "Hembra"] as const;
+const MOTIVO_OPTIONS = [
+  "Eutanasia Programada",
+  "Fallecimiento Natural / Enfermedad",
+  "Accidente",
+  "Otro",
+] as const;
+const MODALIDAD_OPTIONS: { value: "domicilio" | "presencial"; label: string }[] = [
+  { value: "domicilio", label: "A Domicilio (Recojo y Entrega)" },
+  { value: "presencial", label: "Presencial (en Sede)" },
+];
+
+const DISTRITO_OPTIONS = [
+  "Ate",
+  "Barranco",
+  "Callao",
+  "Carabayllo",
+  "Cercado de Lima",
+  "Chorrillos",
+  "Comas",
+  "Independencia",
+  "Jesús María",
+  "La Molina",
+  "La Victoria",
+  "Lince",
+  "Los Olivos",
+  "Lurín",
+  "Magdalena del Mar",
+  "Miraflores",
+  "Pachacámac",
+  "Pueblo Libre",
+  "Puente Piedra",
+  "Rímac",
+  "San Borja",
+  "San Isidro",
+  "San Juan de Lurigancho",
+  "San Juan de Miraflores",
+  "San Luis",
+  "San Miguel",
+  "Surco",
+  "Ventanilla",
+  "Villa El Salvador",
+];
+
+// Evita que se tipeen letras/signos en campos numéricos (edad, peso) sin
+// bloquear teclas de navegación/edición.
+function bloquearTecladoNoNumerico(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (["e", "E", "+", "-"].includes(e.key)) {
+    e.preventDefault();
+  }
+}
+
+// Campos alineados 1:1 con las dos plantillas reales de intake por WhatsApp
+// (a domicilio / presencial) que usa el equipo — ver memoria de negocio.
+interface ManualForm {
+  mascota: string;
+  especie: (typeof ESPECIE_OPTIONS)[number];
+  raza: string;
+  edad: string;
+  peso: string;
+  sexo: (typeof SEXO_OPTIONS)[number];
+  color: string;
+  foto: File | null;
+  fechaFallecimiento: string;
+  motivo: (typeof MOTIVO_OPTIONS)[number];
+  tutor: string;
+  dni: string;
+  telefono: string;
+  distrito: string;
+  modalidad: "domicilio" | "presencial";
+  direccion: string;
+  ubicacionActual: string;
+  deseaVideo: boolean;
+  mensajeDespedida: string;
+  asistente1: string;
+  asistente2: string;
+  servicio: string;
+  costo: string;
+  centroVeterinario: string;
+  canal: "directo" | "veterinaria";
+  veterinaria: string;
+  fecha: string;
+  hora: string;
+  notas: string;
+}
+
+const MANUAL_FORM_INICIAL: ManualForm = {
+  mascota: "",
+  especie: "Canino",
+  raza: "",
+  edad: "",
+  peso: "",
+  sexo: "Macho",
+  color: "",
+  foto: null,
+  fechaFallecimiento: "",
+  motivo: "Eutanasia Programada",
+  tutor: "",
+  dni: "",
+  telefono: "",
+  distrito: "",
+  modalidad: "domicilio",
+  direccion: "",
+  ubicacionActual: "",
+  deseaVideo: false,
+  mensajeDespedida: "",
+  asistente1: "",
+  asistente2: "",
+  servicio: SERVICIO_OPTIONS[0],
+  costo: "",
+  centroVeterinario: "",
+  canal: "directo",
+  veterinaria: "petcare-sur",
+  fecha: "",
+  hora: "",
+  notas: "",
+};
+
+function SeccionForm({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-label uppercase tracking-wider text-slate-400 font-semibold pt-2 border-t border-slate-100 first:pt-0 first:border-t-0">
+      {children}
+    </p>
+  );
+}
+
+function NuevoCasoManualModal({
+  open,
+  onOpenChange,
+  textoInicial,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  textoInicial?: string;
+}) {
+  const [form, setForm] = useState<ManualForm>(MANUAL_FORM_INICIAL);
+
+  useEffect(() => {
+    if (open && textoInicial) {
+      setForm((f) => ({ ...f, notas: textoInicial }));
+    }
+  }, [open, textoInicial]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    notifySuccess(`Caso de "${form.mascota || "la mascota"}" registrado manualmente.`);
+    onOpenChange(false);
+    setForm(MANUAL_FORM_INICIAL);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+            <FilePenLineIcon className="size-5" />
+          </div>
+          <DialogTitle>Ingreso Manual de Caso</DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          Registra un caso directamente cuando no venga de una conversación de WhatsApp.
+        </DialogDescription>
+
+        {/* Un solo contenedor scrolleable (el propio DialogContent) — dos
+            columnas en pantallas medianas+ para no depender de un scroll
+            interno adicional dentro del modal. */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Columna izquierda: la mascota y su fallecimiento */}
+            <div className="flex flex-col gap-3">
+              <SeccionForm>Datos de la Mascota</SeccionForm>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-mascota">Nombre de la Mascota</Label>
+                  <Input
+                    id="manual-mascota"
+                    required
+                    value={form.mascota}
+                    onChange={(e) => setForm((f) => ({ ...f, mascota: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-especie">Especie</Label>
+                  <Select
+                    value={form.especie}
+                    onValueChange={(v) => setForm((f) => ({ ...f, especie: v as ManualForm["especie"] }))}
+                  >
+                    <SelectTrigger id="manual-especie">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ESPECIE_OPTIONS.map((e) => (
+                        <SelectItem key={e} value={e}>
+                          {e}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-raza">Raza (opcional)</Label>
+                  <Input
+                    id="manual-raza"
+                    placeholder="Ej: Golden Retriever"
+                    value={form.raza}
+                    onChange={(e) => setForm((f) => ({ ...f, raza: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-edad">Edad (años)</Label>
+                  <Input
+                    id="manual-edad"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="Ej: 8"
+                    value={form.edad}
+                    onKeyDown={bloquearTecladoNoNumerico}
+                    onChange={(e) => setForm((f) => ({ ...f, edad: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-peso">Peso (kg)</Label>
+                  <Input
+                    id="manual-peso"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    required
+                    placeholder="Ej: 26"
+                    value={form.peso}
+                    onKeyDown={bloquearTecladoNoNumerico}
+                    onChange={(e) => setForm((f) => ({ ...f, peso: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-sexo">Sexo</Label>
+                  <Select value={form.sexo} onValueChange={(v) => setForm((f) => ({ ...f, sexo: v as ManualForm["sexo"] }))}>
+                    <SelectTrigger id="manual-sexo">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEXO_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-color">Color</Label>
+                <Input
+                  id="manual-color"
+                  placeholder="Ej: Dorado"
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-foto">Foto de la Mascota (para portarretrato)</Label>
+                <Input
+                  id="manual-foto"
+                  type="file"
+                  accept="image/*"
+                  className="pt-2 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+                  onChange={(e) => setForm((f) => ({ ...f, foto: e.target.files?.[0] ?? null }))}
+                />
+                <p className="text-xs text-slate-400">
+                  {form.foto
+                    ? `Seleccionada: ${form.foto.name}`
+                    : "Puedes iniciar el servicio sin foto, pero es obligatoria antes de marcarlo como completado."}
+                </p>
+              </div>
+
+              <SeccionForm>Fallecimiento</SeccionForm>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-fecha-fallecimiento">Fecha de Fallecimiento</Label>
+                  <DatePicker
+                    id="manual-fecha-fallecimiento"
+                    value={form.fechaFallecimiento}
+                    onChange={(fechaFallecimiento) => setForm((f) => ({ ...f, fechaFallecimiento }))}
+                    maxDate={new Date()}
+                    placeholder="Elegir fecha"
+                    displayFormat="short"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-motivo">Motivo</Label>
+                  <Select value={form.motivo} onValueChange={(v) => setForm((f) => ({ ...f, motivo: v as ManualForm["motivo"] }))}>
+                    <SelectTrigger id="manual-motivo">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOTIVO_OPTIONS.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Columna derecha: tutor, contacto y modalidad del servicio */}
+            <div className="flex flex-col gap-3">
+              <SeccionForm>Tutor y Contacto</SeccionForm>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-tutor">Tutor(a) o Apellido de la Familia</Label>
+                <Input
+                  id="manual-tutor"
+                  required
+                  value={form.tutor}
+                  onChange={(e) => setForm((f) => ({ ...f, tutor: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-telefono">Celular</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 pointer-events-none">
+                      +51
+                    </span>
+                    <Input
+                      id="manual-telefono"
+                      required
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={9}
+                      className="pl-11"
+                      placeholder="9__ ___ ___"
+                      value={form.telefono}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, telefono: e.target.value.replace(/\D/g, "").slice(0, 9) }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-distrito">Distrito</Label>
+                  <Select value={form.distrito} onValueChange={(v) => setForm((f) => ({ ...f, distrito: v }))}>
+                    <SelectTrigger id="manual-distrito">
+                      <SelectValue placeholder="Seleccionar distrito" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DISTRITO_OPTIONS.map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {form.modalidad === "presencial" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-dni">DNI del Tutor</Label>
+                  <Input
+                    id="manual-dni"
+                    placeholder="8 dígitos"
+                    value={form.dni}
+                    onChange={(e) => setForm((f) => ({ ...f, dni: e.target.value }))}
+                  />
+                </div>
+              )}
+
+              <SeccionForm>Modalidad del Servicio</SeccionForm>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-modalidad">¿Recojo y Entrega a Domicilio, o Presencial en Sede?</Label>
+                <Select
+                  value={form.modalidad}
+                  onValueChange={(v) => setForm((f) => ({ ...f, modalidad: v as ManualForm["modalidad"] }))}
+                >
+                  <SelectTrigger id="manual-modalidad">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODALIDAD_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.modalidad === "domicilio" ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-direccion">Dirección Exacta</Label>
+                    <Input
+                      id="manual-direccion"
+                      required
+                      value={form.direccion}
+                      onChange={(e) => setForm((f) => ({ ...f, direccion: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-ubicacion">Ubicación Actual de la Mascota</Label>
+                    <Input
+                      id="manual-ubicacion"
+                      placeholder="Ej: En casa / En la clínica veterinaria"
+                      value={form.ubicacionActual}
+                      onChange={(e) => setForm((f) => ({ ...f, ubicacionActual: e.target.value }))}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+                    <Checkbox
+                      checked={form.deseaVideo}
+                      onCheckedChange={(checked) => setForm((f) => ({ ...f, deseaVideo: checked === true }))}
+                    />
+                    ¿Desea video del inicio de la cremación?
+                  </label>
+                  {form.deseaVideo && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="manual-mensaje">Mensaje de Despedida (para el video)</Label>
+                      <Textarea
+                        id="manual-mensaje"
+                        rows={2}
+                        placeholder="Texto que la familia desea que se lea o muestre en el video..."
+                        value={form.mensajeDespedida}
+                        onChange={(e) => setForm((f) => ({ ...f, mensajeDespedida: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-asistente1">Asistente 1</Label>
+                    <Input
+                      id="manual-asistente1"
+                      placeholder="Nombre y apellido"
+                      value={form.asistente1}
+                      onChange={(e) => setForm((f) => ({ ...f, asistente1: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-asistente2">Asistente 2 (opcional)</Label>
+                    <Input
+                      id="manual-asistente2"
+                      placeholder="Nombre y apellido"
+                      value={form.asistente2}
+                      onChange={(e) => setForm((f) => ({ ...f, asistente2: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ancho completo: servicio, agenda y observaciones */}
+          <SeccionForm>Servicio</SeccionForm>
+
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+            <div className="space-y-1.5 sm:col-span-3">
+              <Label htmlFor="manual-servicio">Servicio</Label>
+              <Select value={form.servicio} onValueChange={(v) => setForm((f) => ({ ...f, servicio: v }))}>
+                <SelectTrigger id="manual-servicio">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICIO_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-1">
+              <Label htmlFor="manual-costo">Costo (S/.)</Label>
+              <Input
+                id="manual-costo"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="420.00"
+                value={form.costo}
+                onKeyDown={bloquearTecladoNoNumerico}
+                onChange={(e) => setForm((f) => ({ ...f, costo: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="manual-centro-veterinario">Centro Médico Veterinario</Label>
+              <Input
+                id="manual-centro-veterinario"
+                placeholder="Clínica de referencia"
+                value={form.centroVeterinario}
+                onChange={(e) => setForm((f) => ({ ...f, centroVeterinario: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="manual-canal">Canal de Ingreso</Label>
+              <Select
+                value={form.canal}
+                onValueChange={(v) => setForm((f) => ({ ...f, canal: v as ManualForm["canal"] }))}
+              >
+                <SelectTrigger id="manual-canal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="directo">Directo (Tutor)</SelectItem>
+                  <SelectItem value="veterinaria">Veterinaria Aliada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.canal === "veterinaria" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-veterinaria">Veterinaria Aliada</Label>
+                <Select value={form.veterinaria} onValueChange={(v) => setForm((f) => ({ ...f, veterinaria: v }))}>
+                  <SelectTrigger id="manual-veterinaria">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VETERINARIA_OPTIONS.filter((o) => o.value !== "todas").map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <SeccionForm>Fecha Programada</SeccionForm>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="manual-fecha">Fecha del Servicio</Label>
+              <DatePicker
+                id="manual-fecha"
+                value={form.fecha}
+                onChange={(fecha) => setForm((f) => ({ ...f, fecha }))}
+                minDate={new Date()}
+                placeholder="Elegir en el calendario"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="manual-hora">Hora / Turno</Label>
+              <Input
+                id="manual-hora"
+                type="time"
+                value={form.hora}
+                onChange={(e) => setForm((f) => ({ ...f, hora: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="manual-notas">Observaciones</Label>
+            <Textarea
+              id="manual-notas"
+              rows={2}
+              placeholder="Indicaciones especiales, urna solicitada, referencias del domicilio..."
+              value={form.notas}
+              onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="operational">
+              <ClipboardPasteIcon className="size-4" />
+              Registrar Caso
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CasosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | EstadoId>("todos");
   const [filtroCanal, setFiltroCanal] = useState<(typeof CANAL_OPTIONS)[number]["value"]>("todos");
   const [filtroVeterinaria, setFiltroVeterinaria] = useState("todas");
   const [casoSeleccionadoId, setCasoSeleccionadoId] = useState<string | null>(null);
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualTextoInicial, setManualTextoInicial] = useState<string | undefined>(undefined);
+
+  const [pageSize, setPageSize] = useState(10);
+  const [pagina, setPagina] = useState(1);
 
   const casosFiltrados = useMemo(() => {
     const query = busqueda.trim().toLowerCase();
@@ -748,6 +1746,13 @@ export default function CasosPage() {
     });
   }, [busqueda, filtroEstado, filtroCanal, filtroVeterinaria]);
 
+  useEffect(() => {
+    setPagina(1);
+  }, [busqueda, filtroEstado, filtroCanal, filtroVeterinaria, pageSize]);
+
+  const totalPaginas = Math.max(1, Math.ceil(casosFiltrados.length / pageSize));
+  const casosPagina = casosFiltrados.slice((pagina - 1) * pageSize, pagina * pageSize);
+
   const limpiarFiltros = () => {
     setBusqueda("");
     setFiltroEstado("todos");
@@ -755,11 +1760,17 @@ export default function CasosPage() {
     setFiltroVeterinaria("todas");
   };
 
+  const handleInterpretadoWhatsapp = (texto: string) => {
+    notifySuccess("Datos interpretados. Revisa y confirma el formulario antes de guardar.");
+    setManualTextoInicial(texto);
+    setManualOpen(true);
+  };
+
   const casoSeleccionado = CASOS.find((c) => c.id === casoSeleccionadoId) ?? null;
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Módulos de Servicio" }, { label: "Casos & Servicios" }]} />
+      <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Casos & Servicios" }]} />
 
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -779,19 +1790,22 @@ export default function CasosPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <Button
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => notifySuccess('Exportando "Casos_Operativos_Octubre2025.xlsx"...')}
-          >
+          <Button variant="outline" className="gap-1.5" onClick={() => setExportOpen(true)}>
             <DownloadIcon className="size-4" />
             Exportar Lista
           </Button>
           <Button
-            variant="operational"
+            variant="outline"
             className="gap-1.5"
-            onClick={() => notifySuccess("Abriendo formulario de nuevo caso desde WhatsApp.")}
+            onClick={() => {
+              setManualTextoInicial(undefined);
+              setManualOpen(true);
+            }}
           >
+            <FilePenLineIcon className="size-4" />
+            Ingreso Manual
+          </Button>
+          <Button variant="operational" className="gap-1.5" onClick={() => setWhatsappOpen(true)}>
             <PlusIcon className="size-4" />
             Nuevo Caso (WhatsApp)
           </Button>
@@ -870,7 +1884,7 @@ export default function CasosPage() {
       {/* Tabla operativa */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-label font-bold uppercase tracking-wider">
                 <th className="py-3.5 px-4">Caso</th>
@@ -884,7 +1898,7 @@ export default function CasosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {casosFiltrados.map((c) => {
+              {casosPagina.map((c) => {
                 const activo = c.id === casoSeleccionadoId;
                 return (
                   <tr
@@ -898,7 +1912,7 @@ export default function CasosPage() {
                       c.atenuado && "opacity-75"
                     )}
                   >
-                    <td className={cn("py-4 px-4 font-bold", activo ? "text-brand-500" : "text-slate-800")}>
+                    <td className={cn("py-4 px-4 text-sm font-bold", activo ? "text-brand-500" : "text-slate-800")}>
                       <div className="flex items-center gap-1.5">
                         {activo && <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />}
                         <span>#{c.id}</span>
@@ -916,17 +1930,17 @@ export default function CasosPage() {
                           {c.emoji}
                         </div>
                         <div>
-                          <span className="font-bold text-slate-900 block">{c.mascota}</span>
+                          <span className="text-sm font-bold text-slate-900 block">{c.mascota}</span>
                           <span className="text-xs text-slate-400">{c.especieRaza}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="font-semibold text-slate-800 block">{c.tutor}</span>
+                      <span className="text-sm font-semibold text-slate-900 block">{c.tutor}</span>
                       <span className="text-xs text-slate-400">{c.telefono}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="font-medium text-slate-700 block">{c.servicio}</span>
+                      <span className="text-sm font-medium text-slate-700 block">{c.servicio}</span>
                       <span className="text-xs text-slate-400">{c.servicioDetalle}</span>
                     </td>
                     <td className="py-4 px-4">
@@ -956,7 +1970,7 @@ export default function CasosPage() {
                         {c.estadoLabel}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-slate-600 font-medium">{c.proximoPaso}</td>
+                    <td className="py-4 px-4 text-sm text-slate-600 font-medium">{c.proximoPaso}</td>
                     <td className="py-4 px-4 text-right">
                       <div className="inline-flex items-center gap-1">
                         {activo && (
@@ -989,7 +2003,7 @@ export default function CasosPage() {
                 );
               })}
 
-              {casosFiltrados.length === 0 && (
+              {casosPagina.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-sm text-slate-400">
                     No se encontraron casos con esos filtros.
@@ -1000,18 +2014,54 @@ export default function CasosPage() {
           </table>
         </div>
 
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-white flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Mostrando {casosFiltrados.length} de {TOTAL_CASOS_OPERATIVOS} casos operativos
-          </span>
+        <div className="px-6 py-3.5 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
+            <span>
+              Mostrando {casosPagina.length} de {casosFiltrados.length} casos filtrados
+              {casosFiltrados.length !== TOTAL_CASOS_OPERATIVOS &&
+                ` (${TOTAL_CASOS_OPERATIVOS} en total)`}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="whitespace-nowrap">Por página:</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-20 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed" disabled>
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina <= 1}
+              className={cn(
+                "px-3 py-1.5 rounded-lg border border-slate-200 transition-colors",
+                pagina <= 1
+                  ? "text-slate-300 cursor-not-allowed"
+                  : "text-slate-600 hover:bg-slate-50"
+              )}
+            >
               Anterior
             </button>
-            <span className="font-bold text-brand-500 px-2">1</span>
+            <span className="font-bold text-brand-500 px-2">
+              {pagina} / {totalPaginas}
+            </span>
             <button
-              onClick={() => notifySuccess("Cargando la siguiente página de casos...")}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina >= totalPaginas}
+              className={cn(
+                "px-3 py-1.5 rounded-lg border border-slate-200 transition-colors",
+                pagina >= totalPaginas
+                  ? "text-slate-300 cursor-not-allowed"
+                  : "text-slate-600 hover:bg-slate-50"
+              )}
             >
               Siguiente
             </button>
@@ -1022,6 +2072,18 @@ export default function CasosPage() {
       {casoSeleccionado && (
         <MesaTrabajoDrawer caso={casoSeleccionado} onClose={() => setCasoSeleccionadoId(null)} />
       )}
+
+      <ExportarListaModal open={exportOpen} onOpenChange={setExportOpen} />
+      <NuevoCasoWhatsappModal
+        open={whatsappOpen}
+        onOpenChange={setWhatsappOpen}
+        onInterpretado={handleInterpretadoWhatsapp}
+      />
+      <NuevoCasoManualModal
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        textoInicial={manualTextoInicial}
+      />
     </>
   );
 }

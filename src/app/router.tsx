@@ -9,6 +9,8 @@ import MascotasPage from "@/features/mascotas/pages/MascotasPage";
 import ClientesPage from "@/features/clientes/pages/ClientesPage";
 import VeterinariasPage from "@/features/veterinarias/pages/VeterinariasPage";
 import PlanesPage from "@/features/planes/pages/PlanesPage";
+import InventarioPage from "@/features/inventario/pages/InventarioPage";
+import UsuariosPage from "@/features/usuarios/pages/UsuariosPage";
 import CotizacionesPage from "@/features/cotizaciones/pages/CotizacionesPage";
 import ServiciosPage from "@/features/servicios/pages/ServiciosPage";
 import VehiculoPage from "@/features/vehiculos/pages/VehiculoPage";
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
           { path: "clientes", element: <ClientesPage /> },
           { path: "veterinarias", element: <VeterinariasPage /> },
           { path: "planes", element: <PlanesPage /> },
+          { path: "inventario", element: <InventarioPage /> },
+          { path: "usuarios", element: <UsuariosPage /> },
           { path: "cotizaciones", element: <CotizacionesPage /> },
           { path: "servicios", element: <ServiciosPage /> },
           { path: "vehiculos", element: <VehiculoPage /> },

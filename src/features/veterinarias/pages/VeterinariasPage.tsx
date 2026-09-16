@@ -796,7 +796,7 @@ export default function VeterinariasPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Convenios Veterinarios" }]} />
+      <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Convenios Veterinarios" }]} />
 
       {/* Encabezado */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
