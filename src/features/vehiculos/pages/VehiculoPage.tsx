@@ -58,7 +58,6 @@ const FICHA = {
 const EQUIPAMIENTO = [
   { icon: SnowflakeIcon, label: "Cámara climatizada biocustodia (12°C - 16°C)" },
   { icon: AccessibilityIcon, label: "Rampa asistida de carga suave" },
-  { icon: HeartHandshakeIcon, label: "Mantos térmicos dignos para traslado" },
 ];
 
 const SOAT = {
