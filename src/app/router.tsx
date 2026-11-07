@@ -15,6 +15,8 @@ import CotizacionesPage from "@/features/cotizaciones/pages/CotizacionesPage";
 import ServiciosPage from "@/features/servicios/pages/ServiciosPage";
 import VehiculoPage from "@/features/vehiculos/pages/VehiculoPage";
 import EntregasPage from "@/features/entregas/pages/EntregasPage";
+import FinanzasPage from "@/features/finanzas/pages/FinanzasPage";
+import ActivosPage from "@/features/activos/pages/ActivosPage";
 import ConfiguracionPage from "@/features/configuracion/pages/ConfiguracionPage";
 import SignInPage from "@/features/auth/pages/SignInPage";
 import Error404 from "@/features/error-pages/pages/Error404";
@@ -43,6 +45,8 @@ export const router = createBrowserRouter([
           { path: "servicios", element: <ServiciosPage /> },
           { path: "vehiculos", element: <VehiculoPage /> },
           { path: "entregas", element: <EntregasPage /> },
+          { path: "finanzas", element: <FinanzasPage /> },
+          { path: "activos", element: <ActivosPage /> },
           { path: "configuracion", element: <ConfiguracionPage /> },
         ],
       },

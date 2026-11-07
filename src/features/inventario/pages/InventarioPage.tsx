@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   PackageIcon,
+  PillIcon,
   BoxIcon,
   LeafIcon,
   PawPrintIcon,
@@ -27,6 +28,7 @@ import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -46,7 +48,12 @@ import { cn } from "@/lib/utils";
 import { notifySuccess } from "@/shared/utils";
 
 // TODO: reemplazar por datos reales del módulo `inventario` cuando se exponga el endpoint.
-type Categoria = "urnas-clasicas" | "urnas-ecologicas" | "recuerdos" | "suministros";
+type Categoria =
+  | "urnas-clasicas"
+  | "urnas-ecologicas"
+  | "recuerdos"
+  | "suministros"
+  | "medicamentos";
 type Nivel = "optimo" | "bajo" | "critico";
 
 interface ItemInventario {
@@ -70,6 +77,7 @@ const CATEGORIAS: { value: Categoria | "todos"; label: string }[] = [
   { value: "urnas-ecologicas", label: "Urnas Ecológicas" },
   { value: "recuerdos", label: "Recuerdos & Huellas" },
   { value: "suministros", label: "Suministros Operativos" },
+  { value: "medicamentos", label: "Medicamentos (eutanasia y atención)" },
 ];
 
 const ITEMS: ItemInventario[] = [
@@ -144,17 +152,87 @@ const ITEMS: ItemInventario[] = [
     nivel: "critico",
   },
   {
-    id: "sum-man-01",
-    sku: "SUM-MAN-01",
-    nombre: "Manto Térmico de Biocustodia Protocolar",
-    detalle: "Tejido hidrófugo hipoalergénico con precinto inviolable",
+    id: "sum-gua-01",
+    sku: "SUM-GUA-01",
+    nombre: "Guantes de nitrilo (caja x100)",
+    detalle: "Talla M, uso en recojos y atención",
     categoria: "suministros",
     categoriaLabel: "Suministro",
-    icon: ShieldIcon,
+    icon: PackageIcon,
     iconBg: "bg-slate-100",
     iconColor: "text-slate-600",
-    stock: 40,
-    minimo: 15,
+    stock: 12,
+    minimo: 5,
+    nivel: "optimo",
+  },
+  {
+    id: "sum-agu-02",
+    sku: "SUM-AGU-02",
+    nombre: "Agujas hipodérmicas 21G (caja x100)",
+    detalle: "Uso veterinario, descartables",
+    categoria: "suministros",
+    categoriaLabel: "Suministro",
+    icon: PackageIcon,
+    iconBg: "bg-slate-100",
+    iconColor: "text-slate-600",
+    stock: 4,
+    minimo: 5,
+    nivel: "bajo",
+  },
+  {
+    id: "sum-pan-03",
+    sku: "SUM-PAN-03",
+    nombre: "Pañales absorbentes para mascotas (paquete x30)",
+    detalle: "Talla mediana y grande",
+    categoria: "suministros",
+    categoriaLabel: "Suministro",
+    icon: PackageIcon,
+    iconBg: "bg-slate-100",
+    iconColor: "text-slate-600",
+    stock: 3,
+    minimo: 4,
+    nivel: "bajo",
+  },
+  {
+    id: "med-eut-01",
+    sku: "MED-EUT-01",
+    nombre: "Pentobarbital sódico 20 ml",
+    detalle: "Solución para eutanasia · uso controlado, registrar cada salida",
+    categoria: "medicamentos",
+    categoriaLabel: "Medicamentos",
+    icon: PillIcon,
+    iconBg: "bg-rose-50",
+    iconColor: "text-rose-600",
+    stock: 6,
+    minimo: 4,
+    nivel: "optimo",
+  },
+  {
+    id: "med-lid-02",
+    sku: "MED-LID-02",
+    nombre: "Lidocaína 2% 20 ml",
+    detalle: "Anestésico local para procedimientos de atención",
+    categoria: "medicamentos",
+    categoriaLabel: "Medicamentos",
+    icon: PillIcon,
+    iconBg: "bg-rose-50",
+    iconColor: "text-rose-600",
+    stock: 2,
+    minimo: 4,
+    nivel: "critico",
+  },
+  {
+    id: "med-sed-03",
+    sku: "MED-SED-03",
+    nombre: "Sedante inyectable 10 ml",
+    detalle: "Premedicación para atención veterinaria y traslados",
+    categoria: "medicamentos",
+    categoriaLabel: "Medicamentos",
+    icon: PillIcon,
+    iconBg: "bg-rose-50",
+    iconColor: "text-rose-600",
+    stock: 5,
+    minimo: 3,
     nivel: "optimo",
   },
   {
@@ -199,14 +277,265 @@ function pctStock(stock: number, minimo: number) {
   return Math.max(6, Math.min(100, Math.round((stock / meta) * 100)));
 }
 
-const TOTAL_CATALOGO = 28;
-const STOCK_CRITICO = ITEMS.filter((i) => i.nivel === "critico").length;
-const URNAS_DISPONIBLES = ITEMS.filter((i) => i.categoria === "urnas-clasicas" || i.categoria === "urnas-ecologicas").reduce(
-  (acc, i) => acc + i.stock,
-  0
-);
-const KITS_RECUERDO = ITEMS.filter((i) => i.categoria === "recuerdos").reduce((acc, i) => acc + i.stock, 0);
+// Indicadores calculados a partir del catálogo actual (se actualizan al editar).
+function calcularResumen(items: ItemInventario[]) {
+  const urnas = items.filter(
+    (i) => i.categoria === "urnas-clasicas" || i.categoria === "urnas-ecologicas"
+  );
+  const recuerdos = items.filter((i) => i.categoria === "recuerdos");
+  return {
+    critico: items.filter((i) => i.nivel === "critico").length,
+    urnasDisponibles: urnas.reduce((acc, i) => acc + i.stock, 0),
+    kitsRecuerdo: recuerdos.reduce((acc, i) => acc + i.stock, 0),
+  };
+}
 const VALORIZACION = "S/ 28,450.00";
+
+const CATEGORIA_META: Record<
+  Categoria,
+  { label: string; icon: React.ComponentType<{ className?: string }>; iconBg: string; iconColor: string }
+> = {
+  "urnas-clasicas": { label: "Urnas Clásicas", icon: BoxIcon, iconBg: "bg-slate-100", iconColor: "text-slate-600" },
+  "urnas-ecologicas": { label: "Urnas Ecológicas", icon: LeafIcon, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
+  recuerdos: { label: "Recuerdos", icon: PawPrintIcon, iconBg: "bg-brand-50", iconColor: "text-brand-500" },
+  suministros: { label: "Suministro", icon: ShieldIcon, iconBg: "bg-slate-100", iconColor: "text-slate-600" },
+  medicamentos: { label: "Medicamentos", icon: PillIcon, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+};
+
+// Mismo criterio que los datos de ejemplo: <= mitad del mínimo es crítico, bajo del mínimo es bajo.
+function calcularNivel(stock: number, minimo: number): Nivel {
+  if (stock <= minimo / 2) return "critico";
+  if (stock < minimo) return "bajo";
+  return "optimo";
+}
+
+interface ElementoFormValues {
+  nombre: string;
+  sku: string;
+  detalle: string;
+  categoria: Categoria;
+  stock: number;
+  minimo: number;
+}
+
+function ElementoInventarioModal({
+  open,
+  item,
+  skusOcupados,
+  onOpenChange,
+  onGuardar,
+}: {
+  open: boolean;
+  /** Elemento a editar; null para crear uno nuevo. */
+  item: ItemInventario | null;
+  /** SKUs de los demás elementos, para evitar duplicados. */
+  skusOcupados: string[];
+  onOpenChange: (open: boolean) => void;
+  onGuardar: (valores: ElementoFormValues, id?: string) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        {/* Radix desmonta el contenido al cerrar: el formulario se reinicia solo. */}
+        <ElementoForm
+          item={item}
+          skusOcupados={skusOcupados}
+          onCancel={() => onOpenChange(false)}
+          onGuardar={(valores) => {
+            onGuardar(valores, item?.id);
+            onOpenChange(false);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ElementoForm({
+  item,
+  skusOcupados,
+  onCancel,
+  onGuardar,
+}: {
+  item: ItemInventario | null;
+  skusOcupados: string[];
+  onCancel: () => void;
+  onGuardar: (valores: ElementoFormValues) => void;
+}) {
+  const esEdicion = item !== null;
+  const [nombre, setNombre] = useState(item?.nombre ?? "");
+  const [sku, setSku] = useState(item?.sku ?? "");
+  const [detalle, setDetalle] = useState(item?.detalle ?? "");
+  const [categoria, setCategoria] = useState<Categoria | "">(item?.categoria ?? "");
+  const [stock, setStock] = useState(item ? String(item.stock) : "0");
+  const [minimo, setMinimo] = useState(item ? String(item.minimo) : "0");
+  const [error, setError] = useState<string | null>(null);
+
+  const stockNum = Number(stock);
+  const minimoNum = Number(minimo);
+  const meta = categoria ? CATEGORIA_META[categoria] : null;
+  const PreviewIcon = meta?.icon ?? PackageIcon;
+  const nivelPreview =
+    Number.isInteger(stockNum) && Number.isInteger(minimoNum) && stockNum >= 0 && minimoNum >= 0
+      ? calcularNivel(stockNum, minimoNum)
+      : null;
+
+  const handleGuardar = () => {
+    const skuLimpio = sku.trim().toUpperCase();
+    if (!nombre.trim()) return setError("El nombre es obligatorio.");
+    if (!skuLimpio) return setError("El SKU es obligatorio.");
+    if (skusOcupados.includes(skuLimpio)) return setError(`El SKU ${skuLimpio} ya existe en el catálogo.`);
+    if (!categoria) return setError("Elige una categoría.");
+    if (!Number.isInteger(stockNum) || stockNum < 0) {
+      return setError("El stock debe ser un número entero, 0 o mayor.");
+    }
+    if (!Number.isInteger(minimoNum) || minimoNum < 0) {
+      return setError("El stock mínimo debe ser un número entero, 0 o mayor.");
+    }
+    onGuardar({
+      nombre: nombre.trim(),
+      sku: skuLimpio,
+      detalle: detalle.trim(),
+      categoria,
+      stock: stockNum,
+      minimo: minimoNum,
+    });
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+          <PackageIcon className="size-5" />
+        </div>
+        <DialogTitle>{esEdicion ? "Editar Elemento" : "Nuevo Elemento de Catálogo"}</DialogTitle>
+      </DialogHeader>
+      <DialogDescription>
+        {esEdicion
+          ? "Revisa los datos antes de guardar los cambios en el catálogo."
+          : "Completa los datos del nuevo elemento. Revisa la vista previa antes de crearlo."}
+      </DialogDescription>
+
+      <div className="flex flex-col gap-4">
+        {/* Vista previa para verificar los datos */}
+        <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-3">
+          <div
+            className={cn(
+              "w-11 h-11 rounded-lg flex items-center justify-center shrink-0",
+              meta?.iconBg ?? "bg-slate-100",
+              meta?.iconColor ?? "text-slate-400"
+            )}
+          >
+            <PreviewIcon className="size-5" />
+          </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-semibold text-slate-900 truncate">
+              {nombre.trim() || "Nombre del elemento"}
+            </span>
+            <span className="text-xs text-slate-500">
+              {sku.trim().toUpperCase() || "SIN SKU"} · {meta?.label ?? "Sin categoría"}
+            </span>
+          </div>
+          {nivelPreview && (
+            <span
+              className={cn(
+                "px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap",
+                NIVEL_META[nivelPreview].badgeClass
+              )}
+            >
+              {NIVEL_META[nivelPreview].label}
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="inv-nombre">Nombre</Label>
+          <Input
+            id="inv-nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Urna de Roble Natural Artesanal"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="inv-sku">SKU</Label>
+            <Input
+              id="inv-sku"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="URN-ROB-01"
+              className="uppercase"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="inv-categoria">Categoría</Label>
+            <Select value={categoria} onValueChange={(v) => setCategoria(v as Categoria)}>
+              <SelectTrigger id="inv-categoria" className="w-full">
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(CATEGORIA_META) as Categoria[]).map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORIA_META[c].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="inv-detalle">Detalle</Label>
+          <Textarea
+            id="inv-detalle"
+            value={detalle}
+            onChange={(e) => setDetalle(e.target.value)}
+            placeholder="Acabado, capacidad, materiales..."
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="inv-stock">Stock actual (unidades)</Label>
+            <Input
+              id="inv-stock"
+              type="number"
+              min={0}
+              step={1}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="inv-minimo">Stock mínimo</Label>
+            <Input
+              id="inv-minimo"
+              type="number"
+              min={0}
+              step={1}
+              value={minimo}
+              onChange={(e) => setMinimo(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="button" variant="operational" onClick={handleGuardar}>
+          <CheckCircle2Icon className="size-4" />
+          {esEdicion ? "Guardar cambios" : "Crear elemento"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
 
 const TIPOS_MOVIMIENTO = [
   { value: "ingreso", label: "Ingreso por Compra", icon: TruckIcon },
@@ -371,20 +700,45 @@ export default function InventarioPage() {
   const [categoria, setCategoria] = useState<Categoria | "todos">("todos");
   const [nivelFiltro, setNivelFiltro] = useState<Nivel | "todos">("todos");
   const [itemEnMovimiento, setItemEnMovimiento] = useState<ItemInventario | null>(null);
+  const [items, setItems] = useState<ItemInventario[]>(ITEMS);
+  const [elementoDialog, setElementoDialog] = useState<{
+    open: boolean;
+    item: ItemInventario | null;
+  }>({ open: false, item: null });
+  const resumen = useMemo(() => calcularResumen(items), [items]);
 
   const itemsFiltrados = useMemo(() => {
     const query = busqueda.trim().toLowerCase();
-    return ITEMS.filter((i) => {
+    return items.filter((i) => {
       const coincideTexto =
         !query || i.nombre.toLowerCase().includes(query) || i.sku.toLowerCase().includes(query);
       const coincideCategoria = categoria === "todos" || i.categoria === categoria;
       const coincideNivel = nivelFiltro === "todos" || i.nivel === nivelFiltro;
       return coincideTexto && coincideCategoria && coincideNivel;
     });
-  }, [busqueda, categoria, nivelFiltro]);
+  }, [items, busqueda, categoria, nivelFiltro]);
 
   const handleConfirmarMovimiento = (item: ItemInventario, cantidad: number) => {
     notifySuccess(`Movimiento de ${cantidad} unidades registrado para ${item.nombre}.`);
+  };
+
+  const handleGuardarElemento = (valores: ElementoFormValues, id?: string) => {
+    const meta = CATEGORIA_META[valores.categoria];
+    const datos = {
+      ...valores,
+      categoriaLabel: meta.label,
+      icon: meta.icon,
+      iconBg: meta.iconBg,
+      iconColor: meta.iconColor,
+      nivel: calcularNivel(valores.stock, valores.minimo),
+    };
+    if (id) {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...datos } : i)));
+      notifySuccess(`Elemento "${valores.nombre}" actualizado.`);
+    } else {
+      setItems((prev) => [...prev, { ...datos, id: `el-${Date.now()}` }]);
+      notifySuccess(`Elemento "${valores.nombre}" agregado al catálogo.`);
+    }
   };
 
   return (
@@ -419,7 +773,7 @@ export default function InventarioPage() {
           <Button
             variant="operational"
             className="gap-1.5 h-10"
-            onClick={() => notifySuccess("Abriendo formulario de nuevo elemento de catálogo.")}
+            onClick={() => setElementoDialog({ open: true, item: null })}
           >
             <PlusCircleIcon className="size-4" />
             Nuevo Elemento
@@ -436,7 +790,7 @@ export default function InventarioPage() {
                 Stock Crítico / Por Agotar
               </span>
               <span className="text-2xl font-bold text-red-600 mt-1">
-                {STOCK_CRITICO} <span className="text-sm font-normal text-slate-500">ítems</span>
+                {resumen.critico} <span className="text-sm font-normal text-slate-500">ítems</span>
               </span>
             </div>
             <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
@@ -457,7 +811,7 @@ export default function InventarioPage() {
                 Urnas Disponibles
               </span>
               <span className="text-2xl font-bold text-slate-900 mt-1">
-                {URNAS_DISPONIBLES} <span className="text-sm font-normal text-slate-500">uds</span>
+                {resumen.urnasDisponibles} <span className="text-sm font-normal text-slate-500">uds</span>
               </span>
             </div>
             <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
@@ -477,7 +831,7 @@ export default function InventarioPage() {
                 Kits de Recuerdos
               </span>
               <span className="text-2xl font-bold text-slate-900 mt-1">
-                {KITS_RECUERDO} <span className="text-sm font-normal text-slate-500">uds</span>
+                {resumen.kitsRecuerdo} <span className="text-sm font-normal text-slate-500">uds</span>
               </span>
             </div>
             <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 shrink-0">
@@ -508,7 +862,7 @@ export default function InventarioPage() {
             >
               {c.label}
               {c.value === "todos" && (
-                <span className="ml-1 opacity-80">({ITEMS.length})</span>
+                <span className="ml-1 opacity-80">({items.length})</span>
               )}
             </button>
           ))}
@@ -633,7 +987,7 @@ export default function InventarioPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => notifySuccess(`Abriendo edición de ${item.nombre}.`)}
+                          onClick={() => setElementoDialog({ open: true, item })}
                         >
                           <PencilIcon className="size-3.5" />
                           Editar
@@ -658,7 +1012,7 @@ export default function InventarioPage() {
         <div className="p-4 bg-slate-50 flex items-center justify-between">
           <span className="text-xs text-slate-500">
             Mostrando <strong className="text-slate-900">{itemsFiltrados.length}</strong> de{" "}
-            <strong className="text-slate-900">{TOTAL_CATALOGO}</strong> elementos de catálogo
+            <strong className="text-slate-900">{items.length}</strong> elementos de catálogo
           </span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon-sm" disabled>
@@ -684,6 +1038,14 @@ export default function InventarioPage() {
         item={itemEnMovimiento}
         onOpenChange={(open) => !open && setItemEnMovimiento(null)}
         onConfirmar={handleConfirmarMovimiento}
+      />
+
+      <ElementoInventarioModal
+        open={elementoDialog.open}
+        item={elementoDialog.item}
+        skusOcupados={items.filter((i) => i.id !== elementoDialog.item?.id).map((i) => i.sku)}
+        onOpenChange={(open) => setElementoDialog((prev) => ({ ...prev, open }))}
+        onGuardar={handleGuardarElemento}
       />
     </>
   );

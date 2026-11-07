@@ -14,6 +14,8 @@ import {
   PackageIcon,
   UsersIcon,
   SettingsIcon,
+  WalletIcon,
+  WrenchIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -35,10 +37,16 @@ const ATENCION_VETERINARIA_ITEMS = [
   { label: "Mascotas", icon: PawPrintIcon, to: "/mascotas" },
 ];
 
+// Finanzas: ingresos (desde servicios realizados) y gastos fijos mensuales.
+const FINANZAS_ITEMS = [
+  { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas" },
+];
+
 const CATALOGO_ITEMS = [
   { label: "Servicios", icon: ClipboardListIcon, to: "/servicios" },
   { label: "Planes", icon: LayersIcon, to: "/planes" },
   { label: "Inventario", icon: PackageIcon, to: "/inventario" },
+  { label: "Activos", icon: WrenchIcon, to: "/activos" },
   { label: "Vehículo", icon: CarIcon, to: "/vehiculos" },
   { label: "Usuarios", icon: UsersIcon, to: "/usuarios" },
 ];
@@ -143,6 +151,15 @@ export function AppSidebar() {
           </p>
         </div>
         {ATENCION_VETERINARIA_ITEMS.map((item) => (
+          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
+        ))}
+
+        <div className="pt-4 pb-1">
+          <p className="px-3 text-label font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Finanzas
+          </p>
+        </div>
+        {FINANZAS_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
         ))}
 
