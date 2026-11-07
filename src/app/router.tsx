@@ -17,6 +17,7 @@ import VehiculoPage from "@/features/vehiculos/pages/VehiculoPage";
 import EntregasPage from "@/features/entregas/pages/EntregasPage";
 import FinanzasPage from "@/features/finanzas/pages/FinanzasPage";
 import ActivosPage from "@/features/activos/pages/ActivosPage";
+import ReportesPage from "@/features/reportes/pages/ReportesPage";
 import ConfiguracionPage from "@/features/configuracion/pages/ConfiguracionPage";
 import SignInPage from "@/features/auth/pages/SignInPage";
 import Error404 from "@/features/error-pages/pages/Error404";
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
           { path: "entregas", element: <EntregasPage /> },
           { path: "finanzas", element: <FinanzasPage /> },
           { path: "activos", element: <ActivosPage /> },
+          { path: "reportes", element: <ReportesPage /> },
           { path: "configuracion", element: <ConfiguracionPage /> },
         ],
       },

@@ -16,6 +16,7 @@ import {
   SettingsIcon,
   WalletIcon,
   WrenchIcon,
+  ChartColumnIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -35,6 +36,11 @@ const DESPEDIDAS_ITEMS = [
 const ATENCION_VETERINARIA_ITEMS = [
   { label: "Clientes", icon: Building2Icon, to: "/clientes" },
   { label: "Mascotas", icon: PawPrintIcon, to: "/mascotas" },
+];
+
+// Reportes de revisión de la empresa (cada 3 o 6 meses).
+const REPORTES_ITEMS = [
+  { label: "Reportes", icon: ChartColumnIcon, to: "/reportes" },
 ];
 
 // Finanzas: ingresos (desde servicios realizados) y gastos fijos mensuales.
@@ -160,6 +166,15 @@ export function AppSidebar() {
           </p>
         </div>
         {FINANZAS_ITEMS.map((item) => (
+          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
+        ))}
+
+        <div className="pt-4 pb-1">
+          <p className="px-3 text-label font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Reportes
+          </p>
+        </div>
+        {REPORTES_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
         ))}
 

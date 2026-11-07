@@ -19,3 +19,4 @@ repo del backend (`docs/FRONTEND_SPEC.md` y `docs/specs/`).
 | [inventario.md](./inventario.md) | Implementada (datos de ejemplo) | `/inventario` |
 | [activos.md](./activos.md) | Implementada (datos de ejemplo) | `/activos` |
 | [vehiculo.md](./vehiculo.md) | Implementada (datos de ejemplo) | `/vehiculos` |
+| [reportes.md](./reportes.md) | Aprobada, implementada con datos de ejemplo | `/reportes` |

@@ -1,0 +1,30 @@
+/* Colores de los gráficos. Valores de la paleta validada (skill dataviz, palette.md).
+   Los roles se usan por nombre en los componentes; el modo oscuro cambia solo estas variables. */
+
+.reportes-root {
+  color-scheme: light;
+  --serie-1: #2a78d6; /* año actual / período */
+  --serie-2: #eb6834; /* año anterior */
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --baseline: #c3c2b7;
+  --grid: #e1e0d9;
+  --up: #006300;
+  --down: #d03b3b;
+}
+
+.dark .reportes-root {
+  color-scheme: dark;
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --baseline: #383835;
+  --grid: #2c2c2a;
+  --up: #0ca30c;
+  --down: #e66767;
+}
