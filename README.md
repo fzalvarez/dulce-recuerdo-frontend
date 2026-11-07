@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# dulce-recuerdo-frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Panel de administración de Dulce Recuerdo: casos, agenda, inventario, activos,
+vehículo, finanzas y catálogos. Hoy usa datos de ejemplo en memoria y se conectará
+a la API de `dulce-recuerdo-backend`.
 
-Currently, two official plugins are available:
+## Puesta en marcha
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install
+cp .env.example .env   # VITE_URL_CONEXION apunta a la API local
+pnpm dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Documentación
+
+- [`CLAUDE.md`](CLAUDE.md): guía para IA y colaboradores (comandos, convenciones, reglas).
+- [`docs/ESTADO.md`](docs/ESTADO.md): estado de cada pantalla.
+- [`docs/specs/`](docs/specs/): especificaciones de las features (Spec-Driven Development).
+- [`references/`](references/README.md): mockups de diseño.
+
+## Estructura
+
+```
+src/
+├── app/              router y layouts
+├── components/ui/    componentes base (shadcn/Radix)
+├── features/         un directorio por módulo (ver CLAUDE.md)
+├── shared/           sidebar, encabezados, stores globales y utilidades
+└── lib/              utilidades (cn)
+```
