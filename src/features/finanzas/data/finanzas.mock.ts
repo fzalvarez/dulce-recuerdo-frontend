@@ -38,6 +38,40 @@ export const GASTOS_VARIABLES_EJEMPLO: GastoVariable[] = [
     concepto: "Gasolina furgoneta (recojos)",
     monto: 110,
   },
+  // Cargas de combustible registradas desde el módulo Vehículo (bitácora).
+  {
+    id: "veh-comb-1",
+    fecha: "2025-10-24",
+    categoria: "Combustible",
+    concepto: "Gasolina 95 · 10.5 gal",
+    monto: 185,
+    origen: "vehiculo",
+    proveedor: "Grifo Primax (Av. Benavides)",
+    kilometraje: 48120,
+    galones: 10.5,
+  },
+  {
+    id: "veh-comb-2",
+    fecha: "2025-10-18",
+    categoria: "Combustible",
+    concepto: "Gasolina 95 · 11.0 gal",
+    monto: 192.5,
+    origen: "vehiculo",
+    proveedor: "Grifo Repsol (Surco)",
+    kilometraje: 47680,
+    galones: 11,
+  },
+  {
+    id: "veh-comb-3",
+    fecha: "2025-10-10",
+    categoria: "Combustible",
+    concepto: "Gasolina 95 · 9.8 gal",
+    monto: 171.5,
+    origen: "vehiculo",
+    proveedor: "Grifo Primax (San Isidro)",
+    kilometraje: 47250,
+    galones: 9.8,
+  },
 ];
 
 // TODO: reemplazar los montos de ejemplo por los valores reales de la empresa.

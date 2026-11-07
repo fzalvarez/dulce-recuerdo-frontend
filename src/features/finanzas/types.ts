@@ -15,6 +15,8 @@ export interface GastoFijo {
 export const CATEGORIAS_GASTO_VARIABLE = [
   "Combustible",
   "Mantenimiento del auto",
+  "Peajes y estacionamiento",
+  "Lavado y desinfección",
   "Compra de urnas",
   "Compras varias",
   "Reparaciones",
@@ -35,6 +37,14 @@ export interface GastoVariable {
   concepto: string;
   monto: number;
   observaciones?: string;
+  /** "vehiculo" = registrado desde el módulo Vehículo (combustible, mantenimiento, etc.). */
+  origen?: "manual" | "vehiculo";
+  /** Establecimiento o taller donde se hizo el gasto. */
+  proveedor?: string;
+  /** Solo gastos de vehículo: odómetro al momento del registro. */
+  kilometraje?: number;
+  /** Solo gastos de vehículo con combustible: galones cargados. */
+  galones?: number;
 }
 
 /**

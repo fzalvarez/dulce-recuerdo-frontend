@@ -267,8 +267,12 @@ export default function FinanzasPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="secondary">{g.categoria}</Badge>
+                      {g.origen === "vehiculo" && <Badge variant="outline">Vehículo</Badge>}
                       <p className="text-sm font-medium text-slate-800 truncate">{g.concepto}</p>
                     </div>
+                    {g.proveedor && (
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">{g.proveedor}</p>
+                    )}
                     {g.observaciones && (
                       <p className="text-xs text-slate-400 mt-0.5 truncate">{g.observaciones}</p>
                     )}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   TruckIcon,
   ShieldCheckIcon,
@@ -41,7 +41,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { notifySuccess } from "@/shared/utils";
+import { useFinanzasStore } from "@/features/finanzas/store/finanzas.store";
+import type { CategoriaGastoVariable, GastoVariable } from "@/features/finanzas/types";
+import { formatFechaLarga, formatSoles, hoyISO } from "@/features/finanzas/utils/periodo";
 
 // TODO: reemplazar por datos reales del módulo `vehiculos` cuando se exponga el endpoint.
 const FICHA = {
@@ -95,11 +99,6 @@ const COMBUSTIBLE = {
   gastoPromedioMensual: "S/ 680.00 PEN",
 };
 
-const REGISTROS_COMBUSTIBLE = [
-  { fecha: "24 Octubre 2025", hora: "08:45 AM", estacion: "Grifo Primax (Av. Benavides)", tipo: "Gasolina 95", cantidad: "10.5 gal", km: "48,120 km", monto: "S/ 185.00" },
-  { fecha: "18 Octubre 2025", hora: "05:15 PM", estacion: "Grifo Repsol (Surco)", tipo: "Gasolina 95", cantidad: "11.0 gal", km: "47,680 km", monto: "S/ 192.50" },
-  { fecha: "10 Octubre 2025", hora: "09:30 AM", estacion: "Grifo Primax (San Isidro)", tipo: "Gasolina 95", cantidad: "9.8 gal", km: "47,250 km", monto: "S/ 171.50" },
-];
 
 function SectionCard({
   icon: Icon,
@@ -138,141 +137,268 @@ function SectionCard({
   );
 }
 
+type TipoRegistro =
+  | "combustible"
+  | "mantenimiento-programado"
+  | "mantenimiento-correctivo"
+  | "lavado"
+  | "peajes";
+
+// Cada tipo de registro se guarda en Gastos con su categoría correspondiente.
+const TIPOS_REGISTRO: Record<
+  TipoRegistro,
+  { label: string; categoria: CategoriaGastoVariable; concepto: string }
+> = {
+  combustible: {
+    label: "Combustible (Gasolina 95)",
+    categoria: "Combustible",
+    concepto: "Gasolina 95",
+  },
+  "mantenimiento-programado": {
+    label: "Mantenimiento Preventivo Programado",
+    categoria: "Mantenimiento del auto",
+    concepto: "Mantenimiento preventivo programado",
+  },
+  "mantenimiento-correctivo": {
+    label: "Mantenimiento Correctivo / Imprevisto",
+    categoria: "Mantenimiento del auto",
+    concepto: "Mantenimiento correctivo / imprevisto",
+  },
+  lavado: {
+    label: "Lavado y Desinfección Biocida",
+    categoria: "Lavado y desinfección",
+    concepto: "Lavado y desinfección biocida",
+  },
+  peajes: {
+    label: "Peajes y Estacionamientos",
+    categoria: "Peajes y estacionamiento",
+    concepto: "Peajes y estacionamiento",
+  },
+};
+
+type RegistroData = Omit<GastoVariable, "id">;
+
 interface RegistroForm {
-  tipo: string;
+  tipo: TipoRegistro;
+  fecha: string;
   kilometraje: string;
+  galones: string;
   monto: string;
   proveedor: string;
   notas: string;
 }
 
-const REGISTRO_INICIAL: RegistroForm = {
-  tipo: "combustible",
-  kilometraje: String(48250),
-  monto: "",
-  proveedor: "",
-  notas: "",
-};
+function registroInicial(): RegistroForm {
+  return {
+    tipo: "combustible",
+    fecha: hoyISO(),
+    kilometraje: "",
+    galones: "",
+    monto: "",
+    proveedor: "",
+    notas: "",
+  };
+}
 
 function RegistroModal({
   open,
   onOpenChange,
-  onGuardado,
+  onGuardar,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGuardado: () => void;
+  onGuardar: (data: RegistroData) => void;
 }) {
-  const [form, setForm] = useState<RegistroForm>(REGISTRO_INICIAL);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onOpenChange(false);
-    setForm(REGISTRO_INICIAL);
-    onGuardado();
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <div className="w-8 h-8 rounded-lg bg-operational/10 text-operational flex items-center justify-center shrink-0">
-            <PlusCircleIcon className="size-5" />
-          </div>
-          <DialogTitle>Registrar Evento de {FICHA.codigoMovil}</DialogTitle>
-        </DialogHeader>
-        <DialogDescription>
-          Ingresa el comprobante o servicio para actualizar el odómetro y el balance operativo.
-        </DialogDescription>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="tipo-registro">Tipo de Registro</Label>
-            <Select
-              value={form.tipo}
-              onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}
-            >
-              <SelectTrigger id="tipo-registro">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="combustible">Combustible (Gasolina 95)</SelectItem>
-                <SelectItem value="mantenimiento-programado">Mantenimiento Preventivo Programado</SelectItem>
-                <SelectItem value="mantenimiento-correctivo">Mantenimiento Correctivo / Imprevisto</SelectItem>
-                <SelectItem value="lavado">Lavado y Desinfección Biocida</SelectItem>
-                <SelectItem value="peajes">Peajes y Estacionamientos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="km-actual">Kilometraje Actual</Label>
-              <Input
-                id="km-actual"
-                type="number"
-                placeholder="Ej: 48250"
-                required
-                value={form.kilometraje}
-                onChange={(e) => setForm((f) => ({ ...f, kilometraje: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="monto-total">Monto Total (S/.)</Label>
-              <Input
-                id="monto-total"
-                type="number"
-                step="0.5"
-                placeholder="0.00"
-                required
-                value={form.monto}
-                onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="proveedor">Establecimiento / Taller / Proveedor</Label>
-            <Input
-              id="proveedor"
-              placeholder="Ej: Primax Benavides o Taller San Borja"
-              required
-              value={form.proveedor}
-              onChange={(e) => setForm((f) => ({ ...f, proveedor: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="notas">Notas u Observaciones</Label>
-            <Textarea
-              id="notas"
-              rows={2}
-              placeholder="Detalles adicionales del comprobante o estado del móvil..."
-              value={form.notas}
-              onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="operational">
-              Guardar en Bitácora
-            </Button>
-          </DialogFooter>
-        </form>
+      <DialogContent className="sm:max-w-lg">
+        {/* Radix desmonta el contenido al cerrar: el formulario se reinicia solo. */}
+        <RegistroFormulario
+          onCancel={() => onOpenChange(false)}
+          onGuardar={(data) => {
+            onGuardar(data);
+            onOpenChange(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
+function RegistroFormulario({
+  onCancel,
+  onGuardar,
+}: {
+  onCancel: () => void;
+  onGuardar: (data: RegistroData) => void;
+}) {
+  const [form, setForm] = useState<RegistroForm>(registroInicial);
+  const [error, setError] = useState<string | null>(null);
+  const esCombustible = form.tipo === "combustible";
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const monto = Number(form.monto);
+    const km = Number(form.kilometraje);
+    const galones = Number(form.galones);
+    const meta = TIPOS_REGISTRO[form.tipo];
+
+    if (!form.fecha) return setError("Indica la fecha del registro.");
+    if (!Number.isFinite(km) || km <= 0) return setError("Ingresa el kilometraje actual.");
+    if (esCombustible && (!Number.isFinite(galones) || galones <= 0)) {
+      return setError("Ingresa los galones cargados.");
+    }
+    if (!Number.isFinite(monto) || monto <= 0) return setError("El monto debe ser mayor a 0.");
+    if (!form.proveedor.trim()) return setError("Indica el establecimiento o taller.");
+
+    onGuardar({
+      fecha: form.fecha,
+      categoria: meta.categoria,
+      concepto: esCombustible ? `${meta.concepto} · ${galones} gal` : meta.concepto,
+      monto,
+      origen: "vehiculo",
+      proveedor: form.proveedor.trim(),
+      kilometraje: km,
+      galones: esCombustible ? galones : undefined,
+      observaciones: form.notas.trim() || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <DialogHeader>
+        <div className="w-8 h-8 rounded-lg bg-operational/10 text-operational flex items-center justify-center shrink-0">
+          <PlusCircleIcon className="size-5" />
+        </div>
+        <DialogTitle>Registrar Evento de {FICHA.codigoMovil}</DialogTitle>
+      </DialogHeader>
+      <DialogDescription>
+        Se guarda en la bitácora del vehículo y también en Gastos, dentro de Finanzas.
+      </DialogDescription>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="tipo-registro">Tipo de Registro</Label>
+        <Select
+          value={form.tipo}
+          onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as TipoRegistro }))}
+        >
+          <SelectTrigger id="tipo-registro">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(TIPOS_REGISTRO) as TipoRegistro[]).map((t) => (
+              <SelectItem key={t} value={t}>
+                {TIPOS_REGISTRO[t].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="fecha-registro">Fecha</Label>
+          <DatePicker
+            id="fecha-registro"
+            value={form.fecha}
+            onChange={(v) => setForm((f) => ({ ...f, fecha: v }))}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="km-actual">Kilometraje Actual</Label>
+          <Input
+            id="km-actual"
+            type="number"
+            min={0}
+            placeholder="Ej: 48250"
+            value={form.kilometraje}
+            onChange={(e) => setForm((f) => ({ ...f, kilometraje: e.target.value }))}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {esCombustible && (
+          <div className="space-y-1.5">
+            <Label htmlFor="galones">Galones cargados</Label>
+            <Input
+              id="galones"
+              type="number"
+              min={0}
+              step="0.1"
+              placeholder="Ej: 10.5"
+              value={form.galones}
+              onChange={(e) => setForm((f) => ({ ...f, galones: e.target.value }))}
+            />
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="monto-total">Monto Total (S/.)</Label>
+          <Input
+            id="monto-total"
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="0.00"
+            value={form.monto}
+            onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="proveedor">Establecimiento / Taller / Proveedor</Label>
+        <Input
+          id="proveedor"
+          placeholder="Ej: Primax Benavides o Taller San Borja"
+          value={form.proveedor}
+          onChange={(e) => setForm((f) => ({ ...f, proveedor: e.target.value }))}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="notas">Notas u Observaciones</Label>
+        <Textarea
+          id="notas"
+          rows={2}
+          placeholder="Detalles adicionales del comprobante o estado del móvil..."
+          value={form.notas}
+          onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+        />
+      </div>
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="operational">
+          Guardar en Bitácora y Gastos
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 export default function VehiculoPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const gastos = useFinanzasStore((s) => s.gastosVariables);
+  const addGastoVariable = useFinanzasStore((s) => s.addGastoVariable);
 
-  const handleGuardado = () => {
+  // La bitácora de combustible sale del mismo registro que usa Finanzas.
+  const registrosCombustible = useMemo(
+    () =>
+      gastos
+        .filter((g) => g.origen === "vehiculo" && g.categoria === "Combustible")
+        .sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    [gastos]
+  );
+
+  const handleGuardar = (data: RegistroData) => {
+    addGastoVariable(data);
     notifySuccess(
-      "El comprobante y kilometraje fueron actualizados en la ficha y módulo de gastos."
+      `${data.categoria} registrado por ${formatSoles(data.monto)}. Ya aparece en Gastos del mes.`
     );
   };
 
@@ -647,30 +773,44 @@ export default function VehiculoPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {REGISTROS_COMBUSTIBLE.map((r) => (
-                <tr key={r.fecha + r.estacion} className="hover:bg-slate-50/70 transition-colors">
+              {registrosCombustible.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="py-4 px-4 text-sm font-medium text-slate-900">
-                    {r.fecha}
-                    <span className="block text-xs text-slate-500 font-normal">{r.hora}</span>
+                    {formatFechaLarga(r.fecha)}
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <FuelIcon className="size-4 text-slate-400" />
-                      <span className="text-sm font-semibold text-slate-900">{r.estacion}</span>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {r.proveedor ?? "—"}
+                      </span>
                     </div>
                   </td>
                   <td className="py-4 px-4 text-xs">
                     <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
-                      {r.tipo}
+                      Gasolina 95
                     </span>
-                    <span className="text-slate-500 ml-1.5">{r.cantidad}</span>
+                    <span className="text-slate-500 ml-1.5">
+                      {r.galones !== undefined ? `${r.galones} gal` : "—"}
+                    </span>
                   </td>
-                  <td className="py-4 px-4 text-xs text-slate-500">{r.km}</td>
+                  <td className="py-4 px-4 text-xs text-slate-500">
+                    {r.kilometraje !== undefined
+                      ? `${r.kilometraje.toLocaleString("es-PE")} km`
+                      : "—"}
+                  </td>
                   <td className="py-4 px-4 text-right text-sm font-bold text-brand-500">
-                    {r.monto}
+                    {formatSoles(r.monto)}
                   </td>
                 </tr>
               ))}
+              {registrosCombustible.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-sm text-slate-400">
+                    Todavía no hay cargas de combustible registradas.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -692,7 +832,7 @@ export default function VehiculoPage() {
         </div>
       </section>
 
-      <RegistroModal open={modalOpen} onOpenChange={setModalOpen} onGuardado={handleGuardado} />
+      <RegistroModal open={modalOpen} onOpenChange={setModalOpen} onGuardar={handleGuardar} />
     </>
   );
 }

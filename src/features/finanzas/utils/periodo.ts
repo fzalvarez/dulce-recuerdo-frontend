@@ -38,6 +38,24 @@ export function ingresosDelMes(ingresos: Ingreso[], key: string): Ingreso[] {
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
+/** Fecha de hoy en formato YYYY-MM-DD (hora local). */
+export function hoyISO(): string {
+  const hoy = new Date();
+  const y = hoy.getFullYear();
+  const m = String(hoy.getMonth() + 1).padStart(2, "0");
+  const d = String(hoy.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function formatFechaLarga(fecha: string): string {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function formatFechaCorta(fecha: string): string {
   const [y, m, d] = fecha.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("es-PE", {
