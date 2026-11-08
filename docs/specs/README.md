@@ -21,3 +21,4 @@ repo del backend (`docs/FRONTEND_SPEC.md` y `docs/specs/`).
 | [vehiculo.md](./vehiculo.md) | Implementada (datos de ejemplo) | `/vehiculos` |
 | [reportes.md](./reportes.md) | Aprobada, implementada con datos de ejemplo | `/reportes` |
 | [planes.md](./planes.md) | Aprobada, implementada con datos de ejemplo | `/planes` |
+| [casos.md](./casos.md) | Propuesta (pendiente de aprobación) | `/casos`, `/cotizaciones` (se quita) |
