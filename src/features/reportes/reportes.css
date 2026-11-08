@@ -5,6 +5,7 @@
   color-scheme: light;
   --serie-1: #2a78d6; /* año actual / período */
   --serie-2: #eb6834; /* año anterior */
+  --serie-1-soft: #9ec5f4; /* de-énfasis: barras fuera del top */
   --surface: #fcfcfb;
   --ink: #0b0b0b;
   --ink-2: #52514e;
@@ -19,6 +20,7 @@
   color-scheme: dark;
   --serie-1: #3987e5;
   --serie-2: #d95926;
+  --serie-1-soft: #1c5cab;
   --surface: #1a1a19;
   --ink: #f0efec;
   --ink-2: #c3c2b7;

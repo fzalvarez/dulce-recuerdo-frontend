@@ -215,7 +215,7 @@ export default function ReportesPage() {
   }));
 
   return (
-    <div className="reportes-root">
+    <div className="reportes-root flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Reportes" }, { label: "Revisión de la empresa" }]} />
 
       <ModuleHeader
@@ -224,7 +224,7 @@ export default function ReportesPage() {
       />
 
       {/* Filtros: una sola fila para todos los reportes */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
         <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as Longitud)}>
           <SelectTrigger className="md:w-60 whitespace-nowrap">
             <SelectValue />
@@ -253,7 +253,7 @@ export default function ReportesPage() {
       </div>
 
       {/* Resumen del período */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <Resumen
           label="Cremaciones del período"
           valor={totalPeriodo.toLocaleString("es-PE")}
@@ -273,7 +273,7 @@ export default function ReportesPage() {
       </section>
 
       {/* Selector de reporte */}
-      <nav className="flex flex-wrap gap-2" aria-label="Reportes">
+      <nav className="flex flex-wrap gap-3" aria-label="Reportes">
         {REPORTES.map((r) => (
           <button
             key={r.key}
@@ -332,7 +332,7 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos2}
-            series={[SERIE_PERIODO, SERIE_ANTERIOR]}
+            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
             descripcion={`Cremaciones por mes frente al año anterior, ${periodoLabel}`}
             etiquetaVariacion="contra el mismo mes del año anterior"
           />
@@ -356,7 +356,7 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos3}
-            series={[SERIE_PERIODO, SERIE_ANTERIOR]}
+            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
             descripcion={`Cremaciones de particulares por mes frente al año anterior, ${periodoLabel}`}
             etiquetaVariacion="contra el mismo mes del año anterior"
           />
@@ -380,7 +380,7 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos4}
-            series={[SERIE_PERIODO, SERIE_ANTERIOR]}
+            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
             descripcion={`Cremaciones referidas por veterinarias por mes frente al año anterior, ${periodoLabel}`}
             etiquetaVariacion="contra el mismo mes del año anterior"
           />
@@ -450,7 +450,7 @@ export default function ReportesPage() {
             <BarrasHorizontales filas={filasPlanes} descripcion="Ventas por plan de cremación" />
           </ChartCard>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <ExtraDosPartes
               titulo="Presencialidad"
               primera={{ label: "Presencial", valor: presenciales }}

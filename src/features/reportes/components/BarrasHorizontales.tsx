@@ -11,7 +11,7 @@ export interface FilaRanking {
 }
 
 /**
- * Ranking en barras horizontales. Barras de 20px con esquina redondeada al final,
+ * Ranking en barras horizontales. Barras de 24px con esquina redondeada al final,
  * valor a la derecha. El número de puesto va en tinta secundaria, no en color de serie.
  */
 export function BarrasHorizontales({ filas, descripcion }: { filas: FilaRanking[]; descripcion: string }) {
@@ -39,12 +39,12 @@ export function BarrasHorizontales({ filas, descripcion }: { filas: FilaRanking[
             </span>
           </div>
 
-          <div className="h-5 rounded-full bg-[var(--grid)] overflow-hidden">
+          <div className="h-6 rounded-full bg-[var(--grid)] overflow-hidden">
             <div
               className="h-full rounded-r-[4px]"
               style={{
                 width: `${(f.valor / max) * 100}%`,
-                background: f.destacada ? "var(--serie-1)" : "var(--baseline)",
+                background: f.destacada ? "var(--serie-1)" : "var(--serie-1-soft)",
               }}
             />
           </div>

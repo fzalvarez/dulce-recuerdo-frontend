@@ -23,7 +23,7 @@ const ALTURA_ETIQUETA = 22;
 
 /**
  * Barras verticales agrupadas por mes. Valor encima de cada barra, mes debajo y la
- * variación al pie. Barras de 24px con esquina redondeada solo arriba; 2px de
+ * variación al pie. Barras de 28px con esquina redondeada solo arriba; 2px de
  * separación entre barras del mismo mes. Con dos o más series hay leyenda.
  */
 export function BarrasVerticales({
@@ -88,7 +88,7 @@ export function BarrasVerticales({
                           {valor}
                         </span>
                         <div
-                          className="w-6 rounded-t-[4px]"
+                          className="w-7 rounded-t-[4px]"
                           style={{ height: alto, background: s.color }}
                         />
                       </div>
