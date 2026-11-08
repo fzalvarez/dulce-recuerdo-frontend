@@ -11,14 +11,14 @@ export interface FilaRanking {
 }
 
 /**
- * Ranking en barras horizontales. Barras de 12px con esquina redondeada al final,
+ * Ranking en barras horizontales. Barras de 20px con esquina redondeada al final,
  * valor a la derecha. El número de puesto va en tinta secundaria, no en color de serie.
  */
 export function BarrasHorizontales({ filas, descripcion }: { filas: FilaRanking[]; descripcion: string }) {
   const max = Math.max(1, ...filas.map((f) => f.valor));
 
   return (
-    <ul className="flex flex-col gap-3" aria-label={descripcion}>
+    <ul className="flex flex-col gap-4" aria-label={descripcion}>
       {filas.map((f, i) => (
         <li
           key={f.id}
@@ -39,7 +39,7 @@ export function BarrasHorizontales({ filas, descripcion }: { filas: FilaRanking[
             </span>
           </div>
 
-          <div className="h-3 rounded-full bg-[var(--grid)] overflow-hidden">
+          <div className="h-5 rounded-full bg-[var(--grid)] overflow-hidden">
             <div
               className="h-full rounded-r-[4px]"
               style={{
