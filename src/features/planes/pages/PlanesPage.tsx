@@ -1,177 +1,303 @@
+import { useState, type ReactNode } from "react";
 import {
-  DownloadIcon,
-  PlusCircleIcon,
   CalendarIcon,
-  HandshakeIcon,
-  ArrowUpDownIcon,
-  PackageIcon,
-  HistoryIcon,
-  ReceiptIcon,
-  PencilIcon,
-  CopyIcon,
-  PauseCircleIcon,
-  InfoIcon,
-  TruckIcon,
   ClockIcon,
-  SlidersHorizontalIcon,
+  DownloadIcon,
+  HandshakeIcon,
+  HistoryIcon,
+  InfoIcon,
+  PackageIcon,
+  PauseCircleIcon,
   PawPrintIcon,
-  PlusIcon,
+  PencilIcon,
+  PlayCircleIcon,
+  PlusCircleIcon,
+  ReceiptIcon,
+  TruckIcon,
 } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { notifySuccess } from "@/shared/utils";
 
 // TODO: reemplazar por datos reales del módulo `planes` cuando se exponga el endpoint.
-interface RangoPeso {
-  rango: string;
-  precioVet: string;
-  precioSugerido: string;
-  margen: string;
-  tasaMargen: string;
+
+/** Mismos rangos de peso que usan los reportes. */
+const RANGOS = [
+  { id: "0-5", etiqueta: "0 a 5 kg" },
+  { id: "5-15", etiqueta: "5,1 a 15 kg" },
+  { id: "15-25", etiqueta: "15,1 a 25 kg" },
+  { id: "25-35", etiqueta: "25,1 a 35 kg" },
+  { id: "35+", etiqueta: "35,1 kg o más" },
+];
+
+interface Precio {
+  rangoId: string;
+  precioVet: number;
+  precioPublico: number;
 }
 
 interface Plan {
   id: string;
   nombre: string;
-  badge: string;
-  badgeClass: string;
-  dotClass: string;
   descripcion: string;
   kit: string;
+  activo: boolean;
+  masSolicitado?: boolean;
   modif: string;
   casosDelMes: number;
-  rangos: RangoPeso[];
+  precios: Precio[];
+  dotClass: string;
 }
 
-const PLANES: Plan[] = [
+const PLANES_INICIALES: Plan[] = [
   {
     id: "clasico",
     nombre: "Dulce Recuerdo Clásico",
-    badge: "El más solicitado",
-    badgeClass: "bg-brand-100 text-brand-700",
-    dotClass: "bg-brand-400",
     descripcion:
       "Cremación individualizada, urna de roble seleccionada, certificado de autenticidad y acompañamiento en sala de despedida (30 min).",
     kit: "Urna Roble + Certificado Hilo",
+    activo: true,
+    masSolicitado: true,
     modif: "12 Oct 2025",
     casosDelMes: 142,
-    rangos: [
-      { rango: "0 - 5 kg", precioVet: "S/ 250.00", precioSugerido: "S/ 340.00", margen: "+S/ 90.00", tasaMargen: "26%" },
-      { rango: "5.1 - 15 kg", precioVet: "S/ 290.00", precioSugerido: "S/ 380.00", margen: "+S/ 90.00", tasaMargen: "24%" },
-      { rango: "15.1 - 25 kg", precioVet: "S/ 330.00", precioSugerido: "S/ 420.00", margen: "+S/ 90.00", tasaMargen: "21%" },
-      { rango: "25.1 - 35 kg", precioVet: "S/ 390.00", precioSugerido: "S/ 480.00", margen: "+S/ 90.00", tasaMargen: "19%" },
-      { rango: "35.1 kg a más", precioVet: "S/ 460.00", precioSugerido: "S/ 540.00", margen: "+S/ 80.00", tasaMargen: "15%" },
+    dotClass: "bg-brand-400",
+    precios: [
+      { rangoId: "0-5", precioVet: 250, precioPublico: 340 },
+      { rangoId: "5-15", precioVet: 290, precioPublico: 380 },
+      { rangoId: "15-25", precioVet: 330, precioPublico: 420 },
+      { rangoId: "25-35", precioVet: 390, precioPublico: 480 },
+      { rangoId: "35+", precioVet: 460, precioPublico: 540 },
     ],
   },
   {
     id: "paz",
     nombre: "Dulce Recuerdo Paz",
-    badge: "Servicio Premium",
-    badgeClass: "bg-violet-100 text-violet-700",
-    dotClass: "bg-violet-400",
     descripcion:
       "Cremación individual prioritaria, sala privada familiar asistida (60 min) con música sacra/zen, relicario y entrega en 24h garantizada.",
     kit: "Cofre Lacado + Dije Plata",
+    activo: true,
     modif: "28 Sep 2025",
     casosDelMes: 68,
-    rangos: [
-      { rango: "0 - 5 kg", precioVet: "S/ 330.00", precioSugerido: "S/ 450.00", margen: "+S/ 120.00", tasaMargen: "27%" },
-      { rango: "5.1 - 15 kg", precioVet: "S/ 380.00", precioSugerido: "S/ 510.00", margen: "+S/ 130.00", tasaMargen: "25%" },
-      { rango: "15.1 - 25 kg", precioVet: "S/ 430.00", precioSugerido: "S/ 570.00", margen: "+S/ 140.00", tasaMargen: "25%" },
-      { rango: "25.1 - 35 kg", precioVet: "S/ 490.00", precioSugerido: "S/ 630.00", margen: "+S/ 140.00", tasaMargen: "22%" },
-      { rango: "35.1 kg a más", precioVet: "S/ 560.00", precioSugerido: "S/ 680.00", margen: "+S/ 120.00", tasaMargen: "18%" },
+    dotClass: "bg-violet-400",
+    precios: [
+      { rangoId: "0-5", precioVet: 330, precioPublico: 450 },
+      { rangoId: "5-15", precioVet: 380, precioPublico: 510 },
+      { rangoId: "15-25", precioVet: 430, precioPublico: 570 },
+      { rangoId: "25-35", precioVet: 490, precioPublico: 630 },
+      { rangoId: "35+", precioVet: 560, precioPublico: 680 },
     ],
   },
   {
     id: "eco",
     nombre: "Dulce Recuerdo Eco",
-    badge: "Comunitaria & Ecológica",
-    badgeClass: "bg-emerald-100 text-emerald-700",
-    dotClass: "bg-emerald-400",
     descripcion:
       "Cremación ecológica consciente, retorno simbólico de cenizas en urna biodegradable con semilla viva o esparcimiento en jardín memorial.",
     kit: "Urna Biodegradable + Semilla",
+    activo: true,
     modif: "05 Nov 2025",
     casosDelMes: 39,
-    rangos: [
-      { rango: "0 - 5 kg", precioVet: "S/ 210.00", precioSugerido: "S/ 260.00", margen: "+S/ 50.00", tasaMargen: "19%" },
-      { rango: "5.1 - 15 kg", precioVet: "S/ 250.00", precioSugerido: "S/ 300.00", margen: "+S/ 50.00", tasaMargen: "17%" },
-      { rango: "15.1 - 25 kg", precioVet: "S/ 290.00", precioSugerido: "S/ 350.00", margen: "+S/ 60.00", tasaMargen: "17%" },
-      { rango: "25.1 - 35 kg", precioVet: "S/ 350.00", precioSugerido: "S/ 410.00", margen: "+S/ 60.00", tasaMargen: "15%" },
-      { rango: "35.1 kg a más", precioVet: "S/ 420.00", precioSugerido: "S/ 460.00", margen: "+S/ 40.00", tasaMargen: "9%" },
+    dotClass: "bg-emerald-400",
+    precios: [
+      { rangoId: "0-5", precioVet: 210, precioPublico: 260 },
+      { rangoId: "5-15", precioVet: 250, precioPublico: 300 },
+      { rangoId: "15-25", precioVet: 290, precioPublico: 350 },
+      { rangoId: "25-35", precioVet: 350, precioPublico: 410 },
+      { rangoId: "35+", precioVet: 420, precioPublico: 460 },
     ],
   },
 ];
 
+interface Complemento {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  aviso: string;
+  precioVet: number;
+  precioPublico: number;
+}
+
+const COMPLEMENTO_INICIAL: Complemento = {
+  id: "mi-ultima-huella",
+  nombre: "Mi última huella",
+  descripcion:
+    "Impresión artesanal en relieve de la huella de la mascota en molde de arcilla blanca horneada, enmarcada en madera noble con placa de bronce personalizada.",
+  aviso: "Se realiza estrictamente antes del ingreso al horno crematorio por protocolo de custodia.",
+  precioVet: 90,
+  precioPublico: 130,
+};
+
 interface Zona {
+  id: string;
   nombre: string;
   distritos: string;
-  precio: string;
+  precio: number;
   incluido?: boolean;
   dotClass: string;
 }
 
-const ZONAS: Zona[] = [
+const ZONAS_INICIALES: Zona[] = [
   {
+    id: "z1",
     nombre: "Zona Central / Cobertura Base",
     distritos: "San Luis, San Borja, Surco, Miraflores, San Isidro, La Victoria.",
-    precio: "S/ 0.00",
+    precio: 0,
     incluido: true,
     dotClass: "bg-emerald-400",
   },
   {
+    id: "z2",
     nombre: "Zona 2 / Distritos Cercanos",
     distritos: "Barranco, Jesús María, Lince, Magdalena, Pueblo Libre.",
-    precio: "S/ 40.00",
+    precio: 40,
     dotClass: "bg-brand-400",
   },
   {
+    id: "z3",
     nombre: "Zona 3 / Distritos Intermedios",
     distritos: "La Molina, Chorrillos, San Miguel, Cercado de Lima, Rímac.",
-    precio: "S/ 60.00",
+    precio: 60,
     dotClass: "bg-brand-500",
   },
   {
+    id: "z4",
     nombre: "Zona 4 / Distritos Periféricos",
     distritos: "San Juan de Lurigancho, Los Olivos, Comas, Independencia, Villa El Salvador, SJM, Ate.",
-    precio: "S/ 90.00",
+    precio: 90,
     dotClass: "bg-slate-400",
   },
   {
+    id: "z5",
     nombre: "Zona 5 / Extrema Periferia o Balnearios",
     distritos: "Puente Piedra, Carabayllo, Lurín, Pachacámac, Ventanilla, Callao.",
-    precio: "S/ 140.00",
+    precio: 140,
     dotClass: "bg-red-400",
   },
 ];
 
-function PlanCard({ plan }: { plan: Plan }) {
+interface Horario {
+  inicioManana: string;
+  finManana: string;
+  inicioTarde: string;
+  finTarde: string;
+  recargo: number;
+}
+
+const HORARIO_INICIAL: Horario = {
+  inicioManana: "07:30",
+  finManana: "09:30",
+  inicioTarde: "17:00",
+  finTarde: "19:00",
+  recargo: 35,
+};
+
+// ---------- Formato y cálculos ----------
+
+const formatoSoles = new Intl.NumberFormat("es-PE", {
+  style: "currency",
+  currency: "PEN",
+  minimumFractionDigits: 2,
+});
+
+function soles(valor: number): string {
+  return formatoSoles.format(valor);
+}
+
+function ganancia(precio: Pick<Precio, "precioVet" | "precioPublico">): number {
+  return precio.precioPublico - precio.precioVet;
+}
+
+/** Porcentaje de ganancia de la veterinaria sobre el precio al público. */
+function porcentajeGanancia(precio: Pick<Precio, "precioVet" | "precioPublico">): number {
+  if (precio.precioPublico <= 0) return 0;
+  return Math.round((ganancia(precio) / precio.precioPublico) * 100);
+}
+
+function numeroValido(texto: string, minimo: number): number | null {
+  if (texto.trim() === "") return null;
+  const n = Number(texto);
+  return Number.isFinite(n) && n >= minimo ? n : null;
+}
+
+// ---------- Componentes pequeños ----------
+
+function Modal({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}) {
   return (
-    <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <div className="flex items-start gap-3">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">{children}</DialogContent>
+    </Dialog>
+  );
+}
+
+function EstadoPill({ activo }: { activo: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold",
+        activo ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+      )}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full", activo ? "bg-emerald-500" : "bg-slate-400")} />
+      {activo ? "Activo" : "Pausado"}
+    </span>
+  );
+}
+
+// ---------- Plan: tarjeta ----------
+
+function PlanCard({
+  plan,
+  onEditar,
+  onCambiarEstado,
+}: {
+  plan: Plan;
+  onEditar: () => void;
+  onCambiarEstado: () => void;
+}) {
+  return (
+    <article className={cn("bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 lg:p-6 flex flex-col gap-4", !plan.activo && "opacity-80")}>
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex items-start gap-3 min-w-0">
           <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
             <PawPrintIcon className="size-5" />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-900">{plan.nombre}</h3>
-              <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", plan.badgeClass)}>
-                {plan.badge}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Activo en Tarifario
-              </span>
+              {plan.masSolicitado && (
+                <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-brand-100 text-brand-700">
+                  El más solicitado
+                </span>
+              )}
+              <EstadoPill activo={plan.activo} />
             </div>
             <p className="text-xs text-slate-500 max-w-2xl">{plan.descripcion}</p>
-            <div className="flex flex-wrap items-center gap-3 text-label text-slate-400 mt-0.5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-slate-400">
               <span className="inline-flex items-center gap-1">
-                <PackageIcon className="size-3.5" /> Kit: {plan.kit}
+                <PackageIcon className="size-3.5" /> Incluye: {plan.kit}
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
-                <HistoryIcon className="size-3.5" /> Última modif.: {plan.modif}
+                <HistoryIcon className="size-3.5" /> Modificado: {plan.modif}
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1 text-brand-500 font-semibold">
@@ -180,68 +306,66 @@ function PlanCard({ plan }: { plan: Plan }) {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            variant="soft"
-            size="sm"
-            onClick={() => notifySuccess(`Abriendo edición de tarifas de ${plan.nombre}.`)}
-          >
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={onEditar}>
             <PencilIcon className="size-3.5" />
-            Editar Tarifas
+            Editar
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => notifySuccess(`${plan.nombre} duplicado como borrador.`)}
-          >
-            <CopyIcon className="size-3.5" />
-            Duplicar
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Desactivar temporalmente"
-            onClick={() => notifySuccess(`${plan.nombre} desactivado temporalmente.`)}
-          >
-            <PauseCircleIcon className="size-4" />
+          <Button variant="ghost" size="sm" onClick={onCambiarEstado}>
+            {plan.activo ? (
+              <>
+                <PauseCircleIcon className="size-3.5" />
+                Pausar venta
+              </>
+            ) : (
+              <>
+                <PlayCircleIcon className="size-3.5" />
+                Reactivar venta
+              </>
+            )}
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg bg-slate-50/60 border border-slate-100 p-1">
-        <table className="w-full text-left min-w-[620px]">
+      <div className="overflow-x-auto rounded-lg border border-slate-100 bg-slate-50/60">
+        <table className="w-full text-left min-w-[560px]">
           <thead>
             <tr className="text-slate-500 text-label uppercase tracking-wider">
-              <th className="py-2.5 px-3 font-semibold">Rango de Peso</th>
-              <th className="py-2.5 px-3 text-right font-semibold">Precio Vet (Aliado)</th>
-              <th className="py-2.5 px-3 text-right font-semibold">Precio Sugerido</th>
-              <th className="py-2.5 px-3 text-right font-semibold">Margen Vet.</th>
-              <th className="py-2.5 px-3 text-right font-semibold">Tasa</th>
-              <th className="py-2.5 px-3 text-center font-semibold">Ajuste</th>
+              <th className="py-2.5 px-4 font-semibold">Peso de la mascota</th>
+              <th className="py-2.5 px-4 text-right font-semibold">Precio veterinaria</th>
+              <th className="py-2.5 px-4 text-right font-semibold">Precio al público</th>
+              <th className="py-2.5 px-4 text-right font-semibold">Ganancia veterinaria</th>
+              <th className="py-2.5 px-4 text-right font-semibold">% ganancia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {plan.rangos.map((r) => (
-              <tr key={r.rango} className="hover:bg-white transition-colors">
-                <td className="py-2 px-3 text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <span className={cn("w-2 h-2 rounded-full", plan.dotClass)} />
-                  {r.rango}
-                </td>
-                <td className="py-2 px-3 text-right text-sm font-bold text-brand-500">{r.precioVet}</td>
-                <td className="py-2 px-3 text-right text-xs text-slate-500 font-medium">{r.precioSugerido}</td>
-                <td className="py-2 px-3 text-right text-xs text-emerald-700 font-bold">{r.margen}</td>
-                <td className="py-2 px-3 text-right text-xs text-emerald-700 font-semibold">{r.tasaMargen}</td>
-                <td className="py-2 px-3 text-center">
-                  <button
-                    type="button"
-                    className="text-slate-400 hover:text-brand-500 transition-colors p-1"
-                    onClick={() => notifySuccess(`Ajuste manual de ${r.rango} para ${plan.nombre}.`)}
-                  >
-                    <SlidersHorizontalIcon className="size-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {RANGOS.map((rango) => {
+              const precio = plan.precios.find((p) => p.rangoId === rango.id);
+              if (!precio) return null;
+              return (
+                <tr key={rango.id}>
+                  <td className="py-2.5 px-4 text-sm font-semibold text-slate-900">
+                    <span className="inline-flex items-center gap-2">
+                      <span className={cn("w-2 h-2 rounded-full", plan.dotClass)} />
+                      {rango.etiqueta}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-4 text-right text-sm font-semibold text-slate-900 tabular-nums">
+                    {soles(precio.precioVet)}
+                  </td>
+                  <td className="py-2.5 px-4 text-right text-sm text-slate-700 tabular-nums">
+                    {soles(precio.precioPublico)}
+                  </td>
+                  <td className="py-2.5 px-4 text-right text-sm font-semibold text-emerald-700 tabular-nums">
+                    {soles(ganancia(precio))}
+                  </td>
+                  <td className="py-2.5 px-4 text-right text-xs font-semibold text-emerald-700 tabular-nums">
+                    {porcentajeGanancia(precio)}%
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -249,7 +373,515 @@ function PlanCard({ plan }: { plan: Plan }) {
   );
 }
 
+// ---------- Plan: formulario (nuevo o editar) ----------
+
+interface PlanDatos {
+  nombre: string;
+  descripcion: string;
+  kit: string;
+  precios: Precio[];
+}
+
+function PlanDialog({
+  open,
+  plan,
+  onOpenChange,
+  onGuardar,
+}: {
+  open: boolean;
+  plan: Plan | null;
+  onOpenChange: (open: boolean) => void;
+  onGuardar: (datos: PlanDatos) => void;
+}) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      {/* El formulario se monta al abrir: cada vez empieza con los datos del plan. */}
+      <PlanForm
+        plan={plan}
+        onCancelar={() => onOpenChange(false)}
+        onGuardar={(datos) => {
+          onGuardar(datos);
+          onOpenChange(false);
+        }}
+      />
+    </Modal>
+  );
+}
+
+function PlanForm({
+  plan,
+  onCancelar,
+  onGuardar,
+}: {
+  plan: Plan | null;
+  onCancelar: () => void;
+  onGuardar: (datos: PlanDatos) => void;
+}) {
+  const esNuevo = plan === null;
+  const [nombre, setNombre] = useState(plan?.nombre ?? "");
+  const [descripcion, setDescripcion] = useState(plan?.descripcion ?? "");
+  const [kit, setKit] = useState(plan?.kit ?? "");
+  const [textos, setTextos] = useState<Record<string, { vet: string; publico: string }>>(() =>
+    Object.fromEntries(
+      RANGOS.map((r) => {
+        const p = plan?.precios.find((x) => x.rangoId === r.id);
+        return [r.id, { vet: p ? String(p.precioVet) : "", publico: p ? String(p.precioPublico) : "" }];
+      })
+    )
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const actualizarPrecio = (rangoId: string, campo: "vet" | "publico", valor: string) =>
+    setTextos((prev) => ({ ...prev, [rangoId]: { ...prev[rangoId], [campo]: valor } }));
+
+  const handleGuardar = () => {
+    if (!nombre.trim()) return setError("Escribe el nombre del plan.");
+    const precios: Precio[] = [];
+    for (const r of RANGOS) {
+      const vet = numeroValido(textos[r.id].vet, 0);
+      const publico = numeroValido(textos[r.id].publico, 0);
+      if (vet === null || publico === null) {
+        return setError(`Completa los dos precios de ${r.etiqueta}.`);
+      }
+      if (publico <= 0 || publico < vet) {
+        return setError(
+          `En ${r.etiqueta}, el precio al público debe ser mayor que cero y no menor que el de la veterinaria.`
+        );
+      }
+      precios.push({ rangoId: r.id, precioVet: vet, precioPublico: publico });
+    }
+    onGuardar({ nombre: nombre.trim(), descripcion: descripcion.trim(), kit: kit.trim(), precios });
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{plan ? `Editar ${plan.nombre}` : "Nuevo plan de cremación"}</DialogTitle>
+        <DialogDescription>
+          Completa los precios de cada peso. La ganancia de la veterinaria se calcula sola.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="plan-nombre">Nombre del plan</Label>
+          <Input id="plan-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="plan-descripcion">Qué incluye</Label>
+          <Textarea
+            id="plan-descripcion"
+            rows={3}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="plan-kit">Kit o urna</Label>
+          <Input id="plan-kit" value={kit} onChange={(e) => setKit(e.target.value)} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Precios por peso (S/)</Label>
+          <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-label uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="py-2 px-3 text-left font-semibold">Peso</th>
+                  <th className="py-2 px-3 text-left font-semibold">Veterinaria</th>
+                  <th className="py-2 px-3 text-left font-semibold">Público</th>
+                  <th className="py-2 px-3 text-right font-semibold">Ganancia vet.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {RANGOS.map((r) => {
+                  const vet = numeroValido(textos[r.id].vet, 0) ?? 0;
+                  const publico = numeroValido(textos[r.id].publico, 0) ?? 0;
+                  const g = publico - vet;
+                  return (
+                    <tr key={r.id}>
+                      <td className="py-2 px-3 font-medium text-slate-800 whitespace-nowrap">{r.etiqueta}</td>
+                      <td className="py-1.5 px-3">
+                        <Input
+                          aria-label={`Precio veterinaria ${r.etiqueta}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={textos[r.id].vet}
+                          onChange={(e) => actualizarPrecio(r.id, "vet", e.target.value)}
+                          className="h-9"
+                        />
+                      </td>
+                      <td className="py-1.5 px-3">
+                        <Input
+                          aria-label={`Precio al público ${r.etiqueta}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={textos[r.id].publico}
+                          onChange={(e) => actualizarPrecio(r.id, "publico", e.target.value)}
+                          className="h-9"
+                        />
+                      </td>
+                      <td
+                        className={cn(
+                          "py-2 px-3 text-right font-semibold tabular-nums",
+                          g < 0 ? "text-red-600" : "text-emerald-700"
+                        )}
+                      >
+                        {soles(g)} <span className="text-xs font-normal">({porcentajeGanancia({ precioVet: vet, precioPublico: publico })}%)</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button variant="operational" onClick={handleGuardar}>
+          {esNuevo ? "Crear plan" : "Guardar cambios"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// ---------- Complemento ----------
+
+function ComplementoDialog({
+  open,
+  complemento,
+  onOpenChange,
+  onGuardar,
+}: {
+  open: boolean;
+  complemento: Complemento;
+  onOpenChange: (open: boolean) => void;
+  onGuardar: (c: Complemento) => void;
+}) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ComplementoForm
+        complemento={complemento}
+        onCancelar={() => onOpenChange(false)}
+        onGuardar={(c) => {
+          onGuardar(c);
+          onOpenChange(false);
+        }}
+      />
+    </Modal>
+  );
+}
+
+function ComplementoForm({
+  complemento,
+  onCancelar,
+  onGuardar,
+}: {
+  complemento: Complemento;
+  onCancelar: () => void;
+  onGuardar: (c: Complemento) => void;
+}) {
+  const [nombre, setNombre] = useState(complemento.nombre);
+  const [descripcion, setDescripcion] = useState(complemento.descripcion);
+  const [aviso, setAviso] = useState(complemento.aviso);
+  const [vet, setVet] = useState(String(complemento.precioVet));
+  const [publico, setPublico] = useState(String(complemento.precioPublico));
+  const [error, setError] = useState<string | null>(null);
+
+  const vetNum = numeroValido(vet, 0) ?? 0;
+  const publicoNum = numeroValido(publico, 0) ?? 0;
+
+  const handleGuardar = () => {
+    if (!nombre.trim()) return setError("Escribe el nombre del complemento.");
+    const v = numeroValido(vet, 0);
+    const p = numeroValido(publico, 0);
+    if (v === null || p === null) return setError("Completa los dos precios.");
+    if (p <= 0 || p < v) {
+      return setError("El precio al público debe ser mayor que cero y no menor que el de la veterinaria.");
+    }
+    onGuardar({
+      ...complemento,
+      nombre: nombre.trim(),
+      descripcion: descripcion.trim(),
+      aviso: aviso.trim(),
+      precioVet: v,
+      precioPublico: p,
+    });
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Editar complemento</DialogTitle>
+        <DialogDescription>Se vende solo junto con una cremación.</DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="comp-nombre">Nombre</Label>
+          <Input id="comp-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="comp-descripcion">Descripción</Label>
+          <Textarea id="comp-descripcion" rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="comp-aviso">Aviso para el cliente (opcional)</Label>
+          <Input id="comp-aviso" value={aviso} onChange={(e) => setAviso(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="comp-vet">Precio veterinaria (S/)</Label>
+            <Input id="comp-vet" type="number" min={0} step="0.01" value={vet} onChange={(e) => setVet(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="comp-publico">Precio al público (S/)</Label>
+            <Input id="comp-publico" type="number" min={0} step="0.01" value={publico} onChange={(e) => setPublico(e.target.value)} />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500">
+          Ganancia de la veterinaria: <strong className="text-emerald-700">{soles(publicoNum - vetNum)}</strong>
+        </p>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button variant="operational" onClick={handleGuardar}>
+          Guardar cambios
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// ---------- Zona de traslado ----------
+
+function ZonaDialog({
+  open,
+  zona,
+  onOpenChange,
+  onGuardar,
+}: {
+  open: boolean;
+  zona: Zona | null;
+  onOpenChange: (open: boolean) => void;
+  onGuardar: (z: Zona) => void;
+}) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      {zona && (
+        <ZonaForm
+          zona={zona}
+          onCancelar={() => onOpenChange(false)}
+          onGuardar={(z) => {
+            onGuardar(z);
+            onOpenChange(false);
+          }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+function ZonaForm({
+  zona,
+  onCancelar,
+  onGuardar,
+}: {
+  zona: Zona;
+  onCancelar: () => void;
+  onGuardar: (z: Zona) => void;
+}) {
+  const [precio, setPrecio] = useState(String(zona.precio));
+  const [distritos, setDistritos] = useState(zona.distritos);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGuardar = () => {
+    const p = numeroValido(precio, 0);
+    if (p === null) return setError("El precio de traslado debe ser 0 o mayor.");
+    if (!distritos.trim()) return setError("Escribe al menos un distrito.");
+    onGuardar({ ...zona, precio: p, distritos: distritos.trim() });
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{zona.nombre}</DialogTitle>
+        <DialogDescription>Precio de traslado y distritos que incluye esta zona.</DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="zona-precio">Precio de traslado (S/)</Label>
+          <Input id="zona-precio" type="number" min={0} step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+          {zona.incluido && (
+            <p className="text-xs text-slate-500">Esta es la zona incluida en el plan base: normalmente queda en 0.</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="zona-distritos">Distritos (separados por coma)</Label>
+          <Textarea id="zona-distritos" rows={3} value={distritos} onChange={(e) => setDistritos(e.target.value)} />
+        </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button variant="operational" onClick={handleGuardar}>
+          Guardar cambios
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// ---------- Recargo horario punta ----------
+
+function HorarioDialog({
+  open,
+  horario,
+  onOpenChange,
+  onGuardar,
+}: {
+  open: boolean;
+  horario: Horario;
+  onOpenChange: (open: boolean) => void;
+  onGuardar: (h: Horario) => void;
+}) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <HorarioForm
+        horario={horario}
+        onCancelar={() => onOpenChange(false)}
+        onGuardar={(h) => {
+          onGuardar(h);
+          onOpenChange(false);
+        }}
+      />
+    </Modal>
+  );
+}
+
+function HorarioForm({
+  horario,
+  onCancelar,
+  onGuardar,
+}: {
+  horario: Horario;
+  onCancelar: () => void;
+  onGuardar: (h: Horario) => void;
+}) {
+  const [h, setH] = useState(horario);
+  const [recargo, setRecargo] = useState(String(horario.recargo));
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGuardar = () => {
+    const r = numeroValido(recargo, 0);
+    if (r === null) return setError("El recargo debe ser 0 o mayor. Pon 0 para desactivarlo.");
+    if (h.inicioManana >= h.finManana || h.inicioTarde >= h.finTarde) {
+      return setError("Cada franja debe terminar después de empezar.");
+    }
+    onGuardar({ ...h, recargo: r });
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Recargo por horario punta</DialogTitle>
+        <DialogDescription>
+          Se aplica a los traslados que caen dentro de estas dos franjas. Pon 0 en el recargo para desactivarlo.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="h-m-ini">Mañana: desde</Label>
+            <Input id="h-m-ini" type="time" value={h.inicioManana} onChange={(e) => setH({ ...h, inicioManana: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="h-m-fin">Mañana: hasta</Label>
+            <Input id="h-m-fin" type="time" value={h.finManana} onChange={(e) => setH({ ...h, finManana: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="h-t-ini">Tarde: desde</Label>
+            <Input id="h-t-ini" type="time" value={h.inicioTarde} onChange={(e) => setH({ ...h, inicioTarde: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="h-t-fin">Tarde: hasta</Label>
+            <Input id="h-t-fin" type="time" value={h.finTarde} onChange={(e) => setH({ ...h, finTarde: e.target.value })} />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="h-recargo">Recargo por traslado (S/)</Label>
+          <Input id="h-recargo" type="number" min={0} step="0.01" value={recargo} onChange={(e) => setRecargo(e.target.value)} />
+        </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button variant="operational" onClick={handleGuardar}>
+          Guardar cambios
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// ---------- Página ----------
+
 export default function PlanesPage() {
+  const [planes, setPlanes] = useState<Plan[]>(PLANES_INICIALES);
+  const [complemento, setComplemento] = useState<Complemento>(COMPLEMENTO_INICIAL);
+  const [zonas, setZonas] = useState<Zona[]>(ZONAS_INICIALES);
+  const [horario, setHorario] = useState<Horario>(HORARIO_INICIAL);
+
+  const [planDialog, setPlanDialog] = useState<{ open: boolean; plan: Plan | null }>({ open: false, plan: null });
+  const [complementoAbierto, setComplementoAbierto] = useState(false);
+  const [zonaDialog, setZonaDialog] = useState<{ open: boolean; zona: Zona | null }>({ open: false, zona: null });
+  const [horarioAbierto, setHorarioAbierto] = useState(false);
+
+  const planesActivos = planes.filter((p) => p.activo).length;
+
+  const handleGuardarPlan = (datos: PlanDatos) => {
+    const editando = planDialog.plan;
+    if (editando) {
+      setPlanes((prev) => prev.map((p) => (p.id === editando.id ? { ...p, ...datos } : p)));
+      notifySuccess(`Plan "${datos.nombre}" actualizado.`);
+    } else {
+      const nuevo: Plan = {
+        id: `plan-${Date.now()}`,
+        ...datos,
+        activo: true,
+        modif: "Hoy",
+        casosDelMes: 0,
+        dotClass: "bg-slate-400",
+      };
+      setPlanes((prev) => [...prev, nuevo]);
+      notifySuccess(`Plan "${datos.nombre}" creado y activo para la venta.`);
+    }
+  };
+
+  const cambiarEstadoPlan = (plan: Plan) => {
+    setPlanes((prev) => prev.map((p) => (p.id === plan.id ? { ...p, activo: !p.activo } : p)));
+    notifySuccess(
+      plan.activo
+        ? `${plan.nombre} pausado: no aparecerá en nuevas cotizaciones.`
+        : `${plan.nombre} reactivado para la venta.`
+    );
+  };
+
   return (
     <>
       <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Planes" }]} />
@@ -257,278 +889,226 @@ export default function PlanesPage() {
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
-            Planes y Tarifario Oficial
-          </h1>
+          <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">Planes y precios</h1>
           <p className="text-xs text-slate-500 max-w-2xl">
-            Gestión de planes de cremación, rangos de peso y precios especiales para veterinarias
-            aliadas y público final.
+            Planes de cremación, precios por peso, servicios complementarios y traslado.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            className="gap-1.5 h-10"
-            onClick={() => notifySuccess("Generando tarifario oficial en PDF...")}
-          >
+          <Button variant="outline" className="gap-1.5 h-10" onClick={() => notifySuccess("Generando tarifario en PDF para compartir.")}>
             <DownloadIcon className="size-4" />
-            Descargar Tarifario PDF
+            Descargar tarifario
           </Button>
           <Button
             variant="operational"
             className="gap-1.5 h-10"
-            onClick={() => notifySuccess("Abriendo formulario de nuevo plan de cremación.")}
+            onClick={() => setPlanDialog({ open: true, plan: null })}
           >
             <PlusCircleIcon className="size-4" />
-            Editar Tarifario / Nuevo Plan
+            Nuevo plan
           </Button>
         </div>
       </div>
 
-      {/* Barra informativa de vigencia */}
-      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-brand-500" />
-            <span className="text-sm font-semibold text-slate-900">
-              Vigencia actual: Periodo 2025 - 2026
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Activo
-            </span>
-          </div>
-          <div className="hidden sm:block h-5 w-px bg-slate-200" />
-          <div className="flex items-center gap-2">
-            <HandshakeIcon className="size-4 text-brand-400" />
-            <span className="text-xs text-slate-500">
-              Margen pactado con veterinarias:{" "}
-              <strong className="text-slate-900 font-semibold">25% - 35% de beneficio aliado</strong>
-            </span>
-          </div>
+      {/* Vigencia y pacto */}
+      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="size-4 text-brand-500" />
+          <span className="text-sm font-semibold text-slate-900">Vigencia: 2025 – 2026</span>
+          <EstadoPill activo />
         </div>
-        <div className="inline-flex items-center gap-1.5 self-start lg:self-auto px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-          <ArrowUpDownIcon className="size-3.5 text-slate-400" />
-          Orden: Por prioridad
+        <div className="hidden lg:block h-5 w-px bg-slate-200" />
+        <div className="flex items-center gap-2">
+          <HandshakeIcon className="size-4 text-brand-400" />
+          <span className="text-xs text-slate-500">
+            Pacto con veterinarias: ganancia de <strong className="text-slate-900 font-semibold">25% a 35%</strong>
+          </span>
         </div>
       </section>
 
-      {/* Planes de cremación */}
+      {/* Planes */}
       <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">Planes Estándar de Cremación</h2>
-            <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-slate-100 text-slate-500">
-              {PLANES.length} configurados
-            </span>
-          </div>
-          <span className="text-xs text-slate-500">Precios en PEN (S/) con IGV incluido</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-sm font-semibold text-slate-900">Planes de cremación</h2>
+          <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-slate-100 text-slate-500">
+            {planesActivos} activos de {planes.length}
+          </span>
         </div>
-        <div className="flex flex-col gap-4">
-          {PLANES.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
+        <div className="flex flex-col gap-5">
+          {planes.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              onEditar={() => setPlanDialog({ open: true, plan })}
+              onCambiarEstado={() => cambiarEstadoPlan(plan)}
+            />
           ))}
         </div>
+        <p className="text-xs text-slate-500">
+          Los precios están en soles con IGV incluido. Un plan pausado no aparece para nuevas cotizaciones.
+        </p>
       </section>
 
-      {/* Complementos y logística */}
+      {/* Complementos y traslado */}
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Servicios Complementarios & Adicionales
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-slate-100 text-slate-500">
-                Catálogo Activo
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Artículos conmemorativos y logística por distritos para enriquecer el homenaje de
-              despedida.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-label font-medium bg-slate-50 text-slate-500">
-              <InfoIcon className="size-3.5 text-slate-400" />
-              Solo en conjunto con cremación
-            </span>
-            <Button
-              variant="soft"
-              size="sm"
-              onClick={() => notifySuccess("Abriendo formulario de nuevo complemento.")}
-            >
-              <PlusIcon className="size-3.5" />
-              Agregar Complemento
-            </Button>
-          </div>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Complementos y traslado</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Servicios extra para la despedida y cobro del traslado por zona.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Complemento destacado */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Complemento */}
           <div className="lg:col-span-5">
-            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between h-full">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <PawPrintIcon className="size-5 text-brand-500" />
-                  <h3 className="text-sm font-semibold text-slate-900">Mi última huella</h3>
-                  <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Activo
-                  </span>
+            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4 h-full">
+              <div className="flex items-center gap-2">
+                <PawPrintIcon className="size-5 text-brand-500" />
+                <h3 className="text-sm font-semibold text-slate-900">{complemento.nombre}</h3>
+                <span className="ml-auto text-label text-slate-400 inline-flex items-center gap-1">
+                  <InfoIcon className="size-3.5" /> Solo con cremación
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">{complemento.descripcion}</p>
+              <p className="text-xs text-red-600/90 bg-red-50/60 rounded-lg px-3 py-2">{complemento.aviso}</p>
+              <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50/70 rounded-lg text-center border border-slate-100">
+                <div className="flex flex-col">
+                  <span className="text-label text-slate-500">Veterinaria</span>
+                  <span className="text-base font-bold text-slate-900 tabular-nums">{soles(complemento.precioVet)}</span>
                 </div>
-                <p className="text-xs text-slate-500">
-                  Impresión artesanal en relieve de la huella de la mascota en molde de arcilla
-                  blanca horneada, enmarcada en madera noble con placa de bronce personalizada.
-                </p>
-                <div className="p-2.5 bg-slate-50 rounded-lg flex items-start gap-2 text-xs text-slate-500 border border-slate-100">
-                  <span className="text-red-500 shrink-0 font-semibold">Aviso:</span>
-                  <span>
-                    Se realiza estrictamente antes del ingreso al horno crematorio por protocolo
-                    de custodia.
-                  </span>
+                <div className="flex flex-col border-x border-slate-200">
+                  <span className="text-label text-slate-500">Público</span>
+                  <span className="text-base font-bold text-slate-900 tabular-nums">{soles(complemento.precioPublico)}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50/70 rounded-lg text-center border border-slate-100">
-                  <div className="flex flex-col">
-                    <span className="text-label text-slate-500">Precio Vet</span>
-                    <span className="text-lg font-bold text-brand-500">S/ 90.00</span>
-                  </div>
-                  <div className="flex flex-col border-x border-slate-200">
-                    <span className="text-label text-slate-500">Sugerido</span>
-                    <span className="text-lg font-bold text-slate-900">S/ 130.00</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-label text-emerald-700 font-semibold">Margen</span>
-                    <span className="text-lg font-bold text-emerald-700">+S/ 40.00</span>
-                  </div>
+                <div className="flex flex-col">
+                  <span className="text-label text-slate-500">Ganancia vet.</span>
+                  <span className="text-base font-bold text-emerald-700 tabular-nums">
+                    {soles(complemento.precioPublico - complemento.precioVet)}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
-                <span className="text-label text-slate-400 flex items-center gap-1">
-                  <HistoryIcon className="size-3.5" /> Modif. hace 14 días
+              <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100">
+                <span className="text-label text-slate-400 inline-flex items-center gap-1">
+                  <HistoryIcon className="size-3.5" /> Modificado hace 14 días
                 </span>
-                <Button
-                  variant="soft"
-                  size="sm"
-                  onClick={() => notifySuccess("Abriendo configuración del complemento.")}
-                >
-                  <SlidersHorizontalIcon className="size-3.5" />
-                  Configurar
+                <Button variant="outline" size="sm" onClick={() => setComplementoAbierto(true)}>
+                  <PencilIcon className="size-3.5" />
+                  Editar
                 </Button>
               </div>
             </article>
           </div>
 
-          {/* Logística por distritos + recargo horario punta */}
-          <div className="lg:col-span-7 flex flex-col gap-4">
-            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
-                    <TruckIcon className="size-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Traslado Logístico por Distritos
-                    </h3>
-                    <span className="text-xs text-slate-500">
-                      Agrupaciones zonales por cercanía a sede central
-                    </span>
-                  </div>
+          {/* Traslado y recargo */}
+          <div className="lg:col-span-7 flex flex-col gap-5">
+            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
+                  <TruckIcon className="size-4" />
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-label font-semibold bg-slate-100 text-slate-600 self-start sm:self-auto">
-                  {ZONAS.length} Zonas Oficiales
-                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Traslado por zona</h3>
+                  <span className="text-xs text-slate-500">Cuánto se cobra según el distrito del servicio</span>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                {ZONAS.map((zona) => (
+                {zonas.map((zona) => (
                   <div
-                    key={zona.nombre}
-                    className="p-2.5 rounded-lg bg-slate-50/60 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
+                    key={zona.id}
+                    className="p-3 rounded-lg bg-slate-50/60 border border-slate-100 flex items-center justify-between gap-3"
                   >
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("w-2 h-2 rounded-full", zona.dotClass)} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={cn("w-2 h-2 rounded-full shrink-0", zona.dotClass)} />
                         <span className="text-sm font-semibold text-slate-900">{zona.nombre}</span>
                         {zona.incluido && (
                           <span className="px-1.5 py-0.5 rounded text-label font-semibold bg-emerald-50 text-emerald-700">
-                            Incluido en Plan
+                            Incluido en plan
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5 pl-4">{zona.distritos}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 pl-4 truncate">{zona.distritos}</p>
                     </div>
-                    <div className="flex items-center gap-2 pl-4 sm:pl-0 shrink-0">
-                      <span className="text-sm font-bold text-slate-900">{zona.precio}</span>
-                      <button
-                        type="button"
-                        className="p-1 text-slate-400 hover:text-brand-500 transition-colors"
-                        title="Editar distritos"
-                        onClick={() => notifySuccess(`Editando distritos de ${zona.nombre}.`)}
-                      >
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-bold text-slate-900 tabular-nums">
+                        {zona.precio === 0 ? "Sin cargo" : soles(zona.precio)}
+                      </span>
+                      <Button variant="outline" size="sm" onClick={() => setZonaDialog({ open: true, zona })}>
                         <PencilIcon className="size-3.5" />
-                      </button>
+                        Editar
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-
-              <div className="flex items-center justify-between pt-3 mt-1 border-t border-slate-100">
-                <span className="text-xs text-slate-400">
-                  Tarifas fijadas con choferes certificados y furgón refrigerado
-                </span>
-                <Button
-                  variant="soft"
-                  size="sm"
-                  onClick={() => notifySuccess("Abriendo gestión de zonas y distritos.")}
-                >
-                  <SlidersHorizontalIcon className="size-3.5" />
-                  Gestionar Zonas
-                </Button>
-              </div>
             </article>
 
-            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <article className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-slate-100 text-slate-600 shrink-0 flex items-center justify-center">
+                <div className="p-2 rounded-lg bg-slate-100 text-slate-600 shrink-0">
                   <ClockIcon className="size-5" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-sm font-semibold text-slate-900">
-                      Recargo Horario Punta (Tráfico Crítico)
-                    </h4>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Activo (+S/ 35.00)
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                    <span className="inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 font-medium">
-                      <ClockIcon className="size-3.5 text-slate-400" /> Mañana: <strong>07:30 - 09:30</strong>
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 font-medium">
-                      <ClockIcon className="size-3.5 text-slate-400" /> Tarde/Noche: <strong>17:00 - 19:00</strong>
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Se aplica sobre traslados y recojos programados o de urgencia dentro de estas
-                    ventanas críticas de tráfico.
+                  <h4 className="text-sm font-semibold text-slate-900">Recargo por horario punta</h4>
+                  <p className="text-xs text-slate-600">
+                    {horario.recargo > 0 ? (
+                      <>
+                        Se cobra <strong>{soles(horario.recargo)}</strong> extra en las franjas{" "}
+                        <strong>{horario.inicioManana}–{horario.finManana}</strong> y{" "}
+                        <strong>{horario.inicioTarde}–{horario.finTarde}</strong>.
+                      </>
+                    ) : (
+                      "Desactivado: no se cobra recargo por horario."
+                    )}
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 self-start sm:self-center"
-                onClick={() => notifySuccess("Abriendo ajuste de franjas y tarifa punta.")}
-              >
-                <ClockIcon className="size-3.5" />
-                Ajustar Franjas
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => setHorarioAbierto(true)}>
+                <PencilIcon className="size-3.5" />
+                Editar
               </Button>
             </article>
           </div>
         </div>
       </section>
+
+      <PlanDialog
+        open={planDialog.open}
+        plan={planDialog.plan}
+        onOpenChange={(open) => setPlanDialog((prev) => ({ ...prev, open }))}
+        onGuardar={handleGuardarPlan}
+      />
+
+      <ComplementoDialog
+        open={complementoAbierto}
+        complemento={complemento}
+        onOpenChange={setComplementoAbierto}
+        onGuardar={(c) => {
+          setComplemento(c);
+          notifySuccess(`"${c.nombre}" actualizado.`);
+        }}
+      />
+
+      <ZonaDialog
+        open={zonaDialog.open}
+        zona={zonaDialog.zona}
+        onOpenChange={(open) => setZonaDialog((prev) => ({ ...prev, open }))}
+        onGuardar={(z) => {
+          setZonas((prev) => prev.map((x) => (x.id === z.id ? z : x)));
+          notifySuccess(`${z.nombre}: traslado actualizado.`);
+        }}
+      />
+
+      <HorarioDialog
+        open={horarioAbierto}
+        horario={horario}
+        onOpenChange={setHorarioAbierto}
+        onGuardar={(h) => {
+          setHorario(h);
+          notifySuccess("Recargo por horario punta actualizado.");
+        }}
+      />
     </>
   );
 }

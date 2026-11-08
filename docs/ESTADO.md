@@ -17,7 +17,7 @@ Actualizado el 2026-11-07.
 | `/clientes` | Clientes | Placeholder | Sin spec | `clientes` |
 | `/mascotas` | Mascotas | Placeholder | Sin spec | `mascotas` |
 | `/servicios` | Servicios | Placeholder | Sin spec | `servicios` |
-| `/planes` | Planes | Ejemplo | Sin spec | `planes` |
+| `/planes` | Planes y precios | Ejemplo, rediseñada 2026-11-08 | [planes.md](specs/planes.md) | `planes` (precios por peso pendientes) |
 | `/finanzas` | Ingresos y Gastos | Ejemplo | [finanzas.md](specs/finanzas.md) | `gastos`, casos (pendiente) |
 | `/reportes` | Reportes | Ejemplo (datos sintéticos) | [reportes.md](specs/reportes.md) | `GET /reportes/cremaciones` (pendiente) |
 | `/inventario` | Inventario | Ejemplo | [inventario.md](specs/inventario.md) | Sin backend |
