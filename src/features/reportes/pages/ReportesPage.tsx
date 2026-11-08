@@ -9,7 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CASOS_EJEMPLO, NOMBRE_VETERINARIA, VETERINARIAS_REFERIDORAS, ULTIMO_MES_CON_DATOS } from "../data/casos.mock";
+import {
+  CASOS_EJEMPLO,
+  NOMBRE_PLAN,
+  NOMBRE_VETERINARIA,
+  PLANES_ORDEN,
+  ULTIMO_MES_CON_DATOS,
+  VETERINARIAS_REFERIDORAS,
+} from "../data/casos.mock";
+import type { PlanId } from "../types";
 import { ChartCard } from "../components/ChartCard";
 import { BarrasVerticales, type GrupoBarra, type SerieBarra } from "../components/BarrasVerticales";
 import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizontales";
@@ -20,14 +28,27 @@ import {
   etiquetaMesCorta,
   etiquetaMesLarga,
   formatPct,
+  formatPorcentaje,
   ordenarRanking,
+  porcentaje,
+  RANGOS_PESO,
+  rangoDePeso,
   sumar,
   variacionPct,
   ventanaMeses,
+  type RangoPesoId,
 } from "../utils/reportes";
 import "../reportes.css";
 
-type ReporteKey = "mensual" | "interanual" | "particulares" | "veterinarias" | "top-veterinarias" | "distritos";
+type ReporteKey =
+  | "mensual"
+  | "interanual"
+  | "particulares"
+  | "veterinarias"
+  | "top-veterinarias"
+  | "distritos"
+  | "planes"
+  | "peso";
 
 const REPORTES: { key: ReporteKey; label: string }[] = [
   { key: "mensual", label: "Cremaciones por mes" },
@@ -36,7 +57,12 @@ const REPORTES: { key: ReporteKey; label: string }[] = [
   { key: "veterinarias", label: "Veterinarias aliadas" },
   { key: "top-veterinarias", label: "Top 5 veterinarias" },
   { key: "distritos", label: "Distritos" },
+  { key: "planes", label: "Planes vendidos" },
+  { key: "peso", label: "Peso de la mascota" },
 ];
+
+type Longitud = 3 | 6 | 9 | 12;
+const LONGITUDES: Longitud[] = [3, 6, 9, 12];
 
 const SERIE_PERIODO: SerieBarra = { key: "periodo", label: "Mes del período", color: "var(--serie-1)" };
 const SERIE_ANTERIOR: SerieBarra = { key: "anterior", label: "Mismo mes, año anterior", color: "var(--serie-2)" };
@@ -64,7 +90,7 @@ export default function ReportesPage() {
     const anterior = desplazarMes(MES_EN_CURSO, -1);
     return anterior < PRIMER_MES_OPCION ? PRIMER_MES_OPCION : anterior;
   });
-  const [longitud, setLongitud] = useState<3 | 6>(6);
+  const [longitud, setLongitud] = useState<Longitud>(6);
   const [reporte, setReporte] = useState<ReporteKey>("mensual");
 
   const ventana = useMemo(() => ventanaMeses(finClave, longitud), [finClave, longitud]);
@@ -72,6 +98,12 @@ export default function ReportesPage() {
     () => ventanaMeses(desplazarMes(finClave, -longitud), longitud),
     [finClave, longitud]
   );
+  const conjuntoPeriodo = useMemo(() => new Set(ventana), [ventana]);
+  const casosPeriodo = useMemo(
+    () => CASOS_EJEMPLO.filter((c) => conjuntoPeriodo.has(c.fecha.slice(0, 7))),
+    [conjuntoPeriodo]
+  );
+  const totalCasos = casosPeriodo.length;
   const incluyeParcial = ventana.includes(MES_EN_CURSO);
 
   const totalPeriodo = sumar(ventana.map((m) => TOTAL_MES[m] ?? 0));
@@ -118,11 +150,9 @@ export default function ReportesPage() {
   const grupos4 = gruposInteranuales(VETERINARIA_MES);
 
   // Reporte 5: top 5 veterinarias por referidos en el período.
-  const conjuntoPeriodo = new Set(ventana);
   const referidosPorVet: Record<string, number> = {};
-  for (const c of CASOS_EJEMPLO) {
+  for (const c of casosPeriodo) {
     if (c.canal !== "veterinaria" || !c.veterinariaId) continue;
-    if (!conjuntoPeriodo.has(c.fecha.slice(0, 7))) continue;
     referidosPorVet[c.veterinariaId] = (referidosPorVet[c.veterinariaId] ?? 0) + 1;
   }
   const totalReferidos = sumar(Object.values(referidosPorVet));
@@ -136,8 +166,7 @@ export default function ReportesPage() {
 
   // Reporte 6: distritos en el período; los 5 primeros se destacan.
   const conteoDistrito: Record<string, number> = {};
-  for (const c of CASOS_EJEMPLO) {
-    if (!conjuntoPeriodo.has(c.fecha.slice(0, 7))) continue;
+  for (const c of casosPeriodo) {
     conteoDistrito[c.distrito] = (conteoDistrito[c.distrito] ?? 0) + 1;
   }
   const rankingDistritos = ordenarRanking(
@@ -150,12 +179,39 @@ export default function ReportesPage() {
     etiqueta: r.nombre,
     valor: r.valor,
     destacada: true,
+    detalle: formatPorcentaje(porcentaje(r.valor, totalReferidos)),
   }));
   const filasDistritos: FilaRanking[] = rankingDistritos.map((d, i) => ({
     id: d.id,
     etiqueta: d.nombre,
     valor: d.valor,
     destacada: i < 5,
+    detalle: formatPorcentaje(porcentaje(d.valor, totalDistritos)),
+  }));
+
+  // Reporte 7: ventas por plan. "Sin clasificar" va en gris: no es un plan.
+  const conteoPlan: Record<PlanId, number> = { clasico: 0, eco: 0, paz: 0, "sin-clasificar": 0 };
+  for (const c of casosPeriodo) conteoPlan[c.plan] += 1;
+  const rankingPlanes = ordenarRanking(
+    PLANES_ORDEN.map((id) => ({ id, nombre: NOMBRE_PLAN[id], valor: conteoPlan[id] }))
+  );
+  const filasPlanes: FilaRanking[] = rankingPlanes.map((p) => ({
+    id: p.id,
+    etiqueta: p.nombre,
+    valor: p.valor,
+    destacada: p.id !== "sin-clasificar",
+    detalle: formatPorcentaje(porcentaje(p.valor, totalCasos)),
+  }));
+  const presenciales = casosPeriodo.filter((c) => c.presencial).length;
+  const conEutanasia = casosPeriodo.filter((c) => c.eutanasia).length;
+
+  // Reporte 8: peso de la mascota por rango.
+  const conteoRango: Record<RangoPesoId, number> = { "0-5": 0, "5-15": 0, "15-25": 0, "25-35": 0, "35+": 0 };
+  for (const c of casosPeriodo) conteoRango[rangoDePeso(c.pesoKg)] += 1;
+  const gruposPeso: GrupoBarra[] = RANGOS_PESO.map((r) => ({
+    etiqueta: r.etiqueta,
+    valores: { total: conteoRango[r.id] },
+    subetiqueta: formatPorcentaje(porcentaje(conteoRango[r.id], totalCasos)),
   }));
 
   return (
@@ -164,18 +220,21 @@ export default function ReportesPage() {
 
       <ModuleHeader
         title="Reportes"
-        description="Revisión de la empresa cada 3 o 6 meses: cremaciones, canales, veterinarias y distritos."
+        description="Revisión de la empresa: cremaciones, canales, veterinarias, distritos, planes y peso."
       />
 
       {/* Filtros: una sola fila para todos los reportes */}
       <div className="flex flex-col md:flex-row md:items-center gap-3">
-        <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as 3 | 6)}>
+        <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as Longitud)}>
           <SelectTrigger className="md:w-60 whitespace-nowrap">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="3">Período de 3 meses</SelectItem>
-            <SelectItem value="6">Período de 6 meses</SelectItem>
+            {LONGITUDES.map((l) => (
+              <SelectItem key={l} value={String(l)}>
+                Período de {l} meses
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={finClave} onValueChange={setFinClave}>
@@ -338,7 +397,7 @@ export default function ReportesPage() {
               `#${i + 1}`,
               NOMBRE_VETERINARIA[r.id] ?? r.nombre,
               r.valor,
-              `${((r.valor / totalReferidos) * 100).toLocaleString("es-PE", { maximumFractionDigits: 1 })}%`,
+              formatPorcentaje(porcentaje(r.valor, totalReferidos)),
             ]),
           }}
           nota={`Total de referidos en el período: ${totalReferidos.toLocaleString("es-PE")}.`}
@@ -361,7 +420,7 @@ export default function ReportesPage() {
               `#${i + 1}${i < 5 ? " · Top 5" : ""}`,
               d.nombre,
               d.valor,
-              `${((d.valor / totalDistritos) * 100).toLocaleString("es-PE", { maximumFractionDigits: 1 })}%`,
+              formatPorcentaje(porcentaje(d.valor, totalDistritos)),
             ]),
           }}
           nota={`${rankingDistritos.length} distritos con cremaciones en el período.`}
@@ -369,6 +428,143 @@ export default function ReportesPage() {
           <BarrasHorizontales filas={filasDistritos} descripcion="Distritos por cremaciones; los cinco primeros destacados" />
         </ChartCard>
       )}
+
+      {reporte === "planes" && (
+        <>
+          <ChartCard
+            titulo="Planes vendidos"
+            subtitulo={`Cremaciones vendidas por plan · ${periodoLabel}`}
+            nota={notaParcial}
+            tabla={{
+              columnas: ["Plan", "Ventas", "% del total"],
+              filas: [
+                ...rankingPlanes.map((p) => [
+                  p.nombre,
+                  p.valor,
+                  formatPorcentaje(porcentaje(p.valor, totalCasos)),
+                ]),
+                ["Total", totalCasos, totalCasos ? "100%" : "—"],
+              ],
+            }}
+          >
+            <BarrasHorizontales filas={filasPlanes} descripcion="Ventas por plan de cremación" />
+          </ChartCard>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ExtraDosPartes
+              titulo="Presencialidad"
+              primera={{ label: "Presencial", valor: presenciales }}
+              segunda={{ label: "No presencial", valor: totalCasos - presenciales }}
+              total={totalCasos}
+            />
+            <ExtraDosPartes
+              titulo="Eutanasia"
+              primera={{ label: "Con eutanasia", valor: conEutanasia }}
+              segunda={{ label: "Sin eutanasia", valor: totalCasos - conEutanasia }}
+              total={totalCasos}
+            />
+          </div>
+        </>
+      )}
+
+      {reporte === "peso" && (
+        <ChartCard
+          titulo="Peso de la mascota"
+          subtitulo={`Cremaciones por rango de peso · ${periodoLabel}`}
+          tabla={{
+            columnas: ["Rango de peso", "Cremaciones", "% del total"],
+            filas: [
+              ...RANGOS_PESO.map((r) => [
+                r.etiqueta,
+                conteoRango[r.id],
+                formatPorcentaje(porcentaje(conteoRango[r.id], totalCasos)),
+              ]),
+              ["Total", totalCasos, totalCasos ? "100%" : "—"],
+            ],
+          }}
+          nota={
+            <>
+              <p>
+                Total de cremaciones con peso registrado: {totalCasos.toLocaleString("es-PE")}. El
+                porcentaje bajo cada rango es su parte del total del período.
+              </p>
+              {notaParcial && <p className="mt-1">{notaParcial}</p>}
+            </>
+          }
+        >
+          <BarrasVerticales
+            grupos={gruposPeso}
+            series={[{ key: "total", label: "Cremaciones", color: "var(--serie-1)" }]}
+            descripcion="Cremaciones por rango de peso de la mascota"
+            etiquetaVariacion=""
+          />
+        </ChartCard>
+      )}
+    </div>
+  );
+}
+
+/** Dato de dos partes con su porcentaje sobre el total reportado. */
+function ExtraDosPartes({
+  titulo,
+  primera,
+  segunda,
+  total,
+}: {
+  titulo: string;
+  primera: { label: string; valor: number };
+  segunda: { label: string; valor: number };
+  total: number;
+}) {
+  const pA = porcentaje(primera.valor, total);
+  const pB = porcentaje(segunda.valor, total);
+  return (
+    <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{titulo}</p>
+        <p className="text-xs text-slate-400 mt-0.5">
+          Porcentaje sobre el total reportado: {total.toLocaleString("es-PE")} cremaciones
+        </p>
+      </div>
+      <div
+        role="img"
+        aria-label={`${primera.label}: ${formatPorcentaje(pA)}; ${segunda.label}: ${formatPorcentaje(pB)}`}
+        className="flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--grid)]"
+      >
+        <div className="h-full" style={{ width: `${pA ?? 0}%`, background: "var(--serie-1)" }} />
+        <div className="h-full" style={{ width: `${pB ?? 0}%`, background: "var(--baseline)" }} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <ParteDato color="var(--serie-1)" label={primera.label} valor={primera.valor} pct={pA} />
+        <ParteDato color="var(--baseline)" label={segunda.label} valor={segunda.valor} pct={pB} />
+      </div>
+    </section>
+  );
+}
+
+function ParteDato({
+  color,
+  label,
+  valor,
+  pct,
+}: {
+  color: string;
+  label: string;
+  valor: number;
+  pct: number | null;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <span className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} aria-hidden />
+        {label}
+      </div>
+      <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+        {valor.toLocaleString("es-PE")}
+      </p>
+      <p className="text-sm font-semibold text-[var(--ink-2)] tabular-nums">
+        {formatPorcentaje(pct)} del total
+      </p>
     </div>
   );
 }
@@ -401,4 +597,3 @@ function Resumen({
     </div>
   );
 }
-

@@ -1,5 +1,8 @@
 export type Canal = "particular" | "veterinaria";
 
+/** Planes de cremación. "sin-clasificar" es el cuarto caso opcional. */
+export type PlanId = "clasico" | "eco" | "paz" | "sin-clasificar";
+
 /** Cremación realizada, con los datos que usan los reportes. */
 export interface CasoReportable {
   id: string;
@@ -9,4 +12,11 @@ export interface CasoReportable {
   /** Solo si el canal es "veterinaria". */
   veterinariaId?: string;
   distrito: string;
+  plan: PlanId;
+  /** Servicio complementario: presencia del tutor durante el proceso. */
+  presencial: boolean;
+  /** Servicio complementario: eutanasia incluida en la venta. */
+  eutanasia: boolean;
+  /** Peso de la mascota al momento del servicio, en kg. */
+  pesoKg: number;
 }

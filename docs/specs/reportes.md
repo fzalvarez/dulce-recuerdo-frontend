@@ -95,3 +95,64 @@ todos los casos.
 - `docs/ESTADO.md`: fila de `/reportes`.
 - `docs/specs/README.md`: índice.
 - Backend: `GET /reportes/cremaciones` cuando exista, con su propia spec en el back.
+
+## 9. Ampliación 2026-11-08
+
+**Pedido directo del usuario.** Se agregan dos reportes y cambia la temporalidad.
+
+### Temporalidad
+
+Los reportes se pueden ver en períodos de **3, 6, 9 o 12 meses**, terminando en el mes
+que se elija. Aplica a todos los reportes de la pantalla.
+
+### 7. Planes vendidos
+
+Cremaciones vendidas por plan de cremación: Dulce Recuerdo Clásico, Dulce Recuerdo
+Eco, Dulce Recuerdo Paz y, como cuarto caso opcional, Sin clasificar.
+
+- Barras horizontales ordenadas por ventas, con la cantidad y el % del total.
+- Tabla con el mismo dato y una fila de total.
+- Dos datos extra bajo el gráfico, con % sobre el total de ventas del período:
+  - **Presencialidad:** cuántas ventas fueron presenciales y cuántas no.
+  - **Eutanasia:** cuántas cremaciones se hicieron con eutanasia y cuántas no.
+
+### 8. Peso de la mascota
+
+Cremaciones por rango de peso de la mascota: 0 a 5 kg, 5,1 a 15 kg, 15,1 a 25 kg,
+25,1 a 35 kg y 35,1 kg o más.
+
+- Columnas verticales con la cantidad y el % del total debajo de cada rango.
+- Tabla con los mismos datos y una fila de total.
+
+### Reglas nuevas
+
+- **R10 Plan:** cada venta tiene un plan. "Sin clasificar" es un caso aparte: se muestra
+  en gris y no se cuenta como plan.
+- **R11 Presencialidad:** cada venta indica si incluyó presencialidad. Presencial +
+  no presencial = total de ventas del período.
+- **R12 Eutanasia:** cada venta indica si incluyó eutanasia. Con eutanasia + sin eutanasia
+  = total de ventas del período.
+- **R13 Peso:** el peso de la mascota es un dato siempre presente. Los rangos son
+  cerrados por arriba: 5 kg cae en "0 a 5 kg" y 5,1 kg en "5,1 a 15 kg".
+- **R14 Porcentajes:** todo porcentaje muestra su base (total del período) en la
+  pantalla o en la tabla.
+
+### Datos
+
+Se agregan a cada caso: `plan`, `presencial`, `eutanasia` y `pesoKg`. Se agrega el año
+2023 a los datos de ejemplo, para que la comparación interanual de 12 meses tenga año
+anterior.
+
+### Criterios de aceptación (ampliación)
+
+- [ ] Dado un período de 6 meses, cuando se abre "Planes vendidos", entonces la suma de los cuatro planes es igual al total de ventas del período.
+- [ ] Dado el extra de presencialidad, cuando se muestra, entonces presencial + no presencial = total de ventas y ambos % suman 100%.
+- [ ] Dado el extra de eutanasia, cuando se muestra, entonces con eutanasia + sin eutanasia = total de ventas.
+- [ ] Dado un caso de 5 kg exactos, cuando se clasifica, entonces cae en "0 a 5 kg".
+- [ ] Dado "Peso de la mascota", cuando se muestra la tabla, entonces la suma de los rangos es igual al total y el % total es 100%.
+- [ ] Dado el período de 12 meses, cuando se cambia a "Vs. año anterior", entonces cada mes tiene su barra del año anterior con valor real (no cero por falta de datos).
+
+### Preguntas abiertas (ampliación)
+
+- ¿El peso se toma al ingreso del cuerpo o al momento de la venta? Afecta a qué precio por kilo aplica.
+- ¿"Sin clasificar" significa venta sin plan asignado o plan que aún no se define?

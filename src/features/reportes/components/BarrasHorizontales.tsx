@@ -4,8 +4,10 @@ export interface FilaRanking {
   id: string;
   etiqueta: string;
   valor: number;
-  /** Destacada = top 5: color de la serie. El resto va en gris (de-énfasis). */
+  /** Destacada = color de la serie. El resto va en gris (de-énfasis). */
   destacada?: boolean;
+  /** Dato secundario junto al valor, ej. "34%". */
+  detalle?: string;
 }
 
 /**
@@ -47,8 +49,11 @@ export function BarrasHorizontales({ filas, descripcion }: { filas: FilaRanking[
             />
           </div>
 
-          <span className="text-sm font-semibold text-[var(--ink)] tabular-nums w-10 text-right">
-            {f.valor}
+          <span className="text-right whitespace-nowrap">
+            <span className="text-sm font-semibold text-[var(--ink)] tabular-nums">{f.valor}</span>
+            {f.detalle && (
+              <span className="ml-2 text-xs text-[var(--ink-2)] tabular-nums">{f.detalle}</span>
+            )}
           </span>
         </li>
       ))}

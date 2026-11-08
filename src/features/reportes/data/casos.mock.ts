@@ -1,4 +1,4 @@
-import type { CasoReportable } from "../types";
+import type { CasoReportable, PlanId } from "../types";
 
 // TODO: reemplazar por datos reales cuando el back exponga GET /reportes/cremaciones.
 // Datos sintéticos: los totales mensuales son fijos y los casos se generan con una
@@ -18,6 +18,15 @@ export const NOMBRE_VETERINARIA: Record<string, string> = Object.fromEntries(
   VETERINARIAS_REFERIDORAS.map((v) => [v.id, v.nombre])
 );
 
+export const NOMBRE_PLAN: Record<PlanId, string> = {
+  clasico: "Dulce Recuerdo Clásico",
+  eco: "Dulce Recuerdo Eco",
+  paz: "Dulce Recuerdo Paz",
+  "sin-clasificar": "Sin clasificar",
+};
+
+export const PLANES_ORDEN: PlanId[] = ["clasico", "eco", "paz", "sin-clasificar"];
+
 const DISTRITOS_PESO: [string, number][] = [
   ["Santiago de Surco", 16],
   ["San Borja", 13],
@@ -33,8 +42,36 @@ const DISTRITOS_PESO: [string, number][] = [
   ["Los Olivos", 2],
 ];
 
+const PLANES_PESO: [PlanId, number][] = [
+  ["clasico", 45],
+  ["eco", 30],
+  ["paz", 17],
+  ["sin-clasificar", 8],
+];
+
+// Distribución de pesos: la mayoría son perros medianos y grandes.
+const RANGOS_PESO_PESO: [string, number][] = [
+  ["0-5", 14],
+  ["5-15", 30],
+  ["15-25", 24],
+  ["25-35", 20],
+  ["35+", 12],
+];
+
+const LIMITES_RANGO: Record<string, [number, number]> = {
+  "0-5": [0.5, 5],
+  "5-15": [5.1, 15],
+  "15-25": [15.1, 25],
+  "25-35": [25.1, 35],
+  "35+": [35.1, 60],
+};
+
 /** Total de cremaciones y cuántas fueron referidas por veterinarias, por mes. */
 const SERIE_MENSUAL: Record<string, { total: number[]; veterinaria: number[] }> = {
+  "2023": {
+    total: [17, 19, 21, 18, 20, 23, 25, 24, 22, 20, 19, 23],
+    veterinaria: [9, 10, 11, 10, 11, 12, 13, 13, 12, 11, 10, 12],
+  },
   "2024": {
     total: [19, 21, 24, 22, 25, 27, 30, 28, 26, 24, 23, 27],
     veterinaria: [10, 11, 13, 12, 14, 15, 17, 15, 14, 13, 12, 14],
@@ -60,7 +97,7 @@ function crearPrng(semilla: number) {
   };
 }
 
-function elegirPonderado(rnd: () => number, opciones: [string, number][]): string {
+function elegirPonderado<T extends string>(rnd: () => number, opciones: [T, number][]): T {
   const total = opciones.reduce((acc, [, peso]) => acc + peso, 0);
   let r = rnd() * total;
   for (const [valor, peso] of opciones) {
@@ -68,6 +105,12 @@ function elegirPonderado(rnd: () => number, opciones: [string, number][]): strin
     if (r < 0) return valor;
   }
   return opciones[opciones.length - 1][0];
+}
+
+function generarPesoKg(rnd: () => number): number {
+  const rango = elegirPonderado(rnd, RANGOS_PESO_PESO);
+  const [min, max] = LIMITES_RANGO[rango];
+  return Math.round((min + rnd() * (max - min)) * 10) / 10;
 }
 
 function generarCasos(): CasoReportable[] {
@@ -85,17 +128,20 @@ function generarCasos(): CasoReportable[] {
         const dia = 1 + Math.floor(rnd() * diaMax);
         const fecha = `${mes}-${String(dia).padStart(2, "0")}`;
         const distrito = elegirPonderado(rnd, DISTRITOS_PESO);
+        const plan = elegirPonderado(rnd, PLANES_PESO);
+        const presencial = rnd() < 0.4;
+        const eutanasia = rnd() < 0.25;
+        const pesoKg = generarPesoKg(rnd);
         n += 1;
+        const base = { id: `c-${n}`, fecha, distrito, plan, presencial, eutanasia, pesoKg };
         if (k < vet) {
           casos.push({
-            id: `c-${n}`,
-            fecha,
+            ...base,
             canal: "veterinaria",
             veterinariaId: elegirPonderado(rnd, pesosVet),
-            distrito,
           });
         } else {
-          casos.push({ id: `c-${n}`, fecha, canal: "particular", distrito });
+          casos.push({ ...base, canal: "particular" });
         }
       }
     });

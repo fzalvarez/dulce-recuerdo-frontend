@@ -14,6 +14,8 @@ export interface GrupoBarra {
   valores: Record<string, number>;
   /** Variación en %; null = sin base de comparación. Omitido = no se muestra. */
   variacion?: number | null;
+  /** Dato bajo la etiqueta, ej. porcentaje del total. */
+  subetiqueta?: string;
 }
 
 const ALTURA_BARRAS = 200;
@@ -98,6 +100,11 @@ export function BarrasVerticales({
                   {g.etiqueta}
                   {g.parcial && (
                     <span className="block text-[10px] text-[var(--muted)]">parcial</span>
+                  )}
+                  {g.subetiqueta && (
+                    <span className="block text-[11px] font-semibold text-[var(--ink)] tabular-nums">
+                      {g.subetiqueta}
+                    </span>
                   )}
                 </div>
 
