@@ -2,7 +2,6 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboardIcon,
   BriefcaseIcon,
-  FileTextIcon,
   CalendarIcon,
   StethoscopeIcon,
   TruckIcon,
@@ -25,7 +24,6 @@ import { useSidebarStore } from "@/shared/store/sidebar.store";
 // Eutanasia y cremación: pipeline por Caso (evento único, no cliente recurrente).
 const DESPEDIDAS_ITEMS = [
   { label: "Casos & Servicios", icon: BriefcaseIcon, to: "/casos" },
-  { label: "Cotizaciones", icon: FileTextIcon, to: "/cotizaciones" },
   { label: "Agenda & Rutas", icon: CalendarIcon, to: "/agenda" },
   { label: "Convenios Veterinarios", icon: StethoscopeIcon, to: "/veterinarias" },
   { label: "Entregas", icon: TruckIcon, to: "/entregas" },

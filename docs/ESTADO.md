@@ -9,8 +9,7 @@ Actualizado el 2026-11-07.
 | Ruta | Módulo | Estado | Spec | Depende de (backend) |
 |---|---|---|---|---|
 | `/` | Dashboard | Placeholder | Sin spec | Casos, agenda, entregas |
-| `/casos` | Casos & Servicios | Ejemplo | Sin spec | `casos` |
-| `/cotizaciones` | Cotizaciones | Placeholder | Sin spec | `cotizaciones` |
+| `/casos` | Casos & Servicios | Ejemplo, flujo simplificado 2026-11-08 | [casos.md](specs/casos.md) | `casos` (back pendiente) |
 | `/agenda` | Agenda & Rutas | Ejemplo | Sin spec | `agenda` |
 | `/veterinarias` | Convenios Veterinarios | Ejemplo | Sin spec | `veterinarias`, `liquidaciones` |
 | `/entregas` | Entregas | Placeholder | Sin spec | `entregas` |

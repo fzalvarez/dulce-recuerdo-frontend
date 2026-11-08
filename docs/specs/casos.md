@@ -1,6 +1,6 @@
 # Spec: Casos (flujo simplificado)
 
-**Estado:** Propuesta
+**Estado:** Aprobada e implementada en el front (2026-11-08)
 **Fecha:** 2026-11-08
 **Pantalla en el front:** `/casos`, y se elimina `/cotizaciones` del menú
 
@@ -88,12 +88,20 @@ Opcionales (se completan en el caso):
 - [ ] Dado una eutanasia sola, cuando se revisan los reportes de cremaciones, entonces no aparece como cremación.
 - [ ] Dado una cremación con eutanasia incluida, cuando se revisan los reportes, entonces cuenta como cremación y como eutanasia.
 
-## 7. Preguntas abiertas
+## 7. Decisiones tomadas
 
-- ¿El caso puede quedar "Agendado" antes de tener pago, o el orden siempre es pago y luego agenda?
-- ¿El abandono se marca a mano o pasa solo después de X días sin mensajes?
-- ¿Cuánto cuesta la eutanasia sola? ¿Tiene traslado aparte?
-- ¿Entregado es igual para retiro en sede y para entrega a domicilio?
+- **Pago antes que agenda:** un caso solo se puede agendar si ya tiene al menos un pago.
+- **Abandono automático:** un caso sin pagos que lleva 7 días sin mensajes se muestra como
+  abandonado. Es una constante (`DIAS_ABANDONO`). Un caso con pagos nunca se abandona.
+- **Eutanasia sola:** costo fijo más traslado según distrito, y recargo si la hora cae en
+  horario punta. Los montos del costo fijo y de la eutanasia incluida quedan en 0 y se
+  muestran como "pendiente de tarifa" hasta que se definan.
+- **Entregado:** es cuando se entrega la urna, en domicilio o en la cremación presencial.
+
+## 7.1 Pendientes de negocio
+
+- Monto del costo fijo de la eutanasia sola (`EUTANASIA_COSTO_FIJO`).
+- Precio de la eutanasia cuando va incluida en una cremación (`EUTANASIA_EXTRA_PRECIO`).
 
 ## 8. Impacto en el back
 
