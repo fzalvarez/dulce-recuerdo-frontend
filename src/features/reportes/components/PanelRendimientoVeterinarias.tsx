@@ -1,53 +1,27 @@
-import { useMemo } from "react";
-import type { CasoReportable, PlanId } from "../types";
-import { calcularVeterinarias, type FilaVeterinaria } from "../utils/rendimientoVeterinarias";
-import { formatoSolesCorto } from "../utils/oportunidades";
-
-const PLAN_CORTO: Record<PlanId, string> = {
-  clasico: "Clásico",
-  paz: "Paz",
-  eco: "Eco",
-  "sin-clasificar": "Sin clasificar",
-};
+import type { FilaVeterinaria, ReporteVeterinarias } from "../api";
+import { formatoSolesCorto } from "../utils/reportes";
 
 function signo(n: number): string {
   return `${n > 0 ? "+" : ""}${Math.round(n)}%`;
 }
 
-export function PanelRendimientoVeterinarias({
-  casos,
-  ventana,
-  ventanaPrevia,
-}: {
-  casos: CasoReportable[];
-  ventana: string[];
-  ventanaPrevia: string[];
-}) {
-  const resultado = useMemo(
-    () => calcularVeterinarias(casos, ventana, ventanaPrevia),
-    [casos, ventana, ventanaPrevia]
-  );
-  const { filas, conclusiones, pctTop5, totalReferidos } = resultado;
+/** Rendimiento de cada veterinaria aliada, calculado en el backend. */
+export function PanelRendimientoVeterinarias({ datos }: { datos: ReporteVeterinarias | undefined }) {
+  if (!datos) return <section className="text-sm text-slate-500">Cargando rendimiento…</section>;
+  const { filas, conclusiones, pct_top5, total_referidos } = datos;
   const caidas = filas.filter((f) => f.caida).length;
   const crecen = filas.filter((f) => f.crece).length;
 
   return (
     <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Rendimiento de veterinarias</h2>
-          <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-            Datos de maqueta
-          </span>
-        </div>
-        <p className="text-xs text-slate-500">
-          Actividad, ingresos y planes de cada veterinaria aliada en el período.
-        </p>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Rendimiento de veterinarias</h2>
+        <p className="text-xs text-slate-500">Actividad, ingresos y planes de cada veterinaria aliada en el período.</p>
       </header>
 
       <p className="text-sm text-slate-700 dark:text-slate-300">
-        Las cinco principales concentran <strong className="text-slate-900 dark:text-white">{Math.round(pctTop5)}%</strong> de los
-        referidos · {caidas} con caída · {crecen} con crecimiento
+        Las cinco principales concentran <strong className="text-slate-900 dark:text-white">{Math.round(pct_top5)}%</strong> de los referidos ·{" "}
+        {caidas} con caída · {crecen} con crecimiento
       </p>
 
       <div className="overflow-x-auto">
@@ -61,14 +35,14 @@ export function PanelRendimientoVeterinarias({
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
             {filas.map((f) => (
-              <FilaTabla key={f.id} fila={f} />
+              <FilaTabla key={f.veterinaria_id} fila={f} />
             ))}
           </tbody>
         </table>
       </div>
 
       <p className="text-xs text-slate-500">
-        {totalReferidos.toLocaleString("es-PE")} cremaciones referidas en el período. Ingreso según la tabla de planes, sin traslado.
+        {total_referidos.toLocaleString("es-PE")} cremaciones referidas en el período. Ingreso: precio real de cada caso.
       </p>
 
       <div className="rounded-lg bg-slate-50 dark:bg-white/5 p-4">
@@ -92,26 +66,24 @@ function FilaTabla({ fila }: { fila: FilaVeterinaria }) {
       <td className="py-2.5 pr-3 min-w-[200px]">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-slate-900 dark:text-white">{fila.nombre}</span>
-          {fila.caida && fila.variacionPct !== null && (
+          {fila.caida && fila.variacion !== null && (
             <span className="px-2 py-0.5 rounded-full border text-label font-semibold whitespace-nowrap bg-red-50 text-red-700 border-red-100 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20">
-              Pierde actividad {signo(fila.variacionPct)}
+              Pierde actividad {signo(fila.variacion)}
             </span>
           )}
-          {fila.crece && fila.variacionPct !== null && (
+          {fila.crece && fila.variacion !== null && (
             <span className="px-2 py-0.5 rounded-full border text-label font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20">
-              Crece {signo(fila.variacionPct)}
+              Crece {signo(fila.variacion)}
             </span>
           )}
         </div>
         <span className="block text-xs text-slate-500">
-          Plan principal: {fila.planPrincipal ? PLAN_CORTO[fila.planPrincipal] : "—"}
+          {fila.cremaciones} cremaciones · plan principal: {fila.plan_principal ?? "—"}
         </span>
       </td>
-      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-300">
-        {formatoSolesCorto(fila.ingreso)}
-      </td>
+      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-300">{formatoSolesCorto(Number(fila.ingreso))}</td>
       <td className="py-2.5 pl-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
-        {fila.pctIngreso.toLocaleString("es-PE", { maximumFractionDigits: 1 })}%
+        {fila.pct_ingreso.toLocaleString("es-PE", { maximumFractionDigits: 1 })}%
       </td>
     </tr>
   );

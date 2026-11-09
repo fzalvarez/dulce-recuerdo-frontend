@@ -11,38 +11,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CASOS_EJEMPLO,
-  NOMBRE_PLAN,
-  NOMBRE_VETERINARIA,
-  PLANES_ORDEN,
-  ULTIMO_MES_CON_DATOS,
-  VETERINARIAS_REFERIDORAS,
-} from "../data/casos.mock";
-import type { PlanId } from "../types";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { soles } from "@/features/casos/utils/casos";
+import * as R from "../api";
 import { ChartCard } from "../components/ChartCard";
 import { BarrasVerticales, type GrupoBarra, type SerieBarra } from "../components/BarrasVerticales";
 import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizontales";
 import { PanelAbastecimiento } from "../components/PanelAbastecimiento";
 import { PanelOportunidades } from "../components/PanelOportunidades";
 import { PanelRendimientoVeterinarias } from "../components/PanelRendimientoVeterinarias";
-import { calcularIngresosMes, soles } from "../utils/ingresos";
 import {
   claveMes,
-  contarPorMes,
   desplazarMes,
   etiquetaMesCorta,
   etiquetaMesLarga,
   formatPct,
   formatPorcentaje,
-  ordenarRanking,
-  porcentaje,
-  RANGOS_PESO,
-  rangoDePeso,
-  sumar,
-  variacionPct,
-  ventanaMeses,
-  type RangoPesoId,
 } from "../utils/reportes";
 import "../reportes.css";
 
@@ -75,52 +59,41 @@ const LONGITUDES: Longitud[] = [3, 6, 9, 12];
 const SERIE_PERIODO: SerieBarra = { key: "periodo", label: "Mes del período", color: "var(--serie-1)" };
 const SERIE_ANTERIOR: SerieBarra = { key: "anterior", label: "Mismo mes, año anterior", color: "var(--serie-2)" };
 
-// Conteos calculados una sola vez sobre todos los casos.
-const TOTAL_MES = contarPorMes(CASOS_EJEMPLO);
-const PARTICULAR_MES = contarPorMes(CASOS_EJEMPLO, (c) => c.canal === "particular");
-const VETERINARIA_MES = contarPorMes(CASOS_EJEMPLO, (c) => c.canal === "veterinaria");
-
 const MES_EN_CURSO = claveMes(new Date());
-const PRIMER_MES_OPCION = "2025-01";
-
-const OPCIONES_FIN: string[] = [];
-for (let m = PRIMER_MES_OPCION; m <= ULTIMO_MES_CON_DATOS; m = desplazarMes(m, 1)) {
-  OPCIONES_FIN.push(m);
-}
+/** Opciones de cierre: los últimos 24 meses, del más reciente al más antiguo. */
+const OPCIONES_FIN: string[] = Array.from({ length: 24 }, (_, i) => desplazarMes(MES_EN_CURSO, -i));
 
 function fechaDeCorte(): string {
   return new Date().toLocaleDateString("es-PE", { day: "numeric", month: "long" });
 }
 
+/** Reportes calculados en el backend con datos reales (spec reportes). */
 export default function ReportesPage() {
-  const [finClave, setFinClave] = useState(() => {
-    // Por defecto, el último mes que ya cerró.
-    const anterior = desplazarMes(MES_EN_CURSO, -1);
-    return anterior < PRIMER_MES_OPCION ? PRIMER_MES_OPCION : anterior;
-  });
+  const [finClave, setFinClave] = useState(() => desplazarMes(MES_EN_CURSO, -1));
   const [longitud, setLongitud] = useState<Longitud>(6);
-  // El reporte activo sale de la URL: /reportes/<slug>.
   const { reporte: slug } = useParams();
   const reporte: ReporteKey = REPORTES.find((r) => r.slug === slug)?.key ?? "mensual";
+  const clave = `${finClave}|${longitud}`;
 
-  const ventana = useMemo(() => ventanaMeses(finClave, longitud), [finClave, longitud]);
-  const ventanaPrevia = useMemo(
-    () => ventanaMeses(desplazarMes(finClave, -longitud), longitud),
-    [finClave, longitud]
-  );
-  const conjuntoPeriodo = useMemo(() => new Set(ventana), [ventana]);
-  const casosPeriodo = useMemo(
-    () => CASOS_EJEMPLO.filter((c) => conjuntoPeriodo.has(c.fecha.slice(0, 7))),
-    [conjuntoPeriodo]
-  );
-  const totalCasos = casosPeriodo.length;
-  const incluyeParcial = ventana.includes(MES_EN_CURSO);
+  const crem = useRecurso(() => R.cremaciones(finClave, longitud), [clave]);
+  const usaIngresos = reporte === "ingresos";
+  const usaComposicion = ["top-veterinarias", "distritos", "planes", "peso"].includes(reporte);
+  const ing = useRecurso(() => (usaIngresos ? R.ingresos(finClave, longitud) : Promise.resolve(undefined)), [clave, usaIngresos]);
+  const comp = useRecurso(() => (usaComposicion ? R.composicion(finClave, longitud) : Promise.resolve(undefined)), [clave, usaComposicion]);
+  const vets = useRecurso(() => (reporte === "top-veterinarias" ? R.veterinarias(finClave, longitud) : Promise.resolve(undefined)), [clave, reporte]);
+  const opor = useRecurso(() => (reporte === "distritos" ? R.oportunidades(finClave, longitud) : Promise.resolve(undefined)), [clave, reporte]);
+  const abas = useRecurso(() => (reporte === "planes" ? R.abastecimiento(finClave) : Promise.resolve(undefined)), [finClave, reporte]);
 
-  const totalPeriodo = sumar(ventana.map((m) => TOTAL_MES[m] ?? 0));
-  const totalPrevio = sumar(ventanaPrevia.map((m) => TOTAL_MES[m] ?? 0));
-  const variacionPeriodo = variacionPct(totalPeriodo, totalPrevio);
-
+  const c = crem.data;
+  const meses = useMemo(() => c?.meses ?? [], [c]);
+  const ventana = c?.periodo.meses ?? [finClave];
   const periodoLabel = `${etiquetaMesLarga(ventana[0])} – ${etiquetaMesLarga(ventana[ventana.length - 1])}`;
+  const incluyeParcial = !!c?.periodo.incluye_mes_en_curso;
+  const totalPeriodo = c?.total ?? 0;
+  const totalPrevio = c?.total_previo ?? 0;
+  const variacionPeriodo = c?.variacion ?? null;
+  const error = crem.error ?? ing.error ?? comp.error ?? vets.error ?? opor.error ?? abas.error;
+
   const notaParcial = incluyeParcial ? (
     <span className="text-amber-700 dark:text-amber-400">
       {etiquetaMesLarga(MES_EN_CURSO)} es un mes parcial: datos hasta el {fechaDeCorte()}. Sus variaciones no
@@ -128,102 +101,49 @@ export default function ReportesPage() {
     </span>
   ) : null;
 
-  // Reporte 1: un año, variación contra el mes anterior.
-  const grupos1: GrupoBarra[] = ventana.map((m) => {
-    const parcial = m === MES_EN_CURSO;
-    return {
-      etiqueta: etiquetaMesCorta(m),
-      parcial,
-      valores: { total: TOTAL_MES[m] ?? 0 },
-      variacion: parcial
-        ? null
-        : variacionPct(TOTAL_MES[m] ?? 0, TOTAL_MES[desplazarMes(m, -1)] ?? 0),
-    };
-  });
+  // Reporte 1: variación contra el mes anterior.
+  const grupos1: GrupoBarra[] = meses.map((m) => ({
+    etiqueta: etiquetaMesCorta(m.mes),
+    parcial: m.parcial,
+    valores: { total: m.total },
+    variacion: m.variacion_mes_anterior,
+  }));
 
   // Reportes 2, 3 y 4: mes contra el mismo mes del año anterior.
-  function gruposInteranuales(conteo: Record<string, number>): GrupoBarra[] {
-    return ventana.map((m) => {
-      const parcial = m === MES_EN_CURSO;
-      const actual = conteo[m] ?? 0;
-      const previo = conteo[desplazarMes(m, -12)] ?? 0;
-      return {
-        etiqueta: etiquetaMesCorta(m),
-        parcial,
-        valores: { periodo: actual, anterior: previo },
-        variacion: parcial ? null : variacionPct(actual, previo),
-      };
-    });
-  }
-  const filasIngresos = calcularIngresosMes(CASOS_EJEMPLO, ventana);
-  const grupos2 = gruposInteranuales(TOTAL_MES);
-  const grupos3 = gruposInteranuales(PARTICULAR_MES);
-  const grupos4 = gruposInteranuales(VETERINARIA_MES);
+  const interanual = (actual: (m: R.MesCremaciones) => number, previo: (m: R.MesCremaciones) => number, v: (m: R.MesCremaciones) => number | null): GrupoBarra[] =>
+    meses.map((m) => ({
+      etiqueta: etiquetaMesCorta(m.mes),
+      parcial: m.parcial,
+      valores: { periodo: actual(m), anterior: previo(m) },
+      variacion: v(m),
+    }));
+  const grupos2 = interanual((m) => m.total, (m) => m.total_anio_anterior, (m) => m.variacion_interanual);
+  const grupos3 = interanual((m) => m.particulares, (m) => m.particulares_anio_anterior, (m) => m.variacion_interanual_particulares);
+  const grupos4 = interanual((m) => m.veterinarias, (m) => m.veterinarias_anio_anterior, (m) => m.variacion_interanual_veterinarias);
 
-  // Reporte 5: top 5 veterinarias por referidos en el período.
-  const referidosPorVet: Record<string, number> = {};
-  for (const c of casosPeriodo) {
-    if (c.canal !== "veterinaria" || !c.veterinariaId) continue;
-    referidosPorVet[c.veterinariaId] = (referidosPorVet[c.veterinariaId] ?? 0) + 1;
-  }
-  const totalReferidos = sumar(Object.values(referidosPorVet));
-  const top5Vets = ordenarRanking(
-    VETERINARIAS_REFERIDORAS.map((v) => ({
-      id: v.id,
-      nombre: v.nombre,
-      valor: referidosPorVet[v.id] ?? 0,
-    })).filter((r) => r.valor > 0)
-  ).slice(0, 5);
-
-  // Reporte 6: distritos en el período; los 5 primeros se destacan.
-  const conteoDistrito: Record<string, number> = {};
-  for (const c of casosPeriodo) {
-    conteoDistrito[c.distrito] = (conteoDistrito[c.distrito] ?? 0) + 1;
-  }
-  const rankingDistritos = ordenarRanking(
-    Object.entries(conteoDistrito).map(([nombre, valor]) => ({ id: nombre, nombre, valor }))
-  );
-  const totalDistritos = sumar(rankingDistritos.map((d) => d.valor));
-
-  const filasTop5: FilaRanking[] = top5Vets.map((r) => ({
-    id: r.id,
-    etiqueta: r.nombre,
-    valor: r.valor,
-    destacada: true,
-    detalle: formatPorcentaje(porcentaje(r.valor, totalReferidos)),
-  }));
-  const filasDistritos: FilaRanking[] = rankingDistritos.map((d, i) => ({
-    id: d.id,
-    etiqueta: d.nombre,
-    valor: d.valor,
-    destacada: i < 5,
-    detalle: formatPorcentaje(porcentaje(d.valor, totalDistritos)),
+  const filasIngresos = (ing.data?.meses ?? []).map((f) => ({
+    clave: f.mes,
+    etiqueta: etiquetaMesCorta(f.mes),
+    parcial: f.parcial,
+    cremaciones: f.cremaciones,
+    ingreso: Number(f.ingreso),
+    cobrado: Number(f.cobrado),
+    precioPromedio: f.precio_promedio === null ? null : Number(f.precio_promedio),
   }));
 
-  // Reporte 7: ventas por plan. "Sin clasificar" va en gris: no es un plan.
-  const conteoPlan: Record<PlanId, number> = { clasico: 0, eco: 0, paz: 0, "sin-clasificar": 0 };
-  for (const c of casosPeriodo) conteoPlan[c.plan] += 1;
-  const rankingPlanes = ordenarRanking(
-    PLANES_ORDEN.map((id) => ({ id, nombre: NOMBRE_PLAN[id], valor: conteoPlan[id] }))
-  );
-  const filasPlanes: FilaRanking[] = rankingPlanes.map((p) => ({
-    id: p.id,
-    etiqueta: p.nombre,
-    valor: p.valor,
-    destacada: p.id !== "sin-clasificar",
-    detalle: formatPorcentaje(porcentaje(p.valor, totalCasos)),
-  }));
-  const presenciales = casosPeriodo.filter((c) => c.presencial).length;
-  const conEutanasia = casosPeriodo.filter((c) => c.eutanasia).length;
+  const k = comp.data;
+  const totalCasos = k?.total ?? 0;
+  const totalReferidos = k?.total_referidos ?? 0;
+  const top5Vets = (k?.veterinarias ?? []).slice(0, 5);
+  const rankingDistritos = k?.distritos ?? [];
+  const rankingPlanes = k?.planes ?? [];
+  const presenciales = k?.presenciales ?? 0;
+  const conEutanasia = k?.con_eutanasia ?? 0;
 
-  // Reporte 8: peso de la mascota por rango.
-  const conteoRango: Record<RangoPesoId, number> = { "0-5": 0, "5-15": 0, "15-25": 0, "25-35": 0, "35+": 0 };
-  for (const c of casosPeriodo) conteoRango[rangoDePeso(c.pesoKg)] += 1;
-  const gruposPeso: GrupoBarra[] = RANGOS_PESO.map((r) => ({
-    etiqueta: r.etiqueta,
-    valores: { total: conteoRango[r.id] },
-    subetiqueta: formatPorcentaje(porcentaje(conteoRango[r.id], totalCasos)),
-  }));
+  const filasTop5: FilaRanking[] = top5Vets.map((r) => ({ id: r.id, etiqueta: r.nombre, valor: r.cremaciones, destacada: true, detalle: formatPorcentaje(r.porcentaje) }));
+  const filasDistritos: FilaRanking[] = rankingDistritos.map((d, i) => ({ id: d.id, etiqueta: d.nombre, valor: d.cremaciones, destacada: i < 5, detalle: formatPorcentaje(d.porcentaje) }));
+  const filasPlanes: FilaRanking[] = rankingPlanes.map((p) => ({ id: p.id, etiqueta: p.nombre, valor: p.cremaciones, destacada: p.nombre !== "Sin plan", detalle: formatPorcentaje(p.porcentaje) }));
+  const gruposPeso: GrupoBarra[] = (k?.pesos ?? []).map((r) => ({ etiqueta: r.etiqueta, valores: { total: r.cremaciones }, subetiqueta: formatPorcentaje(r.porcentaje) }));
 
   return (
     <div className="reportes-root flex flex-col gap-6">
@@ -271,6 +191,8 @@ export default function ReportesPage() {
         <span className="text-sm text-slate-500">{periodoLabel}</span>
       </section>
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       {/* Resumen del período */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <Resumen
@@ -280,7 +202,7 @@ export default function ReportesPage() {
         />
         <Resumen
           label="Promedio mensual"
-          valor={(totalPeriodo / longitud).toLocaleString("es-PE", { maximumFractionDigits: 1 })}
+          valor={(c?.promedio_mensual ?? 0).toLocaleString("es-PE", { maximumFractionDigits: 1 })}
           hint="Cremaciones por mes"
         />
         <Resumen
@@ -340,25 +262,27 @@ export default function ReportesPage() {
           nota={
             <>
               <p>
-                Importe cobrado: pagos con fecha de cobro en el mes, incluidos los anticipos. Precio promedio: precio de
-                lista de las cremaciones del mes. Las cremaciones sin plan clasificado no tienen precio y no suman.
+                Ingreso: precio de los servicios realizados en el mes. Cobrado: pagos con fecha de cobro en el mes,
+                incluidos anticipos y facturas a veterinarias. Precio promedio: ingreso entre cremaciones del mes.
               </p>
               {notaParcial && <p className="mt-1">{notaParcial}</p>}
             </>
           }
           tabla={{
-            columnas: ["Mes", "Cremaciones", "Importe cobrado", "Precio promedio"],
+            columnas: ["Mes", "Cremaciones", "Ingreso", "Cobrado", "Precio promedio"],
             filas: [
               ...filasIngresos.map((f) => [
-                f.etiqueta + (f.clave === MES_EN_CURSO ? " (parcial)" : ""),
+                f.etiqueta + (f.parcial ? " (parcial)" : ""),
                 f.cremaciones,
-                soles(f.importeCobrado),
+                soles(f.ingreso),
+                soles(f.cobrado),
                 f.precioPromedio === null ? "—" : soles(f.precioPromedio),
               ]),
               [
                 "Total",
-                sumar(filasIngresos.map((f) => f.cremaciones)),
-                soles(sumar(filasIngresos.map((f) => f.importeCobrado))),
+                filasIngresos.reduce((a, f) => a + f.cremaciones, 0),
+                soles(ing.data?.ingreso_total),
+                soles(ing.data?.cobrado_total),
                 "—",
               ],
             ],
@@ -367,13 +291,16 @@ export default function ReportesPage() {
           <BarrasVerticales
             grupos={filasIngresos.map((f) => ({
               etiqueta: f.etiqueta,
-              parcial: f.clave === MES_EN_CURSO,
-              valores: { importe: f.importeCobrado },
+              parcial: f.parcial,
+              valores: { ingreso: f.ingreso, cobrado: f.cobrado },
             }))}
-            series={[{ key: "importe", label: "Importe cobrado", color: "var(--serie-1)" }]}
-            descripcion={`Importe cobrado por mes, ${periodoLabel}`}
+            series={[
+              { key: "ingreso", label: "Ingreso (servicios del mes)", color: "var(--serie-1)" },
+              { key: "cobrado", label: "Cobrado", color: "var(--serie-2)" },
+            ]}
+            descripcion={`Ingreso y cobrado por mes, ${periodoLabel}`}
             etiquetaVariacion=""
-            formatoValor={soles}
+            formatoValor={(v) => soles(v)}
           />
         </ChartCard>
       )}
@@ -460,9 +387,9 @@ export default function ReportesPage() {
             columnas: ["Puesto", "Veterinaria", "Referidos", "% de referidos"],
             filas: top5Vets.map((r, i) => [
               `#${i + 1}`,
-              NOMBRE_VETERINARIA[r.id] ?? r.nombre,
-              r.valor,
-              formatPorcentaje(porcentaje(r.valor, totalReferidos)),
+              r.nombre,
+              r.cremaciones,
+              formatPorcentaje(r.porcentaje),
             ]),
           }}
           nota={`Total de referidos en el período: ${totalReferidos.toLocaleString("es-PE")}.`}
@@ -474,7 +401,7 @@ export default function ReportesPage() {
           )}
         </ChartCard>
           </div>
-          <PanelRendimientoVeterinarias casos={CASOS_EJEMPLO} ventana={ventana} ventanaPrevia={ventanaPrevia} />
+          <PanelRendimientoVeterinarias datos={vets.data} />
         </div>
       )}
 
@@ -489,8 +416,8 @@ export default function ReportesPage() {
             filas: rankingDistritos.map((d, i) => [
               `#${i + 1}${i < 5 ? " · Top 5" : ""}`,
               d.nombre,
-              d.valor,
-              formatPorcentaje(porcentaje(d.valor, totalDistritos)),
+              d.cremaciones,
+              formatPorcentaje(d.porcentaje),
             ]),
           }}
           nota={`${rankingDistritos.length} distritos con cremaciones en el período.`}
@@ -498,7 +425,7 @@ export default function ReportesPage() {
           <BarrasHorizontales filas={filasDistritos} descripcion="Distritos por cremaciones; los cinco primeros destacados" />
         </ChartCard>
           </div>
-          <PanelOportunidades casos={CASOS_EJEMPLO} ventana={ventana} ventanaPrevia={ventanaPrevia} />
+          <PanelOportunidades datos={opor.data} />
         </div>
       )}
 
@@ -507,16 +434,12 @@ export default function ReportesPage() {
           <div className="flex flex-col gap-5 min-w-0">
           <ChartCard
             titulo="Planes vendidos"
-            subtitulo={`Cremaciones vendidas por plan · ${periodoLabel}`}
+            subtitulo={`Cremaciones realizadas por plan · ${periodoLabel}`}
             nota={notaParcial}
             tabla={{
               columnas: ["Plan", "Ventas", "% del total"],
               filas: [
-                ...rankingPlanes.map((p) => [
-                  p.nombre,
-                  p.valor,
-                  formatPorcentaje(porcentaje(p.valor, totalCasos)),
-                ]),
+                ...rankingPlanes.map((p) => [p.nombre, p.cremaciones, formatPorcentaje(p.porcentaje)]),
                 ["Total", totalCasos, totalCasos ? "100%" : "—"],
               ],
             }}
@@ -539,7 +462,7 @@ export default function ReportesPage() {
             />
           </div>
           </div>
-          <PanelAbastecimiento casos={CASOS_EJEMPLO} casosPeriodo={casosPeriodo} finClave={finClave} longitud={longitud} />
+          <PanelAbastecimiento datos={abas.data} />
         </div>
       )}
 
@@ -550,11 +473,7 @@ export default function ReportesPage() {
           tabla={{
             columnas: ["Rango de peso", "Cremaciones", "% del total"],
             filas: [
-              ...RANGOS_PESO.map((r) => [
-                r.etiqueta,
-                conteoRango[r.id],
-                formatPorcentaje(porcentaje(conteoRango[r.id], totalCasos)),
-              ]),
+              ...(k?.pesos ?? []).map((r) => [r.etiqueta, r.cremaciones, formatPorcentaje(r.porcentaje)]),
               ["Total", totalCasos, totalCasos ? "100%" : "—"],
             ],
           }}
@@ -592,8 +511,8 @@ function ExtraDosPartes({
   segunda: { label: string; valor: number };
   total: number;
 }) {
-  const pA = porcentaje(primera.valor, total);
-  const pB = porcentaje(segunda.valor, total);
+  const pA = total ? (primera.valor / total) * 100 : null;
+  const pB = total ? (segunda.valor / total) * 100 : null;
   return (
     <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
       <div>

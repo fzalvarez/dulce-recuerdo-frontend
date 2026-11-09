@@ -1,52 +1,30 @@
-import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import type { CasoReportable, PlanId } from "../types";
-import { calcularOportunidades, formatoSolesCorto, type FilaDistrito } from "../utils/oportunidades";
-
-const PLAN_CORTO: Record<PlanId, string> = {
-  clasico: "Clásico",
-  paz: "Paz",
-  eco: "Eco",
-  "sin-clasificar": "Sin clasificar",
-};
+import type { FilaDistrito, ReporteOportunidades } from "../api";
+import { formatoSolesCorto } from "../utils/reportes";
 
 const BADGES = {
-  altaDemanda: { texto: "Alta demanda", clase: "bg-brand-50 text-brand-700 border-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:border-brand-500/20" },
-  ganaTerreno: { texto: "Gana terreno", clase: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20" },
+  alta_demanda: { texto: "Alta demanda", clase: "bg-brand-50 text-brand-700 border-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:border-brand-500/20" },
+  gana_terreno: { texto: "Gana terreno", clase: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20" },
   oportunidad: { texto: "Oportunidad", clase: "bg-amber-50 text-amber-800 border-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20" },
 } as const;
 
-export function PanelOportunidades({
-  casos,
-  ventana,
-  ventanaPrevia,
-}: {
-  casos: CasoReportable[];
-  ventana: string[];
-  ventanaPrevia: string[];
-}) {
-  const resultado = useMemo(() => calcularOportunidades(casos, ventana, ventanaPrevia), [casos, ventana, ventanaPrevia]);
-  const { filas, conclusiones, ingresoTotal, cremacionesSinPrecio } = resultado;
+/** Oportunidades por distrito, calculadas en el backend con los umbrales del negocio. */
+export function PanelOportunidades({ datos }: { datos: ReporteOportunidades | undefined }) {
+  if (!datos) return <section className="text-sm text-slate-500">Cargando oportunidades…</section>;
+  const { filas, conclusiones, ingreso_total } = datos;
   const oportunidades = filas.filter((f) => f.oportunidad).length;
-  const ganan = filas.filter((f) => f.ganaTerreno).length;
+  const ganan = filas.filter((f) => f.gana_terreno).length;
 
   return (
     <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Oportunidades comerciales</h2>
-          <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-            Datos de maqueta
-          </span>
-        </div>
-        <p className="text-xs text-slate-500">
-          Demanda, crecimiento y composición de clientes por distrito en el período.
-        </p>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Oportunidades comerciales</h2>
+        <p className="text-xs text-slate-500">Demanda, crecimiento y composición de clientes por distrito en el período.</p>
       </header>
 
       <p className="text-sm text-slate-700 dark:text-slate-300">
-        {oportunidades} {oportunidades === 1 ? "oportunidad" : "oportunidades"} · {ganan} ganan terreno · ingreso del
-        período <strong className="text-slate-900 dark:text-white">{formatoSolesCorto(ingresoTotal)}</strong>
+        {oportunidades} {oportunidades === 1 ? "oportunidad" : "oportunidades"} · {ganan} ganan terreno · ingreso del período{" "}
+        <strong className="text-slate-900 dark:text-white">{formatoSolesCorto(Number(ingreso_total))}</strong>
       </p>
 
       <div className="overflow-x-auto">
@@ -67,12 +45,6 @@ export function PanelOportunidades({
         </table>
       </div>
 
-      {cremacionesSinPrecio > 0 && (
-        <p className="text-xs text-slate-500">
-          {cremacionesSinPrecio} cremaciones sin plan clasificado no suman ingreso.
-        </p>
-      )}
-
       <div className="rounded-lg bg-slate-50 dark:bg-white/5 p-4">
         <h3 className="text-label font-semibold uppercase tracking-wider text-slate-500 mb-2">Conclusiones</h3>
         <ul className="flex flex-col gap-3">
@@ -89,8 +61,8 @@ export function PanelOportunidades({
 }
 
 function FilaTabla({ fila }: { fila: FilaDistrito }) {
-  const badges = (["altaDemanda", "ganaTerreno", "oportunidad"] as const).filter((k) => fila[k]);
-
+  const badges = (["alta_demanda", "gana_terreno", "oportunidad"] as const).filter((k) => fila[k]);
+  const pctVet = fila.pct_veterinarias;
   return (
     <tr>
       <td className="py-2.5 pr-3">
@@ -102,30 +74,24 @@ function FilaTabla({ fila }: { fila: FilaDistrito }) {
             </span>
           ))}
         </div>
-        <span className="block text-xs text-slate-500">
-          Plan principal: {fila.planPrincipal ? PLAN_CORTO[fila.planPrincipal] : "—"}
-        </span>
+        <span className="block text-xs text-slate-500">Plan principal: {fila.plan_principal ?? "—"}</span>
       </td>
-      <td className="py-2.5 px-3 text-right tabular-nums text-slate-900 dark:text-white">
-        {fila.cremaciones}
-      </td>
+      <td className="py-2.5 px-3 text-right tabular-nums text-slate-900 dark:text-white">{fila.cremaciones}</td>
       <td className="py-2.5 px-3 min-w-[160px]">
         <div
           role="img"
-          aria-label={`Particulares ${Math.round(100 - fila.pctVeterinarias)}%, veterinarias ${Math.round(fila.pctVeterinarias)}%`}
+          aria-label={`Particulares ${Math.round(100 - pctVet)}%, veterinarias ${Math.round(pctVet)}%`}
           className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--grid)]"
         >
-          <div className="h-full" style={{ width: `${100 - fila.pctVeterinarias}%`, background: "var(--serie-1)" }} />
-          <div className="h-full" style={{ width: `${fila.pctVeterinarias}%`, background: "var(--baseline)" }} />
+          <div className="h-full" style={{ width: `${100 - pctVet}%`, background: "var(--serie-1)" }} />
+          <div className="h-full" style={{ width: `${pctVet}%`, background: "var(--baseline)" }} />
         </div>
         <div className="mt-1 flex justify-between text-[11px] text-slate-500 tabular-nums">
-          <span>Particulares {Math.round(100 - fila.pctVeterinarias)}%</span>
-          <span>Veterinarias {Math.round(fila.pctVeterinarias)}%</span>
+          <span>Particulares {Math.round(100 - pctVet)}%</span>
+          <span>Veterinarias {Math.round(pctVet)}%</span>
         </div>
       </td>
-      <td className="py-2.5 pl-3 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-300">
-        {formatoSolesCorto(fila.ingreso)}
-      </td>
+      <td className="py-2.5 pl-3 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-300">{formatoSolesCorto(Number(fila.ingreso))}</td>
     </tr>
   );
 }
