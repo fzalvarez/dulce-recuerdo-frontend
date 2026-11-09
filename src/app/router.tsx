@@ -20,17 +20,18 @@ import ReportesPage from "@/features/reportes/pages/ReportesPage";
 import ConfiguracionPage from "@/features/configuracion/pages/ConfiguracionPage";
 import SignInPage from "@/features/auth/pages/SignInPage";
 import Error404 from "@/features/error-pages/pages/Error404";
+import ErrorRoute from "@/features/error-pages/pages/ErrorRoute";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <ProtectedLayout />,
-    errorElement: <Error404 />,
+    errorElement: <ErrorRoute />,
     children: [
       {
         path: "",
         element: <AdminLayout />,
-        errorElement: <Error404 />,
+        errorElement: <ErrorRoute />,
         children: [
           { path: "", element: <DashboardPage /> },
           { path: "casos", element: <CasosPage /> },
@@ -56,7 +57,7 @@ export const router = createBrowserRouter([
   {
     path: "/auth",
     element: <AuthLayout />,
-    errorElement: <Error404 />,
+    errorElement: <ErrorRoute />,
     children: [
       {
         path: "signin",
