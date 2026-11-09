@@ -21,6 +21,7 @@ import type { PlanId } from "../types";
 import { ChartCard } from "../components/ChartCard";
 import { BarrasVerticales, type GrupoBarra, type SerieBarra } from "../components/BarrasVerticales";
 import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizontales";
+import { PanelAbastecimiento } from "../components/PanelAbastecimiento";
 import {
   claveMes,
   contarPorMes,
@@ -430,7 +431,8 @@ export default function ReportesPage() {
       )}
 
       {reporte === "planes" && (
-        <>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          <div className="flex flex-col gap-5 min-w-0">
           <ChartCard
             titulo="Planes vendidos"
             subtitulo={`Cremaciones vendidas por plan · ${periodoLabel}`}
@@ -464,7 +466,9 @@ export default function ReportesPage() {
               total={totalCasos}
             />
           </div>
-        </>
+          </div>
+          <PanelAbastecimiento casos={CASOS_EJEMPLO} casosPeriodo={casosPeriodo} finClave={finClave} longitud={longitud} />
+        </div>
       )}
 
       {reporte === "peso" && (
