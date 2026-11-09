@@ -113,7 +113,7 @@ export function AppSidebar() {
   };
   const grupos = [
     { titulo: "Despedidas", items: DESPEDIDAS_ITEMS },
-    { titulo: "Atención Veterinaria", items: ATENCION_VETERINARIA_ITEMS },
+    { titulo: "Fichas", items: ATENCION_VETERINARIA_ITEMS },
     { titulo: "Finanzas", items: FINANZAS_ITEMS },
     { titulo: "Reportes", items: REPORTES_ITEMS },
     { titulo: "Catálogos & Administración", items: CATALOGO_ITEMS },
