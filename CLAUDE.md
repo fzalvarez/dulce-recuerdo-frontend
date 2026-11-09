@@ -5,9 +5,10 @@ Guía de entrada para IA y colaboradores. Leer antes de cambiar código o docs.
 ## Qué es
 
 Panel de administración de Dulce Recuerdo. React 19 + TypeScript + Vite +
-Tailwind 4 + componentes Radix/shadcn, estado con Zustand. **Hoy casi todas las
-pantallas usan datos de ejemplo en memoria.** El contrato con la API está en el
-repo del backend, en `docs/FRONTEND_SPEC.md`.
+Tailwind 4 + componentes Radix/shadcn. **Todas las pantallas usan la API del
+backend** (`VITE_URL_CONEXION`). Las reglas de negocio viven en el backend: el front
+no calcula precios, estados ni reportes. Contrato: `docs/STATUS.md` §3 del backend y
+su prueba `tests/test_contrato_front.py`.
 
 ## Comandos
 
@@ -38,10 +39,9 @@ que ya existen se describen en `docs/ESTADO.md`.
 src/features/<modulo>/
 ├── pages/        página principal (default export)
 ├── components/   diálogos y piezas reutilizables del módulo
-├── store/        Zustand; estado en memoria hasta que exista API
-├── data/         <modulo>.mock.ts con datos de ejemplo
+├── api.ts        llamadas a la API del módulo
 ├── utils/        formato de montos y fechas
-└── types.ts      tipos del dominio
+└── types.ts      tipos que copian los del backend (montos como texto decimal)
 ```
 
 ## Convenciones
@@ -57,11 +57,14 @@ src/features/<modulo>/
   localhost), y el panel se abre por IP en la red. Usar `Date.now()` + random.
 - Un módulo puede importar el store de otro (Vehículo usa `useFinanzasStore`),
   pero no componentes de otro módulo.
-- Todo mock lleva un comentario `// TODO: reemplazar por ...`.
+- Cargar datos con `useRecurso` (`src/shared/hooks`) y guardar con `ejecutar`
+  (`src/shared/utils/ejecutar.ts`). No agregar datos de ejemplo al código.
+- Si una pantalla cambia lo que envía, actualizar `tests/test_contrato_front.py` del backend.
 
 ## Reglas para la IA
 
-- No hacer `push`. Hacer commit al terminar cada cambio, y solo con los archivos
-  de ese cambio. No incluir cambios ajenos que estén sin commitear.
+- Hacer commit al terminar cada cambio, y solo con los archivos de ese cambio. No
+  incluir cambios ajenos que estén sin commitear. El `push` se hace cuando el usuario
+  lo habilita.
 - No modificar `src/components/ui` (componentes base) ni la paleta sin pedirlo.
 - Responder y documentar en español.

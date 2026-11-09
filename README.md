@@ -1,8 +1,8 @@
 # dulce-recuerdo-frontend
 
 Panel de administración de Dulce Recuerdo: casos, agenda, inventario, activos,
-vehículo, finanzas y catálogos. Hoy usa datos de ejemplo en memoria y se conectará
-a la API de `dulce-recuerdo-backend`.
+vehículo, finanzas, reportes y catálogos. Todas las pantallas usan la API de
+`dulce-recuerdo-backend` (estado en [`docs/ESTADO.md`](docs/ESTADO.md)).
 
 ## Puesta en marcha
 
