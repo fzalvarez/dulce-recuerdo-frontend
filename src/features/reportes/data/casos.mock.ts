@@ -113,6 +113,35 @@ function generarPesoKg(rnd: () => number): number {
   return Math.round((min + rnd() * (max - min)) * 10) / 10;
 }
 
+// MAQUETA: afinidad de cada distrito con las veterinarias (más alta = más referidos).
+// Determina qué distritos tienen más clientes por veterinaria y cuáles casi solo particulares.
+const AFINIDAD_VETERINARIA: Record<string, number> = {
+  Barranco: 2.2,
+  Miraflores: 1.8,
+  "San Isidro": 1.4,
+  "Jesús María": 0.8,
+  Surco: 0.9,
+  "San Borja": 1.0,
+  "Pueblo Libre": 1.0,
+  "Magdalena del Mar": 0.9,
+  Lince: 0.6,
+  "San Miguel": 0.7,
+  "La Molina": 0.5,
+  "Los Olivos": 0.4,
+};
+
+// MAQUETA: factor de demanda de 2026 por distrito. Otros años no cambian.
+const CRECIMIENTO_2026: Record<string, number> = {
+  "La Molina": 2.2,
+  "Los Olivos": 2.5,
+  Lince: 1.8,
+  Miraflores: 0.7,
+};
+
+function pesosDistrito(anio: string): [string, number][] {
+  return DISTRITOS_PESO.map(([d, peso]) => [d, anio === "2026" ? peso * (CRECIMIENTO_2026[d] ?? 1) : peso]);
+}
+
 function generarCasos(): CasoReportable[] {
   const rnd = crearPrng(20260701);
   const pesosVet: [string, number][] = VETERINARIAS_REFERIDORAS.map((v) => [v.id, v.peso]);
@@ -120,30 +149,37 @@ function generarCasos(): CasoReportable[] {
   let n = 0;
 
   for (const [anio, serie] of Object.entries(SERIE_MENSUAL)) {
+    const pesosDist = pesosDistrito(anio);
     serie.total.forEach((total, i) => {
       const mes = `${anio}-${String(i + 1).padStart(2, "0")}`;
       const diaMax = mes === ULTIMO_MES_CON_DATOS ? 7 : 28;
       const vet = serie.veterinaria[i];
-      for (let k = 0; k < total; k++) {
+
+      const base = Array.from({ length: total }, () => {
         const dia = 1 + Math.floor(rnd() * diaMax);
         const fecha = `${mes}-${String(dia).padStart(2, "0")}`;
-        const distrito = elegirPonderado(rnd, DISTRITOS_PESO);
+        const distrito = elegirPonderado(rnd, pesosDist);
         const plan = elegirPonderado(rnd, PLANES_PESO);
         const presencial = rnd() < 0.4;
         const eutanasia = rnd() < 0.25;
         const pesoKg = generarPesoKg(rnd);
+        return { fecha, distrito, plan, presencial, eutanasia, pesoKg };
+      });
+
+      // Elegir los casos de veterinaria con probabilidad según la afinidad del distrito.
+      const claves = base.map((b) => Math.pow(rnd(), 1 / (AFINIDAD_VETERINARIA[b.distrito] ?? 1)));
+      const orden = claves.map((_, idx) => idx).sort((a, b) => claves[b] - claves[a]);
+      const esVet = new Set(orden.slice(0, vet));
+
+      base.forEach((b, idx) => {
         n += 1;
-        const base = { id: `c-${n}`, fecha, distrito, plan, presencial, eutanasia, pesoKg };
-        if (k < vet) {
-          casos.push({
-            ...base,
-            canal: "veterinaria",
-            veterinariaId: elegirPonderado(rnd, pesosVet),
-          });
+        const id = `c-${n}`;
+        if (esVet.has(idx)) {
+          casos.push({ id, ...b, canal: "veterinaria", veterinariaId: elegirPonderado(rnd, pesosVet) });
         } else {
-          casos.push({ ...base, canal: "particular" });
+          casos.push({ id, ...b, canal: "particular" });
         }
-      }
+      });
     });
   }
   return casos;

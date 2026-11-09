@@ -22,6 +22,7 @@ import { ChartCard } from "../components/ChartCard";
 import { BarrasVerticales, type GrupoBarra, type SerieBarra } from "../components/BarrasVerticales";
 import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizontales";
 import { PanelAbastecimiento } from "../components/PanelAbastecimiento";
+import { PanelOportunidades } from "../components/PanelOportunidades";
 import {
   claveMes,
   contarPorMes,
@@ -412,6 +413,8 @@ export default function ReportesPage() {
       )}
 
       {reporte === "distritos" && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          <div className="flex flex-col gap-5 min-w-0">
         <ChartCard
           titulo="Distritos que pidieron cremaciones"
           subtitulo={`Todos los canales · ${periodoLabel}. Top 5 destacado.`}
@@ -428,6 +431,9 @@ export default function ReportesPage() {
         >
           <BarrasHorizontales filas={filasDistritos} descripcion="Distritos por cremaciones; los cinco primeros destacados" />
         </ChartCard>
+          </div>
+          <PanelOportunidades casos={CASOS_EJEMPLO} ventana={ventana} ventanaPrevia={ventanaPrevia} />
+        </div>
       )}
 
       {reporte === "planes" && (

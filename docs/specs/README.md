@@ -23,3 +23,4 @@ repo del backend (`docs/FRONTEND_SPEC.md` y `docs/specs/`).
 | [planes.md](./planes.md) | Aprobada, implementada con datos de ejemplo | `/planes` |
 | [casos.md](./casos.md) | Aprobada, implementada con datos de ejemplo | `/casos` (Cotizaciones se quita) |
 | [abastecimiento.md](./abastecimiento.md) | Implementada como maqueta (datos ficticios) | `/reportes` (Planes vendidos) |
+| [oportunidades.md](./oportunidades.md) | Implementada como maqueta (datos ficticios) | `/reportes` (Distritos) |
