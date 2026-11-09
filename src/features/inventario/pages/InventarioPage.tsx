@@ -1,34 +1,11 @@
 import { useMemo, useState } from "react";
-import {
-  PackageIcon,
-  PillIcon,
-  BoxIcon,
-  LeafIcon,
-  PawPrintIcon,
-  ImageIcon,
-  GemIcon,
-  ShieldIcon,
-  SearchIcon,
-  DownloadIcon,
-  PlusCircleIcon,
-  PlusIcon,
-  MinusIcon,
-  ArrowLeftRightIcon,
-  PencilIcon,
-  AlertTriangleIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  InfoIcon,
-  CheckCircle2Icon,
-  TruckIcon,
-  ScanBarcodeIcon,
-  ClipboardCheckIcon,
-} from "lucide-react";
+import { ArrowDownToLineIcon, ArrowUpFromLineIcon, HistoryIcon, PencilIcon, PlusCircleIcon, SearchIcon, ScaleIcon, TruckIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
+import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -36,1084 +13,431 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { notifySuccess } from "@/shared/utils";
-import type { Proveedor } from "../types";
-import { ProveedoresDialog } from "../components/ProveedoresDialog";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { ejecutar } from "@/shared/utils/ejecutar";
+import { Modal } from "@/features/casos/components/Dialogos";
+import { fechaCorta, hoyISO, soles } from "@/features/casos/utils/casos";
+import * as I from "../api";
+import { TIPO_LABEL, type Articulo, type Nivel, type TipoArticulo } from "../types";
+import { ProveedoresContenido } from "../components/ProveedoresDialog";
 
-// TODO: reemplazar por datos reales del módulo `inventario` cuando se exponga el endpoint.
-type Categoria =
-  | "urnas-clasicas"
-  | "urnas-ecologicas"
-  | "recuerdos"
-  | "suministros"
-  | "medicamentos";
-type Nivel = "optimo" | "bajo" | "critico";
-
-interface ItemInventario {
-  id: string;
-  sku: string;
-  nombre: string;
-  detalle: string;
-  categoria: Categoria;
-  categoriaLabel: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
-  stock: number;
-  minimo: number;
-  nivel: Nivel;
-  proveedores: Proveedor[];
-}
-
-const CATEGORIAS: { value: Categoria | "todos"; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "urnas-clasicas", label: "Urnas de Madera y Cerámica" },
-  { value: "urnas-ecologicas", label: "Urnas Ecológicas" },
-  { value: "recuerdos", label: "Recuerdos & Huellas" },
-  { value: "suministros", label: "Suministros Operativos" },
-  { value: "medicamentos", label: "Medicamentos (eutanasia y atención)" },
-];
-
-const ITEMS: ItemInventario[] = [
-  {
-    id: "urn-rob-01",
-    sku: "URN-ROB-01",
-    nombre: "Urna de Roble Natural Artesanal",
-    detalle: "Acabado cera vegetal, mascotas hasta 45kg",
-    categoria: "urnas-clasicas",
-    categoriaLabel: "Urnas Clásicas",
-    icon: BoxIcon,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    stock: 22,
-    minimo: 8,
-    nivel: "optimo",
-    proveedores: [
-      {
-        id: "prov-rob-1",
-        empresa: "Carpintería Huanca",
-        contacto: "Julio Huanca",
-        telefono: "01 445 2210",
-        celular: "983 110 245",
-        correo: "ventas@carpinteriahuanca.pe",
-        direccion: "Jr. Los Carpinteros 245, Lima",
-        diasEntrega: 21,
-        principal: true,
-        notas: "Pedidos los lunes. Pago al contado o transferencia.",
-      },
-    ],
-  },
-  {
-    id: "urn-cao-02",
-    sku: "URN-CAO-02",
-    nombre: "Cofre Lacado Caoba Premium",
-    detalle: "Herrajes de latón en bronce, terciopelo interior",
-    categoria: "urnas-clasicas",
-    categoriaLabel: "Urnas Clásicas",
-    icon: BoxIcon,
-    iconBg: "bg-amber-50",
-    iconColor: "text-amber-600",
-    stock: 3,
-    minimo: 5,
-    nivel: "bajo",
-    proveedores: [],
-  },
-  {
-    id: "rec-hue-01",
-    sku: "REC-HUE-01",
-    nombre: 'Kit Escultura en Arcilla "Mi Última Huella"',
-    detalle: "Arcilla polimérica de secado suave, molde sellado",
-    categoria: "recuerdos",
-    categoriaLabel: "Recuerdos",
-    icon: PawPrintIcon,
-    iconBg: "bg-brand-50",
-    iconColor: "text-brand-500",
-    stock: 18,
-    minimo: 10,
-    nivel: "optimo",
-    proveedores: [
-      {
-        id: "prov-hue-1",
-        empresa: "Arcillas del Sur",
-        contacto: "Rocío Vega",
-        telefono: "054 221 780",
-        correo: "pedidos@arcillasdelsur.pe",
-        direccion: "Av. Los Alfareros 120, Arequipa",
-        diasEntrega: 10,
-        principal: true,
-      },
-    ],
-  },
-  {
-    id: "rec-por-03",
-    sku: "REC-POR-03",
-    nombre: "Portarretrato Conmemorativo de Nogal",
-    detalle: "Marco doble para foto + certificado de despedida",
-    categoria: "recuerdos",
-    categoriaLabel: "Recuerdos",
-    icon: ImageIcon,
-    iconBg: "bg-brand-50",
-    iconColor: "text-brand-500",
-    stock: 12,
-    minimo: 6,
-    nivel: "optimo",
-    proveedores: [],
-  },
-  {
-    id: "rec-dij-02",
-    sku: "REC-DIJ-02",
-    nombre: "Dije Relicario Portacenizas en Plata 925",
-    detalle: "Con cápsula hermética de rosca de precisión",
-    categoria: "recuerdos",
-    categoriaLabel: "Recuerdos",
-    icon: GemIcon,
-    iconBg: "bg-red-50",
-    iconColor: "text-red-600",
-    stock: 1,
-    minimo: 4,
-    nivel: "critico",
-    proveedores: [],
-  },
-  {
-    id: "sum-gua-01",
-    sku: "SUM-GUA-01",
-    nombre: "Guantes de nitrilo (caja x100)",
-    detalle: "Talla M, uso en recojos y atención",
-    categoria: "suministros",
-    categoriaLabel: "Suministro",
-    icon: PackageIcon,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    stock: 12,
-    minimo: 5,
-    nivel: "optimo",
-    proveedores: [
-      {
-        id: "prov-gua-1",
-        empresa: "Papelera Andina",
-        contacto: "Mario Cárdenas",
-        telefono: "01 330 9911",
-        celular: "987 654 321",
-        direccion: "Av. Industrial 980, Ate",
-        diasEntrega: 7,
-        principal: true,
-      },
-    ],
-  },
-  {
-    id: "sum-agu-02",
-    sku: "SUM-AGU-02",
-    nombre: "Agujas hipodérmicas 21G (caja x100)",
-    detalle: "Uso veterinario, descartables",
-    categoria: "suministros",
-    categoriaLabel: "Suministro",
-    icon: PackageIcon,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    stock: 4,
-    minimo: 5,
-    nivel: "bajo",
-    proveedores: [],
-  },
-  {
-    id: "sum-pan-03",
-    sku: "SUM-PAN-03",
-    nombre: "Pañales absorbentes para mascotas (paquete x30)",
-    detalle: "Talla mediana y grande",
-    categoria: "suministros",
-    categoriaLabel: "Suministro",
-    icon: PackageIcon,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    stock: 3,
-    minimo: 4,
-    nivel: "bajo",
-    proveedores: [],
-  },
-  {
-    id: "med-eut-01",
-    sku: "MED-EUT-01",
-    nombre: "Pentobarbital sódico 20 ml",
-    detalle: "Solución para eutanasia · uso controlado, registrar cada salida",
-    categoria: "medicamentos",
-    categoriaLabel: "Medicamentos",
-    icon: PillIcon,
-    iconBg: "bg-rose-50",
-    iconColor: "text-rose-600",
-    stock: 6,
-    minimo: 4,
-    nivel: "optimo",
-    proveedores: [],
-  },
-  {
-    id: "med-lid-02",
-    sku: "MED-LID-02",
-    nombre: "Lidocaína 2% 20 ml",
-    detalle: "Anestésico local para procedimientos de atención",
-    categoria: "medicamentos",
-    categoriaLabel: "Medicamentos",
-    icon: PillIcon,
-    iconBg: "bg-rose-50",
-    iconColor: "text-rose-600",
-    stock: 2,
-    minimo: 4,
-    nivel: "critico",
-    proveedores: [],
-  },
-  {
-    id: "med-sed-03",
-    sku: "MED-SED-03",
-    nombre: "Sedante inyectable 10 ml",
-    detalle: "Premedicación para atención veterinaria y traslados",
-    categoria: "medicamentos",
-    categoriaLabel: "Medicamentos",
-    icon: PillIcon,
-    iconBg: "bg-rose-50",
-    iconColor: "text-rose-600",
-    stock: 5,
-    minimo: 3,
-    nivel: "optimo",
-    proveedores: [],
-  },
-  {
-    id: "urn-bio-03",
-    sku: "URN-BIO-03",
-    nombre: "Urna Biodegradable con Semilla de Árbol",
-    detalle: "Sustrato orgánico compostable con semilla de ciprés",
-    categoria: "urnas-ecologicas",
-    categoriaLabel: "Urnas Ecológicas",
-    icon: LeafIcon,
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
-    stock: 9,
-    minimo: 5,
-    nivel: "optimo",
-    proveedores: [],
-  },
-];
-
-const NIVEL_META: Record<Nivel, { label: string; badgeClass: string; barClass: string; dotClass: string }> = {
-  optimo: {
-    label: "Óptimo",
-    badgeClass: "bg-emerald-50 text-emerald-700",
-    barClass: "bg-emerald-500",
-    dotClass: "bg-emerald-500",
-  },
-  bajo: {
-    label: "Stock Bajo",
-    badgeClass: "bg-amber-50 text-amber-700",
-    barClass: "bg-amber-500",
-    dotClass: "bg-amber-500",
-  },
-  critico: {
-    label: "Crítico",
-    badgeClass: "bg-red-50 text-red-700",
-    barClass: "bg-red-500",
-    dotClass: "bg-red-500",
-  },
+const NIVEL: Record<Nivel, { label: string; clase: string; barra: string }> = {
+  OPTIMO: { label: "Óptimo", clase: "bg-emerald-50 text-emerald-700", barra: "bg-emerald-500" },
+  BAJO: { label: "Bajo", clase: "bg-amber-50 text-amber-700", barra: "bg-amber-500" },
+  CRITICO: { label: "Crítico", clase: "bg-red-50 text-red-700", barra: "bg-red-500" },
 };
 
-function pctStock(stock: number, minimo: number) {
-  const meta = Math.max(minimo * 3, 1);
-  return Math.max(6, Math.min(100, Math.round((stock / meta) * 100)));
-}
+type TipoMovimiento = "entrada" | "salida" | "ajuste";
+type Dialogo =
+  | { tipo: "articulo"; articulo: Articulo | null }
+  | { tipo: "movimiento"; articulo: Articulo; movimiento: TipoMovimiento }
+  | { tipo: "historial"; articulo: Articulo }
+  | { tipo: "proveedores"; articulo: Articulo };
 
-// Indicadores calculados a partir del catálogo actual (se actualizan al editar).
-function calcularResumen(items: ItemInventario[]) {
-  const urnas = items.filter(
-    (i) => i.categoria === "urnas-clasicas" || i.categoria === "urnas-ecologicas"
-  );
-  const recuerdos = items.filter((i) => i.categoria === "recuerdos");
-  return {
-    critico: items.filter((i) => i.nivel === "critico").length,
-    urnasDisponibles: urnas.reduce((acc, i) => acc + i.stock, 0),
-    kitsRecuerdo: recuerdos.reduce((acc, i) => acc + i.stock, 0),
+/** Inventario: stock y costo cambian solo con movimientos (spec inventario). */
+export default function InventarioPage() {
+  const recurso = useRecurso(I.listar);
+  const [busqueda, setBusqueda] = useState("");
+  const [tipo, setTipo] = useState<TipoArticulo | "todos">("todos");
+  const [nivel, setNivel] = useState<Nivel | "todos">("todos");
+  const [dialogo, setDialogo] = useState<Dialogo | null>(null);
+  const cerrar = () => setDialogo(null);
+  const hecho = () => {
+    recurso.recargar();
+    cerrar();
   };
-}
-const VALORIZACION = "S/ 28,450.00";
 
-const CATEGORIA_META: Record<
-  Categoria,
-  { label: string; icon: React.ComponentType<{ className?: string }>; iconBg: string; iconColor: string }
-> = {
-  "urnas-clasicas": { label: "Urnas Clásicas", icon: BoxIcon, iconBg: "bg-slate-100", iconColor: "text-slate-600" },
-  "urnas-ecologicas": { label: "Urnas Ecológicas", icon: LeafIcon, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-  recuerdos: { label: "Recuerdos", icon: PawPrintIcon, iconBg: "bg-brand-50", iconColor: "text-brand-500" },
-  suministros: { label: "Suministro", icon: ShieldIcon, iconBg: "bg-slate-100", iconColor: "text-slate-600" },
-  medicamentos: { label: "Medicamentos", icon: PillIcon, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
-};
+  const articulos = useMemo(() => recurso.data ?? [], [recurso.data]);
+  const visibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    return articulos.filter(
+      (a) =>
+        (tipo === "todos" || a.tipo === tipo) &&
+        (nivel === "todos" || a.nivel === nivel) &&
+        (!q || `${a.nombre} ${a.sku} ${a.modelo ?? ""} ${a.tamano ?? ""}`.toLowerCase().includes(q))
+    );
+  }, [articulos, busqueda, tipo, nivel]);
 
-// Mismo criterio que los datos de ejemplo: <= mitad del mínimo es crítico, bajo del mínimo es bajo.
-function calcularNivel(stock: number, minimo: number): Nivel {
-  if (stock <= minimo / 2) return "critico";
-  if (stock < minimo) return "bajo";
-  return "optimo";
-}
-
-interface ElementoFormValues {
-  nombre: string;
-  sku: string;
-  detalle: string;
-  categoria: Categoria;
-  stock: number;
-  minimo: number;
-}
-
-function ElementoInventarioModal({
-  open,
-  item,
-  skusOcupados,
-  onOpenChange,
-  onGuardar,
-}: {
-  open: boolean;
-  /** Elemento a editar; null para crear uno nuevo. */
-  item: ItemInventario | null;
-  /** SKUs de los demás elementos, para evitar duplicados. */
-  skusOcupados: string[];
-  onOpenChange: (open: boolean) => void;
-  onGuardar: (valores: ElementoFormValues, id?: string) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        {/* Radix desmonta el contenido al cerrar: el formulario se reinicia solo. */}
-        <ElementoForm
-          item={item}
-          skusOcupados={skusOcupados}
-          onCancel={() => onOpenChange(false)}
-          onGuardar={(valores) => {
-            onGuardar(valores, item?.id);
-            onOpenChange(false);
-          }}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ElementoForm({
-  item,
-  skusOcupados,
-  onCancel,
-  onGuardar,
-}: {
-  item: ItemInventario | null;
-  skusOcupados: string[];
-  onCancel: () => void;
-  onGuardar: (valores: ElementoFormValues) => void;
-}) {
-  const esEdicion = item !== null;
-  const [nombre, setNombre] = useState(item?.nombre ?? "");
-  const [sku, setSku] = useState(item?.sku ?? "");
-  const [detalle, setDetalle] = useState(item?.detalle ?? "");
-  const [categoria, setCategoria] = useState<Categoria | "">(item?.categoria ?? "");
-  const [stock, setStock] = useState(item ? String(item.stock) : "0");
-  const [minimo, setMinimo] = useState(item ? String(item.minimo) : "0");
-  const [error, setError] = useState<string | null>(null);
-
-  const stockNum = Number(stock);
-  const minimoNum = Number(minimo);
-  const meta = categoria ? CATEGORIA_META[categoria] : null;
-  const PreviewIcon = meta?.icon ?? PackageIcon;
-  const nivelPreview =
-    Number.isInteger(stockNum) && Number.isInteger(minimoNum) && stockNum >= 0 && minimoNum >= 0
-      ? calcularNivel(stockNum, minimoNum)
-      : null;
-
-  const handleGuardar = () => {
-    const skuLimpio = sku.trim().toUpperCase();
-    if (!nombre.trim()) return setError("El nombre es obligatorio.");
-    if (!skuLimpio) return setError("El SKU es obligatorio.");
-    if (skusOcupados.includes(skuLimpio)) return setError(`El SKU ${skuLimpio} ya existe en el catálogo.`);
-    if (!categoria) return setError("Elige una categoría.");
-    if (!Number.isInteger(stockNum) || stockNum < 0) {
-      return setError("El stock debe ser un número entero, 0 o mayor.");
-    }
-    if (!Number.isInteger(minimoNum) || minimoNum < 0) {
-      return setError("El stock mínimo debe ser un número entero, 0 o mayor.");
-    }
-    onGuardar({
-      nombre: nombre.trim(),
-      sku: skuLimpio,
-      detalle: detalle.trim(),
-      categoria,
-      stock: stockNum,
-      minimo: minimoNum,
-    });
-  };
+  const valor = articulos.reduce((acc, a) => acc + Number(a.valor_stock), 0);
+  const enAlerta = articulos.filter((a) => a.activo && a.nivel !== "OPTIMO").length;
 
   return (
     <>
-      <DialogHeader>
-        <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
-          <PackageIcon className="size-5" />
-        </div>
-        <DialogTitle>{esEdicion ? "Editar Elemento" : "Nuevo Elemento de Catálogo"}</DialogTitle>
-      </DialogHeader>
-      <DialogDescription>
-        {esEdicion
-          ? "Revisa los datos antes de guardar los cambios en el catálogo."
-          : "Completa los datos del nuevo elemento. Revisa la vista previa antes de crearlo."}
-      </DialogDescription>
+      <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Inventario" }]} />
+      <ModuleHeader
+        title="Inventario"
+        description="Urnas, marcos, placas, recuerdos, suministros y medicamentos. Cada modelo y tamaño es un artículo con su costo promedio."
+        actions={
+          <Button variant="operational" className="gap-1.5 h-10" onClick={() => setDialogo({ tipo: "articulo", articulo: null })}>
+            <PlusCircleIcon className="size-4" />
+            Nuevo artículo
+          </Button>
+        }
+      />
 
-      <div className="flex flex-col gap-4">
-        {/* Vista previa para verificar los datos */}
-        <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-3">
-          <div
-            className={cn(
-              "w-11 h-11 rounded-lg flex items-center justify-center shrink-0",
-              meta?.iconBg ?? "bg-slate-100",
-              meta?.iconColor ?? "text-slate-400"
-            )}
-          >
-            <PreviewIcon className="size-5" />
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm font-semibold text-slate-900 truncate">
-              {nombre.trim() || "Nombre del elemento"}
-            </span>
-            <span className="text-xs text-slate-500">
-              {sku.trim().toUpperCase() || "SIN SKU"} · {meta?.label ?? "Sin categoría"}
-            </span>
-          </div>
-          {nivelPreview && (
-            <span
-              className={cn(
-                "px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap",
-                NIVEL_META[nivelPreview].badgeClass
-              )}
-            >
-              {NIVEL_META[nivelPreview].label}
-            </span>
-          )}
-        </div>
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Kpi titulo="Artículos" valor={String(articulos.length)} />
+        <Kpi titulo="Valor del stock" valor={soles(valor)} />
+        <Kpi titulo="Bajo el mínimo" valor={String(enAlerta)} alerta={enAlerta > 0} />
+      </section>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="inv-nombre">Nombre</Label>
-          <Input
-            id="inv-nombre"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Ej: Urna de Roble Natural Artesanal"
-          />
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <Input className="pl-9" placeholder="Nombre, SKU, modelo o tamaño" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-sku">SKU</Label>
-            <Input
-              id="inv-sku"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              placeholder="URN-ROB-01"
-              className="uppercase"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-categoria">Categoría</Label>
-            <Select value={categoria} onValueChange={(v) => setCategoria(v as Categoria)}>
-              <SelectTrigger id="inv-categoria" className="w-full">
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(CATEGORIA_META) as Categoria[]).map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {CATEGORIA_META[c].label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="inv-detalle">Detalle</Label>
-          <Textarea
-            id="inv-detalle"
-            value={detalle}
-            onChange={(e) => setDetalle(e.target.value)}
-            placeholder="Acabado, capacidad, materiales..."
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-stock">Stock actual (unidades)</Label>
-            <Input
-              id="inv-stock"
-              type="number"
-              min={0}
-              step={1}
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-minimo">Stock mínimo</Label>
-            <Input
-              id="inv-minimo"
-              type="number"
-              min={0}
-              step={1}
-              value={minimo}
-              onChange={(e) => setMinimo(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
+          <SelectTrigger className="w-48" aria-label="Tipo"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los tipos</SelectItem>
+            {(Object.keys(TIPO_LABEL) as TipoArticulo[]).map((t) => (
+              <SelectItem key={t} value={t}>{TIPO_LABEL[t]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={nivel} onValueChange={(v) => setNivel(v as typeof nivel)}>
+          <SelectTrigger className="w-44" aria-label="Nivel"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los niveles</SelectItem>
+            {(Object.keys(NIVEL) as Nivel[]).map((n) => (
+              <SelectItem key={n} value={n}>{NIVEL[n].label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
+      {recurso.error && <p className="text-sm text-red-600">{recurso.error}</p>}
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[920px]">
+          <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Artículo</th>
+              <th className="px-4 py-3 font-semibold">Tipo</th>
+              <th className="px-4 py-3 font-semibold">Stock</th>
+              <th className="px-4 py-3 font-semibold">Costo promedio</th>
+              <th className="px-4 py-3 font-semibold">Valor</th>
+              <th className="px-4 py-3 font-semibold text-right">Movimientos</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+            {visibles.map((a) => {
+              const pct = a.stock_minimo > 0 ? Math.min(100, (a.stock / (a.stock_minimo * 2)) * 100) : a.stock > 0 ? 100 : 0;
+              return (
+                <tr key={a.id} className={cn(!a.activo && "opacity-60")}>
+                  <td className="px-4 py-2.5">
+                    <button type="button" className="text-left" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
+                      <span className="block font-medium hover:text-brand-500">{a.nombre}</span>
+                      <span className="text-xs text-slate-500">
+                        {a.sku}
+                        {a.tamano ? ` · ${a.tamano}` : ""}
+                        {a.modelo ? ` · ${a.modelo}` : ""}
+                        {!a.activo ? " · inactivo" : ""}
+                      </span>
+                    </button>
+                  </td>
+                  <td className="px-4 py-2.5">{TIPO_LABEL[a.tipo]}</td>
+                  <td className="px-4 py-2.5 min-w-[160px]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-semibold text-slate-900 dark:text-white">{a.stock} <span className="font-normal text-slate-500">/ mín. {a.stock_minimo}</span></span>
+                      <span className={cn("px-1.5 py-0.5 rounded-full text-[11px] font-semibold", NIVEL[a.nivel].clase)}>{NIVEL[a.nivel].label}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                      <div className={cn("h-full", NIVEL[a.nivel].barra)} style={{ width: `${pct}%` }} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5">{soles(a.costo_promedio)}</td>
+                  <td className="px-4 py-2.5">{soles(a.valor_stock)}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <div className="inline-flex gap-1">
+                      <Button variant="ghost" size="icon-sm" title="Entrada (compra)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "entrada" })}>
+                        <ArrowDownToLineIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Salida (consumo)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "salida" })}>
+                        <ArrowUpFromLineIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Ajuste por conteo" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "ajuste" })}>
+                        <ScaleIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Historial" onClick={() => setDialogo({ tipo: "historial", articulo: a })}>
+                        <HistoryIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Proveedores" onClick={() => setDialogo({ tipo: "proveedores", articulo: a })}>
+                        <TruckIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
+                        <PencilIcon className="size-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!recurso.cargando && visibles.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-slate-400">Sin artículos.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
+        {dialogo?.tipo === "articulo" && <ArticuloForm articulo={dialogo.articulo} onCerrar={cerrar} onHecho={hecho} />}
+        {dialogo?.tipo === "movimiento" && <MovimientoForm articulo={dialogo.articulo} tipo={dialogo.movimiento} onCerrar={cerrar} onHecho={hecho} />}
+        {dialogo?.tipo === "historial" && <Historial articulo={dialogo.articulo} onCambio={recurso.recargar} />}
+        {dialogo?.tipo === "proveedores" && <ProveedoresContenido articulo={dialogo.articulo} />}
+      </Modal>
+    </>
+  );
+}
+
+function Kpi({ titulo, valor, alerta }: { titulo: string; valor: string; alerta?: boolean }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5">
+      <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">{titulo}</span>
+      <span className={cn("block text-2xl font-bold mt-1", alerta ? "text-red-600" : "text-slate-900 dark:text-white")}>{valor}</span>
+    </div>
+  );
+}
+
+function Pie({ onCerrar, onGuardar, guardando, error, texto = "Guardar" }: { onCerrar: () => void; onGuardar: () => void; guardando: boolean; error: string | null; texto?: string }) {
+  return (
+    <>
+      {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="button" variant="operational" onClick={handleGuardar}>
-          <CheckCircle2Icon className="size-4" />
-          {esEdicion ? "Guardar cambios" : "Crear elemento"}
-        </Button>
+        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>Cancelar</Button>
+        <Button variant="operational" onClick={onGuardar} disabled={guardando}>{guardando ? "Guardando…" : texto}</Button>
       </DialogFooter>
     </>
   );
 }
 
-const TIPOS_MOVIMIENTO = [
-  { value: "ingreso", label: "Ingreso por Compra", icon: TruckIcon },
-  { value: "merma", label: "Merma / Daño / Rotura", icon: AlertTriangleIcon },
-  { value: "conteo", label: "Ajuste por Conteo Físico", icon: ClipboardCheckIcon },
-] as const;
+function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | null; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState({
+    sku: articulo?.sku ?? "",
+    nombre: articulo?.nombre ?? "",
+    detalle: articulo?.detalle ?? "",
+    tipo: (articulo?.tipo ?? "URNA") as TipoArticulo,
+    tamano: articulo?.tamano ?? "",
+    modelo: articulo?.modelo ?? "",
+    stock_minimo: String(articulo?.stock_minimo ?? 0),
+    activo: articulo?.activo ?? true,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
-function MovimientoModal({
-  item,
-  onOpenChange,
-  onConfirmar,
-}: {
-  item: ItemInventario | null;
-  onOpenChange: (open: boolean) => void;
-  onConfirmar: (item: ItemInventario, cantidad: number) => void;
-}) {
-  const [tipo, setTipo] = useState<(typeof TIPOS_MOVIMIENTO)[number]["value"]>("ingreso");
-  const [cantidad, setCantidad] = useState(10);
-  const [proveedor, setProveedor] = useState("");
-  const [nota, setNota] = useState("");
-
-  if (!item) return null;
-
-  const proyectado = tipo === "merma" ? Math.max(0, item.stock - cantidad) : item.stock + cantidad;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onConfirmar(item, cantidad);
-    onOpenChange(false);
-    setTipo("ingreso");
-    setCantidad(10);
-    setProveedor("");
-    setNota("");
-  };
-
-  return (
-    <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
-            <ArrowLeftRightIcon className="size-5" />
-          </div>
-          <DialogTitle>Movimiento de Stock Físico</DialogTitle>
-        </DialogHeader>
-        <DialogDescription>
-          Registro de ingresos, mermas o recuentos en almacén.
-        </DialogDescription>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-3">
-            <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center shrink-0", item.iconBg, item.iconColor)}>
-              <item.icon className="size-5" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-slate-900 truncate">{item.nombre}</span>
-              <span className="text-xs text-slate-500">SKU: {item.sku}</span>
-              {item.nivel !== "optimo" && (
-                <span className="text-label text-amber-700 font-semibold flex items-center gap-1 mt-0.5">
-                  <AlertTriangleIcon className="size-3" /> Stock Actual: {item.stock} unidades (Bajo Mínimo)
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Razón del Movimiento</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {TIPOS_MOVIMIENTO.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTipo(value)}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-2.5 rounded-lg text-center gap-1 border transition-colors",
-                    tipo === value
-                      ? "bg-brand-50 text-brand-700 border-brand-200 font-semibold shadow-xs"
-                      : "bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100 font-medium"
-                  )}
-                >
-                  <Icon className="size-4" />
-                  <span className="text-xs leading-tight">{label}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 text-xs text-slate-500">
-              <InfoIcon className="size-3.5 text-brand-500 shrink-0" />
-              Las salidas por servicio se descuentan automáticamente al registrar cada caso.
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Cantidad de Unidades</Label>
-              <span className="text-xs text-emerald-700 font-semibold">
-                Nuevo Stock Proyectado: <strong>{proyectado}</strong> unidades
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="soft"
-                size="icon"
-                onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-              >
-                <MinusIcon className="size-4" />
-              </Button>
-              <Input
-                type="number"
-                min={1}
-                value={cantidad}
-                onChange={(e) => setCantidad(Math.max(1, Number(e.target.value) || 1))}
-                className="text-center font-bold text-slate-900"
-              />
-              <Button
-                type="button"
-                variant="soft"
-                size="icon"
-                onClick={() => setCantidad((c) => c + 1)}
-              >
-                <PlusIcon className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="proveedor-inv">Proveedor / Guía o Motivo del Ajuste</Label>
-            <Input
-              id="proveedor-inv"
-              placeholder="Ej: Factura F001-4921 o justificación de auditoría..."
-              value={proveedor}
-              onChange={(e) => setProveedor(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="nota-inv">Nota de Registro (Opcional)</Label>
-            <Input
-              id="nota-inv"
-              placeholder="Ej: Verificado en recepción de almacén..."
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="operational">
-              <CheckCircle2Icon className="size-4" />
-              Confirmar Movimiento
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+  type Texto = "sku" | "nombre" | "detalle" | "tamano" | "modelo" | "stock_minimo";
+  const campo = (k: Texto, label: string, tipo = "text") => (
+    <div className="space-y-1.5">
+      <Label htmlFor={`ar-${k}`}>{label}</Label>
+      <Input id={`ar-${k}`} type={tipo} value={f[k]} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+    </div>
   );
-}
 
-export default function InventarioPage() {
-  const [busqueda, setBusqueda] = useState("");
-  const [categoria, setCategoria] = useState<Categoria | "todos">("todos");
-  const [nivelFiltro, setNivelFiltro] = useState<Nivel | "todos">("todos");
-  const [itemEnMovimiento, setItemEnMovimiento] = useState<ItemInventario | null>(null);
-  const [items, setItems] = useState<ItemInventario[]>(ITEMS);
-  const [proveedoresItemId, setProveedoresItemId] = useState<string | null>(null);
-  const [elementoDialog, setElementoDialog] = useState<{
-    open: boolean;
-    item: ItemInventario | null;
-  }>({ open: false, item: null });
-  const resumen = useMemo(() => calcularResumen(items), [items]);
-
-  const itemsFiltrados = useMemo(() => {
-    const query = busqueda.trim().toLowerCase();
-    return items.filter((i) => {
-      const coincideTexto =
-        !query || i.nombre.toLowerCase().includes(query) || i.sku.toLowerCase().includes(query);
-      const coincideCategoria = categoria === "todos" || i.categoria === categoria;
-      const coincideNivel = nivelFiltro === "todos" || i.nivel === nivelFiltro;
-      return coincideTexto && coincideCategoria && coincideNivel;
-    });
-  }, [items, busqueda, categoria, nivelFiltro]);
-
-  const handleConfirmarMovimiento = (item: ItemInventario, cantidad: number) => {
-    notifySuccess(`Movimiento de ${cantidad} unidades registrado para ${item.nombre}.`);
-  };
-
-  const handleGuardarElemento = (valores: ElementoFormValues, id?: string) => {
-    const meta = CATEGORIA_META[valores.categoria];
-    const datos = {
-      ...valores,
-      categoriaLabel: meta.label,
-      icon: meta.icon,
-      iconBg: meta.iconBg,
-      iconColor: meta.iconColor,
-      nivel: calcularNivel(valores.stock, valores.minimo),
+  const guardar = async () => {
+    const minimo = Number(f.stock_minimo);
+    if (!f.sku.trim() || !f.nombre.trim()) return setError("SKU y nombre son obligatorios.");
+    if (!Number.isInteger(minimo) || minimo < 0) return setError("El mínimo debe ser un entero.");
+    const t = (s: string) => s.trim() || null;
+    const cuerpo: I.ArticuloCuerpo = {
+      sku: f.sku.trim(),
+      nombre: f.nombre.trim(),
+      detalle: t(f.detalle),
+      tipo: f.tipo,
+      tamano: t(f.tamano),
+      modelo: t(f.modelo),
+      stock_minimo: minimo,
+      activo: f.activo,
     };
-    if (id) {
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...datos } : i)));
-      notifySuccess(`Elemento "${valores.nombre}" actualizado.`);
-    } else {
-      setItems((prev) => [...prev, { ...datos, proveedores: [], id: `el-${Date.now()}` }]);
-      notifySuccess(`Elemento "${valores.nombre}" agregado al catálogo.`);
-    }
+    setGuardando(true);
+    const ok = await ejecutar(() => (articulo ? I.editar(articulo.id, cuerpo) : I.crear(cuerpo)), "Artículo guardado.", "No se pudo guardar.");
+    setGuardando(false);
+    if (ok) onHecho();
   };
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Inventario" }]} />
-
-      {/* Encabezado */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
-              Inventario y Elementos
-            </h1>
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-label font-semibold">
-              Sede Central Lima
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 max-w-2xl">
-            Control de stock de urnas, cuadros, recuerdos conmemorativos y suministros operativos
-            del crematorio.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            className="gap-1.5 h-10"
-            onClick={() => notifySuccess("Exportando catálogo de inventario en Excel...")}
-          >
-            <DownloadIcon className="size-4" />
-            Exportar (.xlsx)
-          </Button>
-          <Button
-            variant="operational"
-            className="gap-1.5 h-10"
-            onClick={() => setElementoDialog({ open: true, item: null })}
-          >
-            <PlusCircleIcon className="size-4" />
-            Nuevo Elemento
-          </Button>
-        </div>
-      </div>
-
-      {/* KPIs */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">
-                Stock Crítico / Por Agotar
-              </span>
-              <span className="text-2xl font-bold text-red-600 mt-1">
-                {resumen.critico} <span className="text-sm font-normal text-slate-500">ítems</span>
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
-              <AlertTriangleIcon className="size-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="px-2.5 py-1 rounded-full text-label font-semibold bg-red-50 text-red-700 inline-flex items-center gap-1">
-              <AlertTriangleIcon className="size-3" /> Requiere reposición inmediata
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">
-                Urnas Disponibles
-              </span>
-              <span className="text-2xl font-bold text-slate-900 mt-1">
-                {resumen.urnasDisponibles} <span className="text-sm font-normal text-slate-500">uds</span>
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
-              <BoxIcon className="size-5" />
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">
-            <span className="text-emerald-700 font-semibold">3 modelos</span> · Madera, cerámica &
-            ecológicas
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">
-                Kits de Recuerdos
-              </span>
-              <span className="text-2xl font-bold text-slate-900 mt-1">
-                {resumen.kitsRecuerdo} <span className="text-sm font-normal text-slate-500">uds</span>
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 shrink-0">
-              <PawPrintIcon className="size-5" />
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">
-            <span className="text-emerald-700 font-semibold">Huellas & Cuadros</span> listos para
-            entrega
-          </div>
-        </div>
-      </section>
-
-      {/* Categorías + valorización */}
-      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-          {CATEGORIAS.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => setCategoria(c.value)}
-              className={cn(
-                "px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                categoria === c.value
-                  ? "bg-brand-500 text-white shadow-sm font-semibold"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-              )}
-            >
-              {c.label}
-              {c.value === "todos" && (
-                <span className="ml-1 opacity-80">({items.length})</span>
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-lg self-start lg:self-auto">
-          <PackageIcon className="size-4 text-brand-500 shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">
-              Valorización de Almacén
-            </span>
-            <span className="text-sm font-bold text-slate-900">{VALORIZACION} PEN</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Búsqueda + filtro de estado */}
-      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-lg">
-          <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input
-            className="pl-10"
-            placeholder="Buscar por nombre, SKU o proveedor..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="filtro-nivel" className="whitespace-nowrap">Estado:</Label>
-          <Select value={nivelFiltro} onValueChange={(v) => setNivelFiltro(v as typeof nivelFiltro)}>
-            <SelectTrigger id="filtro-nivel" className="w-56">
-              <SelectValue />
-            </SelectTrigger>
+      <DialogHeader>
+        <DialogTitle>{articulo ? "Editar artículo" : "Nuevo artículo"}</DialogTitle>
+        <DialogDescription>
+          {articulo ? "El stock y el costo cambian solo con entradas, salidas y ajustes." : "Nace con stock 0. Carga el stock inicial con una entrada sin gasto."}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {campo("sku", "SKU")}
+        {campo("nombre", "Nombre")}
+        <div className="space-y-1.5">
+          <Label htmlFor="ar-tipo">Tipo</Label>
+          <Select value={f.tipo} onValueChange={(v) => setF((x) => ({ ...x, tipo: v as TipoArticulo }))}>
+            <SelectTrigger id="ar-tipo" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos los Estados</SelectItem>
-              <SelectItem value="optimo">Stock Óptimo (&gt; 10 uds)</SelectItem>
-              <SelectItem value="bajo">Stock Bajo (&lt; 5 uds)</SelectItem>
-              <SelectItem value="critico">Crítico (&lt; 2 uds)</SelectItem>
+              {(Object.keys(TIPO_LABEL) as TipoArticulo[]).map((t) => (
+                <SelectItem key={t} value={t}>{TIPO_LABEL[t]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-      </section>
+        {campo("stock_minimo", "Stock mínimo", "number")}
+        {campo("tamano", "Tamaño")}
+        {campo("modelo", "Modelo")}
+        <div className="sm:col-span-2">{campo("detalle", "Detalle")}</div>
+      </div>
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" className="size-4 accent-brand-500" checked={f.activo} onChange={(e) => setF((x) => ({ ...x, activo: e.target.checked }))} />
+        Activo (se ofrece al marcar un caso realizado)
+      </label>
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} />
+    </>
+  );
+}
 
-      {/* Tabla de inventario */}
-      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-400 text-label uppercase tracking-wider">
-                <th className="py-3 px-5 font-semibold">Elemento / Producto</th>
-                <th className="py-3 px-4 font-semibold">Categoría</th>
-                <th className="py-3 px-4 font-semibold">Stock Actual & Nivel</th>
-                <th className="py-3 px-4 font-semibold">Mínimo Sugerido</th>
-                <th className="py-3 px-5 text-right font-semibold">Acciones</th>
+const MOVIMIENTO_TITULO: Record<TipoMovimiento, string> = { entrada: "Entrada", salida: "Salida", ajuste: "Ajuste por conteo" };
+
+function MovimientoForm({ articulo, tipo, onCerrar, onHecho }: { articulo: Articulo; tipo: TipoMovimiento; onCerrar: () => void; onHecho: () => void }) {
+  const [cantidad, setCantidad] = useState(tipo === "ajuste" ? String(articulo.stock) : "1");
+  const [costo, setCosto] = useState(Number(articulo.costo_promedio) > 0 ? String(Number(articulo.costo_promedio)) : "");
+  const [fecha, setFecha] = useState(hoyISO());
+  const [proveedor, setProveedor] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [registrarGasto, setRegistrarGasto] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async () => {
+    const n = Number(cantidad);
+    const fechaIso = `${fecha}T12:00:00`;
+    let accion: () => Promise<unknown>;
+    if (tipo === "entrada") {
+      const c = Number(costo);
+      if (!Number.isInteger(n) || n <= 0) return setError("La cantidad debe ser un entero mayor a 0.");
+      if (!Number.isFinite(c) || c < 0) return setError("Indica el costo unitario.");
+      accion = () => I.entrada(articulo.id, { cantidad: n, costo_unitario: c.toFixed(4), fecha: fechaIso, proveedor: proveedor.trim() || null, registrar_gasto: registrarGasto, motivo: motivo.trim() || null });
+    } else if (tipo === "salida") {
+      if (!Number.isInteger(n) || n <= 0) return setError("La cantidad debe ser un entero mayor a 0.");
+      if (!motivo.trim()) return setError("Indica el motivo.");
+      accion = () => I.salida(articulo.id, { cantidad: n, fecha: fechaIso, motivo: motivo.trim() });
+    } else {
+      if (!Number.isInteger(n) || n < 0) return setError("El conteo debe ser un entero.");
+      if (!motivo.trim()) return setError("Indica el motivo del ajuste.");
+      accion = () => I.ajuste(articulo.id, { stock_contado: n, fecha: fechaIso, motivo: motivo.trim() });
+    }
+    setGuardando(true);
+    const ok = await ejecutar(accion, `${MOVIMIENTO_TITULO[tipo]} registrada.`, "No se pudo registrar.");
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{MOVIMIENTO_TITULO[tipo]} · {articulo.nombre}</DialogTitle>
+        <DialogDescription>
+          Stock actual: {articulo.stock} · costo promedio {soles(articulo.costo_promedio)}.
+          {tipo === "entrada" && " Si es una compra, crea su gasto en Ingresos y Gastos."}
+          {tipo === "salida" && " Para lo usado en un servicio, marca el caso como realizado."}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="mv-cantidad">{tipo === "ajuste" ? "Stock contado" : "Cantidad"}</Label>
+          <Input id="mv-cantidad" type="number" min={0} value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="mv-fecha">Fecha</Label>
+          <DatePicker id="mv-fecha" value={fecha} onChange={setFecha} />
+        </div>
+        {tipo === "entrada" && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-costo">Costo unitario (S/)</Label>
+              <Input id="mv-costo" type="number" min={0} step="0.01" value={costo} onChange={(e) => setCosto(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-proveedor">Proveedor</Label>
+              <Input id="mv-proveedor" value={proveedor} onChange={(e) => setProveedor(e.target.value)} />
+            </div>
+          </>
+        )}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="mv-motivo">{tipo === "entrada" ? "Nota (opcional)" : "Motivo"}</Label>
+          <Input id="mv-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        </div>
+      </div>
+      {tipo === "entrada" && (
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" className="size-4 accent-brand-500" checked={registrarGasto} onChange={(e) => setRegistrarGasto(e.target.checked)} />
+          Es una compra: registrar el gasto (desmarca para stock inicial o donaciones)
+        </label>
+      )}
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Registrar" />
+    </>
+  );
+}
+
+function Historial({ articulo, onCambio }: { articulo: Articulo; onCambio: () => void }) {
+  const lista = useRecurso(() => I.movimientos(articulo.id), [articulo.id]);
+  const ultimo = lista.data?.[0];
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Movimientos · {articulo.nombre}</DialogTitle>
+        <DialogDescription>Solo se puede anular el último movimiento que no sea de un caso. Para corregir otros, usa un ajuste.</DialogDescription>
+      </DialogHeader>
+      {lista.error && <p className="text-sm text-red-600">{lista.error}</p>}
+      <div className="overflow-x-auto max-h-[50vh]">
+        <table className="w-full text-left text-sm">
+          <thead className="text-label uppercase tracking-wider text-slate-500">
+            <tr>
+              <th className="py-2 pr-3 font-semibold">Fecha</th>
+              <th className="py-2 px-3 font-semibold">Tipo</th>
+              <th className="py-2 px-3 text-right font-semibold">Cantidad</th>
+              <th className="py-2 px-3 text-right font-semibold">Costo</th>
+              <th className="py-2 px-3 text-right font-semibold">Stock</th>
+              <th className="py-2 pl-3 font-semibold">Detalle</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+            {lista.data?.map((m) => (
+              <tr key={m.id}>
+                <td className="py-2 pr-3 whitespace-nowrap">{fechaCorta(m.fecha)}</td>
+                <td className="py-2 px-3">{m.tipo === "ENTRADA" ? "Entrada" : m.tipo === "SALIDA" ? "Salida" : "Ajuste"}</td>
+                <td className="py-2 px-3 text-right tabular-nums">{m.tipo === "SALIDA" ? -m.cantidad : m.cantidad > 0 && m.tipo === "AJUSTE" ? `+${m.cantidad}` : m.cantidad}</td>
+                <td className="py-2 px-3 text-right tabular-nums">{soles(m.costo_total)}</td>
+                <td className="py-2 px-3 text-right tabular-nums">{m.stock_resultante}</td>
+                <td className="py-2 pl-3 text-xs text-slate-500">
+                  {m.caso_id ? "Uso en servicio" : m.motivo ?? m.proveedor ?? ""}
+                  {m.gasto_id ? " · con gasto" : ""}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {itemsFiltrados.map((item) => {
-                const meta = NIVEL_META[item.nivel];
-                return (
-                  <tr
-                    key={item.id}
-                    className={cn(
-                      "transition-colors",
-                      item.nivel === "critico"
-                        ? "bg-red-50/40 hover:bg-red-50/70"
-                        : "hover:bg-slate-50/70"
-                    )}
-                  >
-                    <td className="py-4 px-5">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center shrink-0", item.iconBg, item.iconColor)}>
-                          <item.icon className="size-5" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-semibold text-slate-900 truncate">
-                            {item.nombre}
-                          </span>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-label font-semibold text-slate-600">
-                              {item.sku}
-                            </span>
-                            <span className="truncate">· {item.detalle}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex px-2.5 py-1 rounded-full bg-slate-100 text-label font-semibold text-slate-600">
-                        {item.categoriaLabel}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col gap-1 w-44">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-slate-900">{item.stock} uds</span>
-                          <span className={cn("px-2 py-0.5 rounded-full text-label font-bold flex items-center gap-1", meta.badgeClass)}>
-                            <span className={cn("w-1.5 h-1.5 rounded-full", meta.dotClass)} />
-                            {meta.label}
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full", meta.barClass)}
-                            style={{ width: `${pctStock(item.stock, item.minimo)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-xs text-slate-500 font-medium">
-                      Min: {item.minimo} uds
-                    </td>
-                    <td className="py-4 px-5 text-right">
-                      <div className="inline-flex items-center gap-1.5">
-                        <Button
-                          variant={item.nivel === "critico" ? "default" : "soft"}
-                          size="sm"
-                          onClick={() => setItemEnMovimiento(item)}
-                        >
-                          <ArrowLeftRightIcon className="size-3.5" />
-                          Movimiento
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setProveedoresItemId(item.id)}>
-                          <TruckIcon className="size-3.5" />
-                          Proveedores ({item.proveedores.length})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setElementoDialog({ open: true, item })}
-                        >
-                          <PencilIcon className="size-3.5" />
-                          Editar
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {itemsFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-sm text-slate-400">
-                    <ScanBarcodeIcon className="size-6 mx-auto mb-2 text-slate-300" />
-                    No se encontraron elementos con estos filtros.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="p-4 bg-slate-50 flex items-center justify-between">
-          <span className="text-xs text-slate-500">
-            Mostrando <strong className="text-slate-900">{itemsFiltrados.length}</strong> de{" "}
-            <strong className="text-slate-900">{items.length}</strong> elementos de catálogo
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" disabled>
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-            <Button variant="default" size="sm" className="h-7 px-3">
-              1
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-3">
-              2
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-3">
-              3
-            </Button>
-            <Button variant="ghost" size="icon-sm">
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <MovimientoModal
-        item={itemEnMovimiento}
-        onOpenChange={(open) => !open && setItemEnMovimiento(null)}
-        onConfirmar={handleConfirmarMovimiento}
-      />
-
-      <ProveedoresDialog
-        open={proveedoresItemId !== null}
-        nombreItem={items.find((i) => i.id === proveedoresItemId)?.nombre ?? ""}
-        proveedores={items.find((i) => i.id === proveedoresItemId)?.proveedores ?? []}
-        onOpenChange={(open) => {
-          if (!open) setProveedoresItemId(null);
-        }}
-        onActualizar={(lista) =>
-          setItems((prev) => prev.map((i) => (i.id === proveedoresItemId ? { ...i, proveedores: lista } : i)))
-        }
-      />
-
-      <ElementoInventarioModal
-        open={elementoDialog.open}
-        item={elementoDialog.item}
-        skusOcupados={items.filter((i) => i.id !== elementoDialog.item?.id).map((i) => i.sku)}
-        onOpenChange={(open) => setElementoDialog((prev) => ({ ...prev, open }))}
-        onGuardar={handleGuardarElemento}
-      />
+            ))}
+            {lista.data?.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-4 text-center text-slate-400">Sin movimientos.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {ultimo && !ultimo.caso_id && (
+        <DialogFooter>
+          <Button
+            variant="outline"
+            className="text-red-600"
+            onClick={async () => {
+              if (await ejecutar(() => I.anularMovimiento(ultimo.id), "Movimiento anulado.", "No se pudo anular.")) {
+                lista.recargar();
+                onCambio();
+              }
+            }}
+          >
+            Anular el último movimiento
+          </Button>
+        </DialogFooter>
+      )}
     </>
   );
 }

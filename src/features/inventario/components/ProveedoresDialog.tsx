@@ -1,258 +1,154 @@
 import { useState } from "react";
-import { MailIcon, MapPinIcon, PencilIcon, PhoneIcon, PlusIcon, Trash2Icon, TruckIcon } from "lucide-react";
+import { PencilIcon, PlusCircleIcon, StarIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { notifySuccess } from "@/shared/utils";
-import type { Proveedor } from "../types";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { ejecutar } from "@/shared/utils/ejecutar";
+import * as I from "../api";
+import type { Articulo, Proveedor } from "../types";
 
-type DatosProveedor = Omit<Proveedor, "id">;
+/** Proveedores de un artículo. Solo uno es el principal: su plazo se usa en Abastecimiento. */
+export function ProveedoresContenido({ articulo }: { articulo: Articulo }) {
+  const lista = useRecurso(() => I.proveedores(articulo.id), [articulo.id]);
+  const [editando, setEditando] = useState<Proveedor | "nuevo" | null>(null);
 
-export function ProveedoresDialog({
-  open,
-  nombreItem,
-  proveedores,
-  onOpenChange,
-  onActualizar,
-}: {
-  open: boolean;
-  nombreItem: string;
-  proveedores: Proveedor[];
-  onOpenChange: (open: boolean) => void;
-  onActualizar: (lista: Proveedor[]) => void;
-}) {
-  const [formulario, setFormulario] = useState<{ proveedor: Proveedor | null } | null>(null);
-  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
-
-  const guardar = (datos: DatosProveedor, id?: string) => {
-    // Solo un proveedor principal por insumo.
-    const base = datos.principal ? proveedores.map((p) => ({ ...p, principal: false })) : proveedores;
-    const nuevo: Proveedor = { ...datos, id: id ?? `prov-${Date.now()}` };
-    const lista = id ? base.map((p) => (p.id === id ? nuevo : p)) : [...base, nuevo];
-    // Si no queda ningún principal, el primero pasa a serlo.
-    const conPrincipal = lista.some((p) => p.principal) ? lista : lista.map((p, i) => ({ ...p, principal: i === 0 }));
-    onActualizar(conPrincipal);
-    setFormulario(null);
-    notifySuccess(id ? "Proveedor actualizado." : "Proveedor agregado.");
-  };
-
-  const eliminar = (id: string) => {
-    if (confirmandoId !== id) return setConfirmandoId(id);
-    const restantes = proveedores.filter((p) => p.id !== id);
-    const conPrincipal =
-      restantes.length > 0 && !restantes.some((p) => p.principal)
-        ? restantes.map((p, i) => ({ ...p, principal: i === 0 }))
-        : restantes;
-    onActualizar(conPrincipal);
-    setConfirmandoId(null);
-    notifySuccess("Proveedor eliminado.");
-  };
+  if (editando) {
+    return (
+      <ProveedorForm
+        articulo={articulo}
+        proveedor={editando === "nuevo" ? null : editando}
+        onCerrar={() => setEditando(null)}
+        onHecho={() => {
+          lista.recargar();
+          setEditando(null);
+        }}
+      />
+    );
+  }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) {
-          setFormulario(null);
-          setConfirmandoId(null);
-        }
-        onOpenChange(v);
-      }}
-    >
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
-            <TruckIcon className="size-5" />
-          </div>
-          <DialogTitle>Proveedores de {nombreItem}</DialogTitle>
-        </DialogHeader>
-        <DialogDescription>Quién vende este insumo y cómo contactarlo.</DialogDescription>
-
-        {formulario ? (
-          <ProveedorForm
-            key={formulario.proveedor?.id ?? "nuevo"}
-            proveedor={formulario.proveedor}
-            onCancelar={() => setFormulario(null)}
-            onGuardar={(datos) => guardar(datos, formulario.proveedor?.id)}
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {proveedores.length === 0 && (
-              <p className="text-sm text-slate-500">Todavía no hay proveedores registrados para este insumo.</p>
-            )}
-            {proveedores.map((p) => (
-              <article key={p.id} className="rounded-lg border border-slate-200 dark:border-white/10 p-4 flex flex-col gap-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{p.empresa}</span>
-                    {p.principal && (
-                      <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-brand-50 text-brand-700 border border-brand-100">
-                        Principal
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" onClick={() => setFormulario({ proveedor: p })}>
-                      <PencilIcon className="size-3.5" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant={confirmandoId === p.id ? "destructive" : "ghost"}
-                      size="sm"
-                      onClick={() => eliminar(p.id)}
-                    >
-                      <Trash2Icon className="size-3.5" />
-                      {confirmandoId === p.id ? "Confirmar" : "Eliminar"}
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
-                  {p.contacto && <span>Contacto: {p.contacto}</span>}
-                  <span className="inline-flex items-center gap-1.5">
-                    <PhoneIcon className="size-3.5 text-slate-400" /> {p.telefono}
-                    {p.celular && <span className="text-slate-400">· WhatsApp {p.celular}</span>}
-                  </span>
-                  {p.correo && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <MailIcon className="size-3.5 text-slate-400" /> {p.correo}
-                    </span>
-                  )}
-                  {p.direccion && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPinIcon className="size-3.5 text-slate-400" /> {p.direccion}
-                    </span>
-                  )}
-                  {p.diasEntrega !== undefined && <span>Entrega: {p.diasEntrega} días</span>}
-                </div>
-                {p.notas && <p className="text-xs text-slate-500">{p.notas}</p>}
-              </article>
-            ))}
-            <div>
-              <Button variant="outline" size="sm" onClick={() => setFormulario({ proveedor: null })}>
-                <PlusIcon className="size-3.5" />
-                Agregar proveedor
+    <>
+      <DialogHeader>
+        <DialogTitle>Proveedores · {articulo.nombre}</DialogTitle>
+        <DialogDescription>El plazo de entrega del principal se usa para avisar a tiempo cuándo pedir.</DialogDescription>
+      </DialogHeader>
+      {lista.error && <p className="text-sm text-red-600">{lista.error}</p>}
+      <ul className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
+        {lista.data?.map((p) => (
+          <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+            <span className="min-w-0">
+              <span className="font-medium inline-flex items-center gap-1">
+                {p.principal && <StarIcon className="size-3.5 text-amber-500" aria-label="Principal" />}
+                {p.empresa}
+              </span>
+              <span className="block text-xs text-slate-500">
+                {[p.contacto, p.telefono, p.celular, p.correo].filter(Boolean).join(" · ")}
+                {p.dias_entrega != null ? ` · entrega en ${p.dias_entrega} días` : ""}
+              </span>
+            </span>
+            <span className="inline-flex gap-1">
+              <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setEditando(p)}>
+                <PencilIcon className="size-4" />
               </Button>
-            </div>
-          </div>
-        )}
-
-        {formulario === null && (
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cerrar
-            </Button>
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Eliminar"
+                className="text-slate-400 hover:text-red-600"
+                onClick={async () => (await ejecutar(() => I.eliminarProveedor(articulo.id, p.id), "Proveedor eliminado.", "No se pudo eliminar.")) && lista.recargar()}
+              >
+                <Trash2Icon className="size-4" />
+              </Button>
+            </span>
+          </li>
+        ))}
+        {lista.data?.length === 0 && <li className="py-2 text-slate-400">Sin proveedores.</li>}
+      </ul>
+      <DialogFooter>
+        <Button variant="operational" onClick={() => setEditando("nuevo")}>
+          <PlusCircleIcon className="size-4" />
+          Agregar proveedor
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
-function ProveedorForm({
-  proveedor,
-  onCancelar,
-  onGuardar,
-}: {
-  proveedor: Proveedor | null;
-  onCancelar: () => void;
-  onGuardar: (datos: DatosProveedor) => void;
-}) {
-  const [empresa, setEmpresa] = useState(proveedor?.empresa ?? "");
-  const [contacto, setContacto] = useState(proveedor?.contacto ?? "");
-  const [telefono, setTelefono] = useState(proveedor?.telefono ?? "");
-  const [celular, setCelular] = useState(proveedor?.celular ?? "");
-  const [correo, setCorreo] = useState(proveedor?.correo ?? "");
-  const [direccion, setDireccion] = useState(proveedor?.direccion ?? "");
-  const [dias, setDias] = useState(proveedor?.diasEntrega !== undefined ? String(proveedor.diasEntrega) : "");
-  const [principal, setPrincipal] = useState(proveedor?.principal ?? false);
-  const [notas, setNotas] = useState(proveedor?.notas ?? "");
+function ProveedorForm({ articulo, proveedor, onCerrar, onHecho }: { articulo: Articulo; proveedor: Proveedor | null; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState({
+    empresa: proveedor?.empresa ?? "",
+    contacto: proveedor?.contacto ?? "",
+    telefono: proveedor?.telefono ?? "",
+    celular: proveedor?.celular ?? "",
+    correo: proveedor?.correo ?? "",
+    direccion: proveedor?.direccion ?? "",
+    dias_entrega: proveedor?.dias_entrega != null ? String(proveedor.dias_entrega) : "",
+    notas: proveedor?.notas ?? "",
+    principal: proveedor?.principal ?? false,
+  });
   const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const handleGuardar = () => {
-    if (!empresa.trim()) return setError("Escribe el nombre de la empresa.");
-    if (!telefono.trim()) return setError("Escribe un teléfono de contacto.");
-    if (correo.trim() && !/^\S+@\S+\.\S+$/.test(correo.trim())) {
-      return setError("El correo no tiene un formato válido.");
-    }
-    const d = dias.trim() === "" ? undefined : Number(dias);
-    if (d !== undefined && (!Number.isInteger(d) || d < 0)) {
-      return setError("Los días de entrega deben ser un número entero, 0 o mayor.");
-    }
-    onGuardar({
-      empresa: empresa.trim(),
-      contacto: contacto.trim() || undefined,
-      telefono: telefono.trim(),
-      celular: celular.trim() || undefined,
-      correo: correo.trim() || undefined,
-      direccion: direccion.trim() || undefined,
-      diasEntrega: d,
-      principal,
-      notas: notas.trim() || undefined,
-    });
+  type Texto = Exclude<keyof typeof f, "principal">;
+  const campo = (k: Texto, label: string, tipo = "text") => (
+    <div className="space-y-1.5">
+      <Label htmlFor={`pv-${k}`}>{label}</Label>
+      <Input id={`pv-${k}`} type={tipo} value={f[k]} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+    </div>
+  );
+
+  const guardar = async () => {
+    if (!f.empresa.trim() || !f.telefono.trim()) return setError("Empresa y teléfono son obligatorios.");
+    const dias = f.dias_entrega.trim() === "" ? null : Number(f.dias_entrega);
+    if (dias !== null && (!Number.isInteger(dias) || dias < 0)) return setError("Los días de entrega deben ser un entero.");
+    const t = (s: string) => s.trim() || null;
+    const cuerpo: I.ProveedorCuerpo = {
+      empresa: f.empresa.trim(),
+      contacto: t(f.contacto),
+      telefono: f.telefono.trim(),
+      celular: t(f.celular),
+      correo: t(f.correo),
+      direccion: t(f.direccion),
+      dias_entrega: dias,
+      notas: t(f.notas),
+      principal: f.principal,
+    };
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => (proveedor ? I.editarProveedor(articulo.id, proveedor.id, cuerpo) : I.crearProveedor(articulo.id, cuerpo)),
+      "Proveedor guardado.",
+      "No se pudo guardar."
+    );
+    setGuardando(false);
+    if (ok) onHecho();
   };
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5 col-span-2">
-          <Label htmlFor="prov-empresa">Empresa</Label>
-          <Input id="prov-empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="prov-contacto">Persona de contacto</Label>
-          <Input id="prov-contacto" value={contacto} onChange={(e) => setContacto(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="prov-telefono">Teléfono</Label>
-          <Input id="prov-telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="prov-celular">WhatsApp (opcional)</Label>
-          <Input id="prov-celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="prov-correo">Correo</Label>
-          <Input id="prov-correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-        </div>
-        <div className="space-y-1.5 col-span-2">
-          <Label htmlFor="prov-direccion">Dirección</Label>
-          <Input id="prov-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="prov-dias">Días de entrega</Label>
-          <Input id="prov-dias" type="number" min={0} step={1} value={dias} onChange={(e) => setDias(e.target.value)} />
-        </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-700 dark:text-slate-300">
-          <input
-            type="checkbox"
-            className="size-4 accent-brand-500"
-            checked={principal}
-            onChange={(e) => setPrincipal(e.target.checked)}
-          />
-          Proveedor principal
-        </label>
-        <div className="space-y-1.5 col-span-2">
-          <Label htmlFor="prov-notas">Notas (condiciones, horarios, forma de pago)</Label>
-          <Textarea id="prov-notas" rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
-        </div>
+      <DialogHeader>
+        <DialogTitle>{proveedor ? "Editar proveedor" : "Nuevo proveedor"}</DialogTitle>
+        <DialogDescription>{articulo.nombre}</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {campo("empresa", "Empresa")}
+        {campo("contacto", "Contacto")}
+        {campo("telefono", "Teléfono")}
+        {campo("celular", "Celular / WhatsApp")}
+        {campo("correo", "Correo", "email")}
+        {campo("dias_entrega", "Días de entrega", "number")}
+        <div className="sm:col-span-2">{campo("direccion", "Dirección")}</div>
+        <div className="sm:col-span-2">{campo("notas", "Notas")}</div>
       </div>
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" className="size-4 accent-brand-500" checked={f.principal} onChange={(e) => setF((x) => ({ ...x, principal: e.target.checked }))} />
+        Proveedor principal
+      </label>
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
-        <Button variant="ghost" onClick={onCancelar}>
-          Cancelar
-        </Button>
-        <Button variant="operational" onClick={handleGuardar}>
-          {proveedor ? "Guardar cambios" : "Agregar proveedor"}
-        </Button>
+        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>Cancelar</Button>
+        <Button variant="operational" onClick={guardar} disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</Button>
       </DialogFooter>
     </>
   );
