@@ -668,7 +668,7 @@ function NuevaVeterinariaModal({
               <Label htmlFor="nombre-clinica">Nombre Comercial de la Veterinaria</Label>
               <Input
                 id="nombre-clinica"
-                placeholder="Ej. Clínica Veterinaria San Miguel"
+                placeholder="Ej. Clínica Veterinaria San Luis"
                 required
                 value={form.nombre}
                 onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
@@ -678,7 +678,7 @@ function NuevaVeterinariaModal({
               <Label htmlFor="razon-social">Razón Social</Label>
               <Input
                 id="razon-social"
-                placeholder="Ej. San Miguel Pet Services S.A.C."
+                placeholder="Ej. San Luis Pet Services S.A.C."
                 required
                 value={form.razonSocial}
                 onChange={(e) => setForm((f) => ({ ...f, razonSocial: e.target.value }))}
