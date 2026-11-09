@@ -1,4 +1,4 @@
-import type { PlanId } from "../types";
+import type { PlanId } from "./types";
 
 // TODO: reemplazar por la fuente real de tarifas (módulo planes / backend).
 // Las tarifas de planes y zonas son las mismas que se muestran en /planes.

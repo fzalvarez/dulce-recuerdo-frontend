@@ -1,47 +1,37 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { notifyError, notifySuccess } from "@/shared/utils";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PLAN_NOMBRE } from "../data/tarifas";
-import type { Caso, EstadoMostrado, EstadoPago } from "../types";
-import { ESTADO_BADGE, PAGO_BADGE } from "../utils/estilos";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import * as casosApi from "../api";
+import type { CasoFila } from "../types";
+import { ESTADO_BADGE, pagoBadge } from "../utils/estilos";
 import {
   accionPrincipal,
-  calcularPrecio,
+  CANAL_LABEL,
   ESTADO_LABEL,
-  formatoFecha,
+  fechaCorta,
+  fechaHora,
+  METODO_LABEL,
   MODALIDAD_LABEL,
-  mensajeCotizacion,
   SERVICIO_LABEL,
   soles,
-  totalPagado,
 } from "../utils/casos";
 import { Modal } from "./Dialogos";
 
+export type AccionCaso = "pago" | "realizado" | "entregado" | "cancelar" | "precio";
+
 export function DetalleCasoDialog({
-  caso,
-  estado,
-  estadoPagoActual,
+  fila,
   onOpenChange,
   onAccion,
 }: {
-  caso: Caso | null;
-  estado: EstadoMostrado;
-  estadoPagoActual: EstadoPago;
+  fila: CasoFila | null;
   onOpenChange: (open: boolean) => void;
-  onAccion: (tipo: string) => void;
+  onAccion: (tipo: AccionCaso) => void;
 }) {
   return (
-    <Modal open={caso !== null} onOpenChange={onOpenChange}>
-      {caso && (
-        <DetalleContenido
-          caso={caso}
-          estado={estado}
-          estadoPagoActual={estadoPagoActual}
-          onCerrar={() => onOpenChange(false)}
-          onAccion={onAccion}
-        />
-      )}
+    <Modal open={fila !== null} onOpenChange={onOpenChange}>
+      {fila && <DetalleContenido fila={fila} onCerrar={() => onOpenChange(false)} onAccion={onAccion} />}
     </Modal>
   );
 }
@@ -64,131 +54,107 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   );
 }
 
-function DetalleContenido({
-  caso,
-  estado,
-  estadoPagoActual,
-  onCerrar,
-  onAccion,
-}: {
-  caso: Caso;
-  estado: EstadoMostrado;
-  estadoPagoActual: EstadoPago;
-  onCerrar: () => void;
-  onAccion: (tipo: string) => void;
-}) {
-  const cot = calcularPrecio(caso);
-  const pagado = totalPagado(caso);
-  const accion = accionPrincipal(caso, estado);
-  const puedeCopiar = cot.faltante === null && estado !== "ABANDONADO";
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(mensajeCotizacion(caso, cot));
-      notifySuccess("Mensaje copiado. Pégalo en WhatsApp.");
-    } catch {
-      notifyError("No se pudo copiar. Revisa los permisos del navegador.");
-    }
-  };
+function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerrar: () => void; onAccion: (tipo: AccionCaso) => void }) {
+  const detalle = useRecurso(() => casosApi.detalle(fila.id), [fila.id]);
+  const pagos = useRecurso(() => casosApi.pagosDe(fila.id), [fila.id]);
+  const d = detalle.data;
+  const accion = accionPrincipal(fila.estado);
+  const pago = pagoBadge(Number(fila.precio_total), Number(fila.total_pagado));
+  const abierto = fila.estado === "AGENDADO" || fila.estado === "REALIZADO";
 
   return (
     <>
       <DialogHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-mono text-slate-400">#{caso.codigo}</span>
-          <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", ESTADO_BADGE[estado])}>
-            {ESTADO_LABEL[estado]}
+          <span className="text-xs font-mono text-slate-400">#{fila.id.slice(0, 8)}</span>
+          <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", ESTADO_BADGE[fila.estado])}>
+            {ESTADO_LABEL[fila.estado]}
           </span>
-          {estado !== "ABANDONADO" && (
-            <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", PAGO_BADGE[estadoPagoActual].clase)}>
-              {PAGO_BADGE[estadoPagoActual].texto}
-            </span>
+          {fila.estado !== "CANCELADO" && (
+            <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", pago.clase)}>{pago.texto}</span>
           )}
         </div>
         <DialogTitle>
-          {caso.mascota} · {caso.tutor}
+          {fila.mascota} · {fila.tutor}
         </DialogTitle>
         <DialogDescription>
-          {caso.telefono}
-          {caso.canal === "veterinaria" && caso.veterinaria ? ` · Refiere: ${caso.veterinaria}` : ""}
+          {fila.telefono ?? ""}
+          {fila.dni ? ` · DNI ${fila.dni}` : ""}
+          {fila.veterinaria ? ` · Refiere: ${fila.veterinaria}` : ""}
         </DialogDescription>
       </DialogHeader>
 
+      {detalle.error && <p className="text-sm text-red-600">{detalle.error}</p>}
+
       <div className="flex flex-col gap-4">
         <Seccion titulo="Servicio">
-          <Fila etiqueta="Servicio" valor={SERVICIO_LABEL[caso.servicio]} />
-          <Fila etiqueta="Modalidad" valor={MODALIDAD_LABEL[caso.modalidad]} />
-          {caso.servicio === "CREMACION" && (
-            <Fila etiqueta="Plan" valor={caso.plan ? PLAN_NOMBRE[caso.plan] : "Por definir"} />
-          )}
-          {caso.servicio === "CREMACION" && (
-            <Fila etiqueta="Peso" valor={caso.pesoKg !== undefined ? `${caso.pesoKg} kg` : "Falta"} />
-          )}
-          {caso.modalidad === "DOMICILIO" && (
-            <Fila etiqueta="Distrito" valor={caso.distrito ?? "Falta"} />
-          )}
-          {caso.direccion && <Fila etiqueta="Dirección" valor={caso.direccion} />}
-          {caso.fechaServicio && (
-            <Fila
-              etiqueta="Agenda"
-              valor={`${formatoFecha(caso.fechaServicio)}${caso.horaServicio ? ` · ${caso.horaServicio}` : ""}`}
-            />
-          )}
+          <Fila etiqueta="Servicio" valor={SERVICIO_LABEL[fila.servicio]} />
+          <Fila etiqueta="Modalidad" valor={MODALIDAD_LABEL[fila.modalidad]} />
+          <Fila etiqueta="Origen" valor={CANAL_LABEL[fila.canal_origen]} />
+          {fila.plan_nombre && <Fila etiqueta="Plan" valor={fila.plan_nombre} />}
+          <Fila etiqueta="Peso" valor={`${fila.peso_kg} kg`} />
+          {fila.eutanasia_incluida && <Fila etiqueta="Eutanasia" valor="Incluida" />}
+          {fila.distrito_origen && <Fila etiqueta="Distrito" valor={fila.distrito_origen} />}
+          {d?.caso.direccion_origen && <Fila etiqueta="Dirección" valor={d.caso.direccion_origen} />}
+          <Fila etiqueta="Agenda" valor={fechaHora(fila.inicio)} />
+          {fila.fecha_realizado && <Fila etiqueta="Realizado" valor={fechaHora(fila.fecha_realizado)} />}
+          {fila.fecha_entrega && <Fila etiqueta="Entregado" valor={fechaHora(fila.fecha_entrega)} />}
+          {d?.caso.motivo_cancelacion && <Fila etiqueta="Motivo de cancelación" valor={d.caso.motivo_cancelacion} />}
+          {d?.caso.monto_devuelto && <Fila etiqueta="Devuelto" valor={soles(d.caso.monto_devuelto)} />}
         </Seccion>
 
         <Seccion titulo="Precio">
-          {cot.lineas.map((l) => (
-            <Fila
-              key={l.concepto}
-              etiqueta={l.concepto}
-              valor={l.pendiente ? <span className="text-amber-700">Pendiente de tarifa</span> : soles(l.monto)}
-            />
-          ))}
+          {d?.caso.desglose.map((l) => <Fila key={l.concepto} etiqueta={l.concepto} valor={soles(l.monto)} />)}
           <div className="mt-2 border-t border-slate-100 dark:border-white/10 pt-2">
-            <Fila etiqueta="Total" valor={<span className="font-bold">{soles(cot.total)}</span>} />
-            <Fila etiqueta="Pagado" valor={soles(pagado)} />
+            {d && d.caso.precio_total !== d.caso.precio_calculado && (
+              <Fila etiqueta={`Ajustado a mano (${d.caso.motivo_ajuste ?? ""})`} valor={`antes ${soles(d.caso.precio_calculado)}`} />
+            )}
+            <Fila etiqueta="Total" valor={<span className="font-bold">{soles(fila.precio_total)}</span>} />
+            <Fila etiqueta="Pagado" valor={soles(fila.total_pagado)} />
             <Fila
               etiqueta="Saldo"
-              valor={<span className={cn(cot.total - pagado > 0 ? "text-amber-700" : "text-emerald-700")}>{soles(Math.max(0, cot.total - pagado))}</span>}
+              valor={<span className={cn(Number(fila.saldo) > 0 ? "text-amber-700" : "text-emerald-700")}>{soles(Math.max(0, Number(fila.saldo)))}</span>}
             />
+            {d?.margen && <Fila etiqueta="Margen (precio − materiales)" valor={soles(d.margen)} />}
           </div>
-          {cot.faltante && (
-            <p className="mt-3 text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2">
-              Para dar el precio falta: {cot.faltante}.
-            </p>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 w-full"
-            disabled={!puedeCopiar}
-            onClick={copiar}
-          >
-            Copiar mensaje de cotización para WhatsApp
-          </Button>
         </Seccion>
 
         <Seccion titulo="Pagos">
-          {caso.pagos.length === 0 ? (
-            <p className="text-sm text-slate-500">Todavía no hay pagos registrados.</p>
-          ) : (
-            caso.pagos.map((p) => (
-              <Fila key={p.id} etiqueta={`${formatoFecha(p.fecha)} · ${p.metodo}`} valor={soles(p.monto)} />
-            ))
-          )}
+          {pagos.data?.length === 0 && <p className="text-sm text-slate-500">Sin pagos registrados.</p>}
+          {pagos.data?.map((p) => (
+            <Fila key={p.id} etiqueta={`${fechaCorta(p.fecha)} · ${METODO_LABEL[p.metodo]}${p.factura_id ? " · factura" : ""}`} valor={soles(p.monto)} />
+          ))}
         </Seccion>
+
+        {d && d.materiales.length > 0 && (
+          <Seccion titulo="Materiales usados">
+            {d.materiales.map((m) => (
+              <Fila key={m.articulo_id} etiqueta={`${m.nombre} × ${m.cantidad}`} valor={soles(m.costo_total)} />
+            ))}
+          </Seccion>
+        )}
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="flex-wrap gap-2">
         <Button variant="ghost" onClick={onCerrar}>
           Cerrar
         </Button>
-        {estado !== "ABANDONADO" && estado !== "ENTREGADO" && (
+        {fila.estado === "AGENDADO" && (
+          <Button variant="ghost" className="text-red-600" onClick={() => onAccion("cancelar")}>
+            Cancelar caso
+          </Button>
+        )}
+        {abierto && (
+          <Button variant="outline" onClick={() => onAccion("precio")}>
+            Ajustar precio
+          </Button>
+        )}
+        {fila.estado !== "CANCELADO" && Number(fila.saldo) > 0 && (
           <Button variant="outline" onClick={() => onAccion("pago")}>
             Registrar pago
           </Button>
         )}
-        {accion && accion.tipo !== "pago" && (
+        {accion && (
           <Button variant="operational" onClick={() => onAccion(accion.tipo)}>
             {accion.texto}
           </Button>

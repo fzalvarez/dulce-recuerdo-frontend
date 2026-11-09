@@ -1,14 +1,14 @@
 import { CASOS_EJEMPLO } from "../../reportes/data/casos.mock";
 import type { CasoReportable, PlanId } from "../../reportes/types";
-import { CASOS_INICIALES } from "../../casos/data/casos.mock";
+import { CASOS_INICIALES } from "../../casos/legacy/casos.mock";
 import { ACTIVOS_EJEMPLO } from "../../activos/data/activos.mock";
-import type { Caso, EstadoMostrado } from "../../casos/types";
-import { diasEntre, estadoMostrado, estadoPago, calcularPrecio, hoyISO } from "../../casos/utils/casos";
+import type { Caso, EstadoMostrado } from "../../casos/legacy/types";
+import { diasEntre, estadoMostrado, estadoPago, calcularPrecio, hoyISO } from "../../casos/legacy/casos";
 import { calcularAbastecimiento } from "../../reportes/utils/abastecimiento";
 import { calcularVeterinarias } from "../../reportes/utils/rendimientoVeterinarias";
 import { calcularOportunidades } from "../../reportes/utils/oportunidades";
 import { desplazarMes, rangoDePeso, ventanaMeses } from "../../reportes/utils/reportes";
-import { PRECIO_PLAN } from "../../casos/data/tarifas";
+import { PRECIO_PLAN } from "../../casos/legacy/tarifas";
 
 export type Nivel = "critico" | "atencion" | "info";
 

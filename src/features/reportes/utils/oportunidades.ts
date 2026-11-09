@@ -1,5 +1,5 @@
 import type { CasoReportable, PlanId } from "../types";
-import { PRECIO_PLAN } from "../../casos/data/tarifas";
+import { PRECIO_PLAN } from "../../casos/legacy/tarifas";
 import { rangoDePeso } from "./reportes";
 
 /** Umbrales de las reglas. Cambiarlos cambia las señales, no los datos. */

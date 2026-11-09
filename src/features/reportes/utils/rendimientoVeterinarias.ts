@@ -1,5 +1,5 @@
 import type { CasoReportable, PlanId } from "../types";
-import { PRECIO_PLAN } from "../../casos/data/tarifas";
+import { PRECIO_PLAN } from "../../casos/legacy/tarifas";
 import { VETERINARIAS_REFERIDORAS } from "../data/casos.mock";
 import { rangoDePeso } from "./reportes";
 import type { Conclusion } from "./oportunidades";

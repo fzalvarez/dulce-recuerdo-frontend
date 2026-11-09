@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,81 +19,87 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Caso, MetodoPago, Modalidad, PlanId, Servicio } from "../types";
-import { DISTRITOS, PLAN_NOMBRE } from "../data/tarifas";
-import { VETERINARIAS } from "../data/veterinarias";
-import { hoyISO, MODALIDAD_LABEL, SERVICIO_LABEL, soles, totalPagado } from "../utils/casos";
-
-
-const METODO_LABEL: Record<MetodoPago, string> = { EFECTIVO: "Efectivo", YAPE: "Yape", POS: "POS (tarjeta)" };
+import { ejecutar } from "@/shared/utils/ejecutar";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import * as casosApi from "../api";
+import type { CasoFila, MetodoPago } from "../types";
+import { combinarFechaHora, hoyISO, METODO_LABEL, montoValido, soles } from "../utils/casos";
 
 export function Modal({
   open,
   onOpenChange,
   children,
+  ancho = "sm:max-w-lg",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
+  ancho?: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">{children}</DialogContent>
+      <DialogContent className={`${ancho} max-h-[90vh] overflow-y-auto`}>{children}</DialogContent>
     </Dialog>
+  );
+}
+
+interface AccionProps {
+  caso: CasoFila | null;
+  onOpenChange: (open: boolean) => void;
+  onHecho: () => void;
+}
+
+function Pie({ onCancelar, texto, guardando, onGuardar, variante = "operational" }: {
+  onCancelar: () => void;
+  texto: string;
+  guardando: boolean;
+  onGuardar: () => void;
+  variante?: "operational" | "destructive";
+}) {
+  return (
+    <DialogFooter>
+      <Button variant="ghost" onClick={onCancelar} disabled={guardando}>
+        Cancelar
+      </Button>
+      <Button variant={variante} onClick={onGuardar} disabled={guardando}>
+        {guardando ? "Guardando…" : texto}
+      </Button>
+    </DialogFooter>
   );
 }
 
 // ---------- Registrar pago ----------
 
-export function PagoDialog({
-  caso,
-  total,
-  onOpenChange,
-  onGuardar,
-}: {
-  caso: Caso | null;
-  total: number;
-  onOpenChange: (open: boolean) => void;
-  onGuardar: (monto: number, metodo: MetodoPago) => void;
-}) {
+export function PagoDialog({ caso, onOpenChange, onHecho }: AccionProps) {
   return (
     <Modal open={caso !== null} onOpenChange={onOpenChange}>
-      {caso && (
-        <PagoForm
-          caso={caso}
-          total={total}
-          onCancelar={() => onOpenChange(false)}
-          onGuardar={(monto, metodo) => {
-            onGuardar(monto, metodo);
-            onOpenChange(false);
-          }}
-        />
-      )}
+      {caso && <PagoForm caso={caso} onCerrar={() => onOpenChange(false)} onHecho={onHecho} />}
     </Modal>
   );
 }
 
-function PagoForm({
-  caso,
-  total,
-  onCancelar,
-  onGuardar,
-}: {
-  caso: Caso;
-  total: number;
-  onCancelar: () => void;
-  onGuardar: (monto: number, metodo: MetodoPago) => void;
-}) {
-  const pagado = totalPagado(caso);
-  const saldo = Math.max(0, total - pagado);
-  const [monto, setMonto] = useState(saldo > 0 ? String(saldo) : "");
+function PagoForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () => void; onHecho: () => void }) {
+  const saldo = Math.max(0, Number(caso.saldo));
+  const [monto, setMonto] = useState(saldo > 0 ? saldo.toFixed(2) : "");
   const [metodo, setMetodo] = useState<MetodoPago>("YAPE");
+  const [fecha, setFecha] = useState(hoyISO());
   const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const handleGuardar = () => {
-    const n = Number(monto);
-    if (!Number.isFinite(n) || n <= 0) return setError("El monto debe ser mayor a 0.");
-    onGuardar(n, metodo);
+  const guardar = async () => {
+    const m = montoValido(monto);
+    if (!m) return setError("El monto debe ser mayor a 0.");
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => casosApi.registrarPago({ caso_id: caso.id, monto: m, metodo, fecha: combinarFechaHora(fecha, "12:00") }),
+      `Pago de ${soles(m)} registrado.`,
+      "No se pudo registrar el pago."
+    );
+    setGuardando(false);
+    if (ok) {
+      onHecho();
+      onCerrar();
+    }
   };
 
   return (
@@ -100,380 +107,271 @@ function PagoForm({
       <DialogHeader>
         <DialogTitle>Registrar pago · {caso.mascota}</DialogTitle>
         <DialogDescription>
-          Precio del servicio: {total > 0 ? soles(total) : "por confirmar"} · Pagado hasta ahora: {soles(pagado)}
+          Precio: {soles(caso.precio_total)} · Pagado: {soles(caso.total_pagado)} · Saldo: {soles(saldo)}
         </DialogDescription>
       </DialogHeader>
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="pago-monto">Monto (S/)</Label>
-            <Input id="pago-monto" type="number" min={0} step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pago-metodo">Forma de pago</Label>
-            <Select value={metodo} onValueChange={(v) => setMetodo(v as MetodoPago)}>
-              <SelectTrigger id="pago-metodo" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {METODO_LABEL[m]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="pago-monto">Monto (S/)</Label>
+          <Input id="pago-monto" type="number" min={0} step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        <div className="space-y-1.5">
+          <Label htmlFor="pago-metodo">Forma de pago</Label>
+          <Select value={metodo} onValueChange={(v) => setMetodo(v as MetodoPago)}>
+            <SelectTrigger id="pago-metodo" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => (
+                <SelectItem key={m} value={m}>
+                  {METODO_LABEL[m]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pago-fecha">Fecha del cobro</Label>
+          <DatePicker id="pago-fecha" value={fecha} onChange={setFecha} />
+        </div>
       </div>
-      <DialogFooter>
-        <Button variant="ghost" onClick={onCancelar}>
-          Cancelar
-        </Button>
-        <Button variant="operational" onClick={handleGuardar}>
-          Registrar pago
-        </Button>
-      </DialogFooter>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <Pie onCancelar={onCerrar} texto="Registrar pago" guardando={guardando} onGuardar={guardar} />
     </>
   );
 }
 
-// ---------- Agendar ----------
+// ---------- Marcar realizado (materiales) ----------
 
-export function AgendarDialog({
-  caso,
-  onOpenChange,
-  onGuardar,
-}: {
-  caso: Caso | null;
-  onOpenChange: (open: boolean) => void;
-  onGuardar: (fecha: string, hora: string) => void;
-}) {
+export function RealizadoDialog({ caso, onOpenChange, onHecho }: AccionProps) {
   return (
     <Modal open={caso !== null} onOpenChange={onOpenChange}>
-      {caso && (
-        <AgendarForm
-          caso={caso}
-          onCancelar={() => onOpenChange(false)}
-          onGuardar={(f, h) => {
-            onGuardar(f, h);
-            onOpenChange(false);
-          }}
-        />
-      )}
+      {caso && <RealizadoForm caso={caso} onCerrar={() => onOpenChange(false)} onHecho={onHecho} />}
     </Modal>
   );
 }
 
-function AgendarForm({
-  caso,
-  onCancelar,
-  onGuardar,
-}: {
-  caso: Caso;
-  onCancelar: () => void;
-  onGuardar: (fecha: string, hora: string) => void;
-}) {
-  const [fecha, setFecha] = useState(caso.fechaServicio ?? hoyISO());
-  const [hora, setHora] = useState(caso.horaServicio ?? "");
-  const [error, setError] = useState<string | null>(null);
+interface LineaMaterial {
+  clave: number;
+  articulo_id: string;
+  cantidad: string;
+}
 
-  const handleGuardar = () => {
-    if (!fecha) return setError("Elige la fecha del servicio.");
-    if (!hora) return setError("Indica la hora del servicio.");
-    onGuardar(fecha, hora);
+function RealizadoForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () => void; onHecho: () => void }) {
+  const disponibles = useRecurso(casosApi.materialesDisponibles);
+  const [fecha, setFecha] = useState(hoyISO());
+  const [hora, setHora] = useState(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  });
+  const [lineas, setLineas] = useState<LineaMaterial[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const agregar = () => setLineas((l) => [...l, { clave: Date.now() + Math.random(), articulo_id: "", cantidad: "1" }]);
+  const cambiar = (clave: number, cambio: Partial<LineaMaterial>) =>
+    setLineas((l) => l.map((x) => (x.clave === clave ? { ...x, ...cambio } : x)));
+
+  const guardar = async () => {
+    const materiales: { articulo_id: string; cantidad: number }[] = [];
+    for (const l of lineas) {
+      const cantidad = Number(l.cantidad);
+      if (!l.articulo_id) return setError("Elige el artículo de cada línea o quítala.");
+      if (!Number.isInteger(cantidad) || cantidad <= 0) return setError("La cantidad debe ser un entero mayor a 0.");
+      materiales.push({ articulo_id: l.articulo_id, cantidad });
+    }
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => casosApi.marcarRealizado(caso.id, { fecha: combinarFechaHora(fecha, hora), materiales }),
+      "Servicio realizado. Queda pendiente la entrega.",
+      "No se pudo marcar como realizado."
+    );
+    setGuardando(false);
+    if (ok) {
+      onHecho();
+      onCerrar();
+    }
   };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Agendar · {caso.mascota}</DialogTitle>
+        <DialogTitle>Marcar realizado · {caso.mascota}</DialogTitle>
         <DialogDescription>
-          {caso.modalidad === "DOMICILIO"
-            ? "La hora define el recargo de traslado si cae en horario punta."
-            : "Fecha y hora en que se realiza el servicio."}
+          Indica la urna, el marco, la placa y lo demás que se usó. Están incluidos en el plan: no
+          cambian el precio, descuentan stock y registran su costo.
         </DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="ag-fecha">Fecha</Label>
-          <DatePicker id="ag-fecha" value={fecha} onChange={setFecha} />
+          <Label htmlFor="re-fecha">Fecha del servicio</Label>
+          <DatePicker id="re-fecha" value={fecha} onChange={setFecha} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="ag-hora">Hora</Label>
-          <Input id="ag-hora" type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+          <Label htmlFor="re-hora">Hora</Label>
+          <Input id="re-hora" type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
         </div>
       </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Materiales usados</span>
+        {disponibles.error && <p className="text-xs text-red-600">{disponibles.error}</p>}
+        {lineas.map((l) => (
+          <div key={l.clave} className="flex items-end gap-2">
+            <div className="flex-1 min-w-0">
+              <Select value={l.articulo_id} onValueChange={(v) => cambiar(l.clave, { articulo_id: v })}>
+                <SelectTrigger className="w-full" aria-label="Artículo">
+                  <SelectValue placeholder="Elegir artículo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(disponibles.data ?? []).map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.nombre}
+                      {a.tamano ? ` · ${a.tamano}` : ""}
+                      {a.modelo ? ` · ${a.modelo}` : ""} ({a.stock} en stock)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Input
+              aria-label="Cantidad"
+              className="w-20"
+              type="number"
+              min={1}
+              value={l.cantidad}
+              onChange={(e) => cambiar(l.clave, { cantidad: e.target.value })}
+            />
+            <Button variant="ghost" size="icon-sm" title="Quitar" onClick={() => setLineas((x) => x.filter((y) => y.clave !== l.clave))}>
+              <Trash2Icon className="size-4" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="self-start" onClick={agregar} disabled={disponibles.cargando}>
+          Agregar material
+        </Button>
+        {disponibles.data?.length === 0 && (
+          <p className="text-xs text-slate-500">No hay artículos con stock en Inventario.</p>
+        )}
+      </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
-      <DialogFooter>
-        <Button variant="ghost" onClick={onCancelar}>
-          Cancelar
-        </Button>
-        <Button variant="operational" onClick={handleGuardar}>
-          Agendar
-        </Button>
-      </DialogFooter>
+      <Pie onCancelar={onCerrar} texto="Marcar realizado" guardando={guardando} onGuardar={guardar} />
     </>
   );
 }
 
-// ---------- Nuevo caso ----------
+// ---------- Cancelar ----------
 
-export type NuevoCasoDatos = Omit<Caso, "id" | "codigo" | "pagos" | "ultimoContacto" | "estado">;
-
-export function NuevoCasoDialog({
-  open,
-  onOpenChange,
-  onGuardar,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onGuardar: (datos: NuevoCasoDatos) => void;
-}) {
+export function CancelarDialog({ caso, onOpenChange, onHecho }: AccionProps) {
   return (
-    <Modal open={open} onOpenChange={onOpenChange}>
-      <NuevoCasoForm
-        onCancelar={() => onOpenChange(false)}
-        onGuardar={(d) => {
-          onGuardar(d);
-          onOpenChange(false);
-        }}
-      />
+    <Modal open={caso !== null} onOpenChange={onOpenChange}>
+      {caso && <CancelarForm caso={caso} onCerrar={() => onOpenChange(false)} onHecho={onHecho} />}
     </Modal>
   );
 }
 
-function NuevoCasoForm({
-  onCancelar,
-  onGuardar,
-}: {
-  onCancelar: () => void;
-  onGuardar: (datos: NuevoCasoDatos) => void;
-}) {
-  const [tutor, setTutor] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [mascota, setMascota] = useState("");
-  const [especie, setEspecie] = useState("Canino");
-  const [servicio, setServicio] = useState<Servicio>("CREMACION");
-  const [modalidad, setModalidad] = useState<Modalidad>("PRESENCIAL");
-  const [canal, setCanal] = useState<"directo" | "veterinaria">("directo");
-  const [veterinaria, setVeterinaria] = useState("");
-  const [peso, setPeso] = useState("");
-  const [plan, setPlan] = useState<PlanId | "">("");
-  const [distrito, setDistrito] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [eutanasiaIncluida, setEutanasiaIncluida] = useState(false);
-  const [complementoHuella, setComplementoHuella] = useState(false);
+function CancelarForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () => void; onHecho: () => void }) {
+  const pagado = Number(caso.total_pagado);
+  const [motivo, setMotivo] = useState("");
+  const [retenido, setRetenido] = useState("0");
   const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const retenidoNum = Number(retenido) || 0;
 
-  const esCremacion = servicio === "CREMACION";
-  const esDomicilio = modalidad === "DOMICILIO";
-
-  const handleGuardar = () => {
-    if (!tutor.trim()) return setError("Escribe el nombre del tutor.");
-    if (!telefono.trim()) return setError("Escribe el teléfono del tutor.");
-    if (!mascota.trim()) return setError("Escribe el nombre de la mascota.");
-    if (canal === "veterinaria" && !veterinaria) return setError("Elige la veterinaria que refiere.");
-    if (esDomicilio && !distrito) return setError("Para recojo a domicilio, elige el distrito.");
-    const pesoNum = peso.trim() === "" ? undefined : Number(peso);
-    if (pesoNum !== undefined && (!Number.isFinite(pesoNum) || pesoNum <= 0)) {
-      return setError("El peso debe ser mayor a 0.");
+  const guardar = async () => {
+    if (!motivo.trim()) return setError("Indica el motivo de la cancelación.");
+    const r = montoValido(retenido, { permitirCero: true });
+    if (r === null) return setError("El gasto retenido no es válido.");
+    if (Number(r) > pagado) return setError("El gasto retenido no puede superar lo pagado.");
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => casosApi.cancelar(caso.id, motivo.trim(), r),
+      `Caso cancelado. Se devuelve ${soles(pagado - Number(r))}.`,
+      "No se pudo cancelar el caso."
+    );
+    setGuardando(false);
+    if (ok) {
+      onHecho();
+      onCerrar();
     }
-    onGuardar({
-      tutor: tutor.trim(),
-      telefono: telefono.trim(),
-      mascota: mascota.trim(),
-      especie,
-      pesoKg: pesoNum,
-      servicio,
-      modalidad,
-      plan: esCremacion && plan ? plan : undefined,
-      eutanasiaIncluida: esCremacion && eutanasiaIncluida,
-      complementoHuella: esCremacion && complementoHuella,
-      distrito: esDomicilio ? distrito : undefined,
-      direccion: direccion.trim() || undefined,
-      canal,
-      veterinaria: canal === "veterinaria" ? veterinaria : undefined,
-      horaServicio: undefined,
-      fechaServicio: undefined,
-    });
   };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Nuevo caso</DialogTitle>
+        <DialogTitle>Cancelar caso · {caso.mascota}</DialogTitle>
         <DialogDescription>
-          Lo mínimo para abrir el caso. El precio, el pago y la agenda se completan después.
+          Se devuelve lo pagado ({soles(pagado)}) menos el gasto que ya se haya generado.
         </DialogDescription>
       </DialogHeader>
-
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-tutor">Nombre del tutor</Label>
-            <Input id="nc-tutor" value={tutor} onChange={(e) => setTutor(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-telefono">Teléfono</Label>
-            <Input id="nc-telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-mascota">Nombre de la mascota</Label>
-            <Input id="nc-mascota" value={mascota} onChange={(e) => setMascota(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-especie">Especie</Label>
-            <Select value={especie} onValueChange={setEspecie}>
-              <SelectTrigger id="nc-especie" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {["Canino", "Felino", "Otro"].map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-servicio">Servicio</Label>
-            <Select value={servicio} onValueChange={(v) => setServicio(v as Servicio)}>
-              <SelectTrigger id="nc-servicio" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(SERVICIO_LABEL) as Servicio[]).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {SERVICIO_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-modalidad">Modalidad</Label>
-            <Select value={modalidad} onValueChange={(v) => setModalidad(v as Modalidad)}>
-              <SelectTrigger id="nc-modalidad" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(MODALIDAD_LABEL) as Modalidad[]).map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {MODALIDAD_LABEL[m]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="ca-motivo">Motivo</Label>
+          <Input id="ca-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="nc-canal">Cómo llegó</Label>
-            <Select value={canal} onValueChange={(v) => setCanal(v as "directo" | "veterinaria")}>
-              <SelectTrigger id="nc-canal" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="directo">Directo (WhatsApp)</SelectItem>
-                <SelectItem value="veterinaria">Refiere veterinaria</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {canal === "veterinaria" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="nc-vet">Veterinaria</Label>
-              <Select value={veterinaria} onValueChange={setVeterinaria}>
-                <SelectTrigger id="nc-vet" className="w-full">
-                  <SelectValue placeholder="Elegir" />
-                </SelectTrigger>
-                <SelectContent>
-                  {VETERINARIAS.map((v) => (
-                    <SelectItem key={v} value={v}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        <div className="space-y-1.5">
+          <Label htmlFor="ca-retenido">Gasto ya generado (S/)</Label>
+          <Input id="ca-retenido" type="number" min={0} step="0.01" value={retenido} onChange={(e) => setRetenido(e.target.value)} />
+          <p className="text-xs text-slate-500">A devolver: {soles(Math.max(0, pagado - retenidoNum))}</p>
         </div>
-
-        {esCremacion && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="nc-peso">Peso (kg)</Label>
-              <Input id="nc-peso" type="number" min={0} step="0.1" value={peso} onChange={(e) => setPeso(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nc-plan">Plan</Label>
-              <Select value={plan} onValueChange={(v) => setPlan(v as PlanId)}>
-                <SelectTrigger id="nc-plan" className="w-full">
-                  <SelectValue placeholder="Por definir" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PLAN_NOMBRE) as PlanId[]).map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PLAN_NOMBRE[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {esDomicilio && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="nc-distrito">Distrito</Label>
-              <Select value={distrito} onValueChange={setDistrito}>
-                <SelectTrigger id="nc-distrito" className="w-full">
-                  <SelectValue placeholder="Elegir" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DISTRITOS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nc-direccion">Dirección (opcional)</Label>
-              <Input id="nc-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-            </div>
-          </div>
-        )}
-
-        {esCremacion && (
-          <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" className="size-4 accent-brand-500" checked={eutanasiaIncluida} onChange={(e) => setEutanasiaIncluida(e.target.checked)} />
-              Incluye eutanasia
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" className="size-4 accent-brand-500" checked={complementoHuella} onChange={(e) => setComplementoHuella(e.target.checked)} />
-              Incluye Mi última huella
-            </label>
-          </div>
-        )}
-
-        {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <Pie onCancelar={onCerrar} texto="Cancelar caso" guardando={guardando} onGuardar={guardar} variante="destructive" />
+    </>
+  );
+}
 
-      <DialogFooter>
-        <Button variant="ghost" onClick={onCancelar}>
-          Cancelar
-        </Button>
-        <Button variant="operational" onClick={handleGuardar}>
-          Abrir caso
-        </Button>
-      </DialogFooter>
+// ---------- Ajustar precio ----------
+
+export function PrecioDialog({ caso, onOpenChange, onHecho }: AccionProps) {
+  return (
+    <Modal open={caso !== null} onOpenChange={onOpenChange}>
+      {caso && <PrecioForm caso={caso} onCerrar={() => onOpenChange(false)} onHecho={onHecho} />}
+    </Modal>
+  );
+}
+
+function PrecioForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () => void; onHecho: () => void }) {
+  const [precio, setPrecio] = useState(Number(caso.precio_total).toFixed(2));
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async () => {
+    const p = montoValido(precio, { permitirCero: true });
+    if (p === null) return setError("El precio no es válido.");
+    if (!motivo.trim()) return setError("Indica el motivo del ajuste.");
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => casosApi.ajustarPrecio(caso.id, p, motivo.trim()),
+      `Precio ajustado a ${soles(p)}.`,
+      "No se pudo ajustar el precio."
+    );
+    setGuardando(false);
+    if (ok) {
+      onHecho();
+      onCerrar();
+    }
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Ajustar precio · {caso.mascota}</DialogTitle>
+        <DialogDescription>El precio calculado por las tarifas queda guardado como referencia.</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="pr-precio">Nuevo precio (S/)</Label>
+          <Input id="pr-precio" type="number" min={0} step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pr-motivo">Motivo</Label>
+          <Input id="pr-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <Pie onCancelar={onCerrar} texto="Guardar precio" guardando={guardando} onGuardar={guardar} />
     </>
   );
 }

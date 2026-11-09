@@ -1,4 +1,4 @@
-import type { Caso } from "../types";
+import type { Caso } from "./types";
 
 // TODO: reemplazar por datos reales cuando el back exponga el módulo de casos.
 // Fechas de ejemplo alrededor del 2026-11-08.

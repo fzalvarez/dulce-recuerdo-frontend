@@ -5,149 +5,70 @@ import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { notifySuccess } from "@/shared/utils";
-import type { Caso, EstadoMostrado, EstadoPago, MetodoPago } from "../types";
-import { CASOS_INICIALES } from "../data/casos.mock";
-import { DIAS_ABANDONO, PLAN_NOMBRE } from "../data/tarifas";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import * as casosApi from "../api";
+import type { CasoFila, EstadoCaso } from "../types";
 import {
   accionPrincipal,
-  calcularPrecio,
   ESTADO_LABEL,
-  estadoMostrado,
-  estadoPago,
-  formatoFecha,
-  hoyISO,
+  fechaHora,
   MODALIDAD_LABEL,
   SERVICIO_LABEL,
   soles,
-  totalPagado,
 } from "../utils/casos";
-import { AgendarDialog, NuevoCasoDialog, PagoDialog, type NuevoCasoDatos } from "../components/Dialogos";
-import { DetalleCasoDialog } from "../components/DetalleCasoDialog";
-import { ESTADO_BADGE, PAGO_BADGE } from "../utils/estilos";
+import { CancelarDialog, PagoDialog, PrecioDialog, RealizadoDialog } from "../components/Dialogos";
+import { ejecutar } from "@/shared/utils/ejecutar";
+import { NuevoCasoDialog } from "../components/NuevoCasoDialog";
+import { DetalleCasoDialog, type AccionCaso } from "../components/DetalleCasoDialog";
+import { ESTADO_BADGE, pagoBadge } from "../utils/estilos";
 
-type Filtro = "activos" | "entregados" | "abandonados" | "todos";
+type Filtro = "activos" | EstadoCaso | "todos";
 
 const FILTROS: { key: Filtro; label: string }[] = [
-  { key: "activos", label: "Activos" },
-  { key: "entregados", label: "Entregados" },
-  { key: "abandonados", label: "Abandonados" },
+  { key: "activos", label: "En curso" },
+  { key: "AGENDADO", label: "Agendados" },
+  { key: "REALIZADO", label: "Por entregar" },
+  { key: "ENTREGADO", label: "Entregados" },
+  { key: "CANCELADO", label: "Cancelados" },
   { key: "todos", label: "Todos" },
 ];
 
-interface Fila {
-  caso: Caso;
-  estado: EstadoMostrado;
-  pago: EstadoPago;
-  total: number;
-}
-
-function enFiltro(estado: EstadoMostrado, filtro: Filtro): boolean {
+function enFiltro(estado: EstadoCaso, filtro: Filtro): boolean {
   if (filtro === "todos") return true;
-  if (filtro === "entregados") return estado === "ENTREGADO";
-  if (filtro === "abandonados") return estado === "ABANDONADO";
-  return estado !== "ENTREGADO" && estado !== "ABANDONADO";
+  if (filtro === "activos") return estado === "AGENDADO" || estado === "REALIZADO";
+  return estado === filtro;
 }
 
 export default function CasosPage() {
-  const [casos, setCasos] = useState<Caso[]>(CASOS_INICIALES);
-  const [filtro, setFiltro] = useState<Filtro>("activos");
   const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
+  const recurso = useRecurso(() => casosApi.bandeja({ q: q || undefined }), [q]);
+  const casos = useMemo(() => recurso.data ?? [], [recurso.data]);
+
+  const [filtro, setFiltro] = useState<Filtro>("activos");
   const [nuevoAbierto, setNuevoAbierto] = useState(false);
-  const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [pagoId, setPagoId] = useState<string | null>(null);
-  const [agendarId, setAgendarId] = useState<string | null>(null);
-
-  const hoy = useMemo(() => hoyISO(), []);
-
-  const filas: Fila[] = useMemo(
-    () =>
-      casos.map((caso) => {
-        const total = calcularPrecio(caso).total;
-        return {
-          caso,
-          estado: estadoMostrado(caso, hoy),
-          pago: estadoPago(caso, total),
-          total,
-        };
-      }),
-    [casos, hoy]
-  );
+  const [detalle, setDetalle] = useState<CasoFila | null>(null);
+  const [accion, setAccion] = useState<{ tipo: AccionCaso; caso: CasoFila } | null>(null);
 
   const conteo = useMemo(
-    () => ({
-      activos: filas.filter((f) => enFiltro(f.estado, "activos")).length,
-      entregados: filas.filter((f) => enFiltro(f.estado, "entregados")).length,
-      abandonados: filas.filter((f) => enFiltro(f.estado, "abandonados")).length,
-      todos: filas.length,
-    }),
-    [filas]
+    () => Object.fromEntries(FILTROS.map((f) => [f.key, casos.filter((c) => enFiltro(c.estado, f.key)).length])) as Record<Filtro, number>,
+    [casos]
   );
+  const visibles = useMemo(() => casos.filter((c) => enFiltro(c.estado, filtro)), [casos, filtro]);
 
-  const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    return filas
-      .filter((f) => enFiltro(f.estado, filtro))
-      .filter(
-        (f) =>
-          !q ||
-          f.caso.tutor.toLowerCase().includes(q) ||
-          f.caso.mascota.toLowerCase().includes(q) ||
-          f.caso.codigo.includes(q)
-      )
-      .sort((a, b) => b.caso.ultimoContacto.localeCompare(a.caso.ultimoContacto));
-  }, [filas, filtro, busqueda]);
-
-  const casoPorId = (id: string | null) => casos.find((c) => c.id === id) ?? null;
-  const filaDetalle = detalleId ? filas.find((f) => f.caso.id === detalleId) ?? null : null;
-  const casoPago = casoPorId(pagoId);
-  const casoAgendar = casoPorId(agendarId);
-  const totalPago = casoPago ? calcularPrecio(casoPago).total : 0;
-
-  const actualizar = (id: string, cambio: (c: Caso) => Caso) =>
-    setCasos((prev) => prev.map((c) => (c.id === id ? cambio(c) : c)));
-
-  const ejecutarAccion = (id: string, tipo: string) => {
-    if (tipo === "pago") return setPagoId(id);
-    if (tipo === "agendar") return setAgendarId(id);
-    if (tipo === "realizado") {
-      actualizar(id, (c) => ({ ...c, estado: "REALIZADO" }));
-      return notifySuccess("Servicio marcado como realizado. Falta la entrega de la urna.");
-    }
+  const ejecutarAccion = async (caso: CasoFila, tipo: AccionCaso) => {
     if (tipo === "entregado") {
-      actualizar(id, (c) => ({ ...c, estado: "ENTREGADO" }));
-      return notifySuccess("Caso entregado y cerrado.");
+      const ok = await ejecutar(() => casosApi.marcarEntregado(caso.id), "Entrega registrada. Caso cerrado.", "No se pudo registrar la entrega.");
+      if (ok) recurso.recargar();
+      return;
     }
+    setAccion({ tipo, caso });
   };
 
-  const guardarPago = (monto: number, metodo: MetodoPago) => {
-    if (!pagoId) return;
-    actualizar(pagoId, (c) => ({
-      ...c,
-      pagos: [...c.pagos, { id: `p-${Date.now()}`, monto, metodo, fecha: hoy }],
-    }));
-    notifySuccess(`Pago de ${soles(monto)} registrado.`);
+  const cerrarAccion = (open: boolean) => {
+    if (!open) setAccion(null);
   };
-
-  const guardarAgenda = (fecha: string, hora: string) => {
-    if (!agendarId) return;
-    actualizar(agendarId, (c) => ({ ...c, estado: "AGENDADO", fechaServicio: fecha, horaServicio: hora }));
-    notifySuccess("Caso agendado.");
-  };
-
-  const crearCaso = (datos: NuevoCasoDatos) => {
-    const maxCodigo = Math.max(...casos.map((c) => Number(c.codigo)));
-    const nuevo: Caso = {
-      ...datos,
-      id: `c-${Date.now()}`,
-      codigo: String(maxCodigo + 1).padStart(6, "0"),
-      pagos: [],
-      ultimoContacto: hoy,
-      estado: "EN_CONVERSACION",
-    };
-    setCasos((prev) => [...prev, nuevo]);
-    notifySuccess(`Caso #${nuevo.codigo} abierto para ${nuevo.mascota}.`);
-  };
+  const casoDe = (tipo: AccionCaso) => (accion?.tipo === tipo ? accion.caso : null);
 
   return (
     <>
@@ -155,7 +76,7 @@ export default function CasosPage() {
 
       <ModuleHeader
         title="Casos"
-        description="Un caso por mascota: desde el primer mensaje hasta la entrega de la urna."
+        description="Cada servicio contratado: agenda, pagos, realización y entrega de la urna."
         actions={
           <Button variant="operational" className="gap-1.5 h-10" onClick={() => setNuevoAbierto(true)}>
             <PlusCircleIcon className="size-4" />
@@ -164,7 +85,6 @@ export default function CasosPage() {
         }
       />
 
-      {/* Filtros y búsqueda */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar casos">
           {FILTROS.map((f) => (
@@ -181,22 +101,27 @@ export default function CasosPage() {
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-gray-900 dark:text-slate-300 dark:border-white/10"
               )}
             >
-              {f.label} <span className="opacity-70">({conteo[f.key]})</span>
+              {f.label} <span className="opacity-70">({conteo[f.key] ?? 0})</span>
             </button>
           ))}
         </div>
-        <div className="relative md:ml-auto md:w-72">
+        <form
+          className="relative md:ml-auto md:w-80"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setQ(busqueda.trim());
+          }}
+        >
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar tutor, mascota o código"
+            placeholder="Tutor, DNI, teléfono o mascota (Enter)"
             className="pl-9"
           />
-        </div>
+        </form>
       </div>
 
-      {/* Tabla */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[860px]">
@@ -211,20 +136,19 @@ export default function CasosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {visibles.map((f) => {
-                const { caso, estado } = f;
-                const accion = accionPrincipal(caso, estado);
-                const saldo = Math.max(0, f.total - totalPagado(caso));
+              {visibles.map((caso) => {
+                const siguiente = accionPrincipal(caso.estado);
+                const pago = pagoBadge(Number(caso.precio_total), Number(caso.total_pagado));
+                const saldo = Number(caso.saldo);
                 return (
-                  <tr key={caso.id} className={cn("hover:bg-slate-50/60 dark:hover:bg-white/5", estado === "ABANDONADO" && "opacity-70")}>
+                  <tr key={caso.id} className={cn("hover:bg-slate-50/60 dark:hover:bg-white/5", caso.estado === "CANCELADO" && "opacity-70")}>
                     <td className="px-5 py-3">
-                      <button type="button" onClick={() => setDetalleId(caso.id)} className="text-left">
+                      <button type="button" onClick={() => setDetalle(caso)} className="text-left">
                         <span className="block font-semibold text-slate-900 dark:text-white hover:text-brand-500">
                           {caso.mascota} · {caso.tutor}
                         </span>
                         <span className="text-xs text-slate-500">
-                          #{caso.codigo} · {caso.especie}
-                          {caso.pesoKg !== undefined ? ` · ${caso.pesoKg} kg` : ""}
+                          {caso.especie ?? ""} · {caso.peso_kg} kg{caso.veterinaria ? ` · ${caso.veterinaria}` : ""}
                         </span>
                       </button>
                     </td>
@@ -233,47 +157,37 @@ export default function CasosPage() {
                         {SERVICIO_LABEL[caso.servicio]} · {MODALIDAD_LABEL[caso.modalidad]}
                       </span>
                       <span className="text-xs text-slate-500">
-                        {caso.servicio === "CREMACION" && caso.plan ? PLAN_NOMBRE[caso.plan] : ""}
-                        {caso.modalidad === "DOMICILIO" && caso.distrito ? ` · ${caso.distrito}` : ""}
+                        {caso.plan_nombre ?? ""}
+                        {caso.distrito_origen ? ` · ${caso.distrito_origen}` : ""}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                      {caso.fechaServicio
-                        ? `${formatoFecha(caso.fechaServicio)}${caso.horaServicio ? ` · ${caso.horaServicio}` : ""}`
-                        : "Sin agendar"}
-                    </td>
+                    <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{fechaHora(caso.inicio)}</td>
                     <td className="px-5 py-3">
-                      {estado === "ABANDONADO" ? (
+                      {caso.estado === "CANCELADO" ? (
                         <span className="text-xs text-slate-400">—</span>
                       ) : (
                         <div className="flex flex-col gap-1 items-start">
-                          <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", PAGO_BADGE[f.pago].clase)}>
-                            {PAGO_BADGE[f.pago].texto}
+                          <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", pago.clase)}>{pago.texto}</span>
+                          <span className="text-xs text-slate-500">
+                            {soles(caso.total_pagado)} de {soles(caso.precio_total)}
+                            {saldo > 0 ? ` · falta ${soles(saldo)}` : ""}
                           </span>
-                          {f.total > 0 && saldo > 0 && (
-                            <span className="text-xs text-slate-500">Falta {soles(saldo)}</span>
-                          )}
                         </div>
                       )}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap", ESTADO_BADGE[estado])}>
-                        {ESTADO_LABEL[estado]}
+                      <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap", ESTADO_BADGE[caso.estado])}>
+                        {ESTADO_LABEL[caso.estado]}
                       </span>
-                      {estado === "ABANDONADO" && (
-                        <span className="block text-xs text-slate-400 mt-1">
-                          Sin respuesta desde {formatoFecha(caso.ultimoContacto)}
-                        </span>
-                      )}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      {accion ? (
+                      {siguiente ? (
                         <Button
-                          variant={accion.tipo === "pago" || accion.tipo === "agendar" ? "operational" : "outline"}
+                          variant={siguiente.tipo === "realizado" ? "operational" : "outline"}
                           size="sm"
-                          onClick={() => ejecutarAccion(caso.id, accion.tipo)}
+                          onClick={() => ejecutarAccion(caso, siguiente.tipo)}
                         >
-                          {accion.texto}
+                          {siguiente.texto}
                         </Button>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
@@ -282,54 +196,47 @@ export default function CasosPage() {
                   </tr>
                 );
               })}
-              {visibles.length === 0 && (
+              {recurso.cargando && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-slate-400">
-                    No hay casos en esta vista.
-                  </td>
+                  <td colSpan={6} className="py-10 text-center text-sm text-slate-400">Cargando casos…</td>
+                </tr>
+              )}
+              {recurso.error && (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-red-600">{recurso.error}</td>
+                </tr>
+              )}
+              {!recurso.cargando && !recurso.error && visibles.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-slate-400">No hay casos en esta vista.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 text-xs text-slate-500">
-          {visibles.length} de {filas.length} casos. Un caso pasa a abandonado solo cuando lleva{" "}
-          {DIAS_ABANDONO} días sin mensajes y sin pagos.
+          {visibles.length} de {casos.length} casos{q ? ` para “${q}”` : ""}.
         </div>
       </div>
 
-      <NuevoCasoDialog open={nuevoAbierto} onOpenChange={setNuevoAbierto} onGuardar={crearCaso} />
+      <NuevoCasoDialog open={nuevoAbierto} onOpenChange={setNuevoAbierto} onCreado={recurso.recargar} />
 
       <DetalleCasoDialog
-        caso={filaDetalle?.caso ?? null}
-        estado={filaDetalle?.estado ?? "EN_CONVERSACION"}
-        estadoPagoActual={filaDetalle?.pago ?? "PENDIENTE"}
+        fila={detalle}
         onOpenChange={(open) => {
-          if (!open) setDetalleId(null);
+          if (!open) setDetalle(null);
         }}
         onAccion={(tipo) => {
-          if (!detalleId) return;
-          setDetalleId(null);
-          ejecutarAccion(detalleId, tipo);
+          const caso = detalle;
+          setDetalle(null);
+          if (caso) ejecutarAccion(caso, tipo);
         }}
       />
 
-      <PagoDialog
-        caso={casoPago}
-        total={totalPago}
-        onOpenChange={(open) => {
-          if (!open) setPagoId(null);
-        }}
-        onGuardar={guardarPago}
-      />
-
-      <AgendarDialog
-        caso={casoAgendar}
-        onOpenChange={(open) => {
-          if (!open) setAgendarId(null);
-        }}
-        onGuardar={guardarAgenda}
-      />
+      <PagoDialog caso={casoDe("pago")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
+      <RealizadoDialog caso={casoDe("realizado")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
+      <CancelarDialog caso={casoDe("cancelar")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
+      <PrecioDialog caso={casoDe("precio")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import type { CasoReportable, PlanId } from "../types";
-import { PRECIO_PLAN } from "../../casos/data/tarifas";
+import { PRECIO_PLAN } from "../../casos/legacy/tarifas";
 import { desplazarMes, rangoDePeso } from "../utils/reportes";
 
 // TODO: reemplazar por datos reales cuando el back exponga GET /reportes/cremaciones.
