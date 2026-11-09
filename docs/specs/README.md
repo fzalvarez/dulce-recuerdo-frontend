@@ -25,3 +25,4 @@ repo del backend (`docs/FRONTEND_SPEC.md` y `docs/specs/`).
 | [abastecimiento.md](./abastecimiento.md) | Implementada como maqueta (datos ficticios) | `/reportes` (Planes vendidos) |
 | [oportunidades.md](./oportunidades.md) | Implementada como maqueta (datos ficticios) | `/reportes` (Distritos) |
 | [dashboard.md](./dashboard.md) | Implementada como maqueta | `/` (Dashboard) |
+| [roles.md](./roles.md) | Propuesta, implementada con datos de ejemplo | `/usuarios` y `/usuarios/roles` |

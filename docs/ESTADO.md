@@ -1,6 +1,6 @@
 # Estado de las pantallas — dulce-recuerdo-frontend
 
-Actualizado el 2026-11-07.
+Actualizado el 2026-11-08.
 
 - **Ejemplo:** la pantalla funciona con datos en memoria (`data/*.mock.ts`). No hay API conectada.
 - **Placeholder:** la pantalla todavía dice "en construcción".
@@ -22,9 +22,9 @@ Actualizado el 2026-11-07.
 | `/inventario` | Inventario | Ejemplo | [inventario.md](specs/inventario.md) | Sin backend |
 | `/activos` | Activos | Ejemplo | [activos.md](specs/activos.md) | Sin backend |
 | `/vehiculos` | Vehículo | Ejemplo, integrado con Finanzas | [vehiculo.md](specs/vehiculo.md) | `vehiculos`, eventos (pendiente) |
-| `/usuarios` | Usuarios | Ejemplo | Sin spec | Sin backend (auth) |
+| `/usuarios` | Usuarios y Roles (incluye `/usuarios/roles`) | Ejemplo, roles fijos 2026-11-08 | [roles.md](specs/roles.md) | Auth con claim `rol` (pendiente) |
 | `/configuracion` | Configuración | Placeholder | Sin spec | — |
-| `/signin` | Inicio de sesión | Simulado (`DEV_TOKEN`) | Sin spec | Auth (no existe) |
+| `/signin` | Inicio de sesión | Simulado (`DEV_TOKEN`, rol `root`) | Sin spec | Auth (no existe) |
 
 ## Pendiente
 
