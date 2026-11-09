@@ -9,19 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInSchema, type SignInSchema } from "../validation/signIn.schema";
 import { useAuthStore } from "../store/auth.store";
-
-// JWT de desarrollo: exp año 2286, sin verificación de firma
-const DEV_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-  btoa(JSON.stringify({ sub: "admin@dulcerecuerdo.com", name: "Admin", rol: "root", exp: 9999999999 }))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_") +
-  ".dev";
+import { iniciarSesion, usuarioActual } from "../api";
+import { getApiErrorMessage } from "@/shared/lib/http-error";
 
 export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const setToken = useAuthStore((s) => s.setToken);
+  const [errorLogin, setErrorLogin] = useState<string | null>(null);
+  const setSesion = useAuthStore((s) => s.setSesion);
   const navigate = useNavigate();
 
   const {
@@ -37,11 +31,16 @@ export function SignInForm() {
 
   const rememberMe = watch("rememberMe");
 
-  const onSubmit = async (_data: SignInSchema) => {
-    await new Promise((r) => setTimeout(r, 600));
-    // TODO: reemplazar DEV_TOKEN por respuesta real del API de autenticación
-    setToken(DEV_TOKEN);
-    navigate("/");
+  const onSubmit = async (data: SignInSchema) => {
+    setErrorLogin(null);
+    try {
+      const token = await iniciarSesion(data.email, data.password);
+      const yo = await usuarioActual(token);
+      setSesion(token, yo.modulos);
+      navigate("/");
+    } catch (e) {
+      setErrorLogin(getApiErrorMessage(e, "No se pudo iniciar sesión."));
+    }
   };
 
   return (
@@ -111,6 +110,12 @@ export function SignInForm() {
           ¿Olvidó su contraseña?
         </a>
       </div>
+
+      {errorLogin && (
+        <p role="alert" className="text-sm text-red-600">
+          {errorLogin}
+        </p>
+      )}
 
       {/* Submit */}
       <Button

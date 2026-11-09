@@ -32,11 +32,3 @@ export const ROLES: RolDef[] = [
 export const MODULOS_PROTEGIDOS: Partial<Record<RolId, ModuloId[]>> = {
   root: ["usuarios"],
 };
-
-// TODO: reemplazar por la configuración real de roles cuando exista API.
-export const MODULOS_INICIALES: Record<RolId, ModuloId[]> = {
-  root: MODULOS.map((m) => m.id),
-  admin: MODULOS.map((m) => m.id),
-  operador1: ["dashboard", "casos", "agenda", "entregas", "clientes", "mascotas", "inventario"],
-  operador2: ["dashboard", "agenda", "entregas", "vehiculos"],
-};

@@ -32,12 +32,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { notifySuccess } from "@/shared/utils";
+import { notifyError, notifySuccess } from "@/shared/utils";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { getApiErrorMessage } from "@/shared/lib/http-error";
+import {
+  actualizarUsuario,
+  crearUsuario,
+  eliminarUsuario,
+  listarUsuarios,
+  type Usuario,
+} from "../api";
 import { useNavigate } from "react-router-dom";
 import { ROLES } from "@/features/roles/data/roles";
 import type { RolId } from "@/features/roles/types";
 
-// TODO: reemplazar por datos reales del módulo `usuarios` cuando se exponga el endpoint.
 type Rol = RolId;
 
 // Colores de los cuatro roles fijos (spec roles.md, R1). Nombres en ../../roles/data/roles.ts
@@ -53,73 +61,8 @@ function rolMeta(rol: Rol) {
   return { label: def.nombre, badgeClass: BADGE_ROL[rol] };
 }
 
-interface Usuario {
-  id: string;
-  nombres: string;
-  apellidos: string;
-  username: string;
-  email: string;
-  rol: Rol;
-  activo: boolean;
-  ultimoAcceso: string;
-}
-
-const USUARIOS_INICIALES: Usuario[] = [
-  {
-    id: "u-1",
-    nombres: "Marcos",
-    apellidos: "Gutiérrez",
-    username: "marcos.g",
-    email: "marcos@dulcerecuerdo.pe",
-    rol: "root",
-    activo: true,
-    ultimoAcceso: "Hoy, 09:12 AM",
-  },
-  {
-    id: "u-2",
-    nombres: "Paola",
-    apellidos: "Reyes",
-    username: "paola.r",
-    email: "paola@dulcerecuerdo.pe",
-    rol: "admin",
-    activo: true,
-    ultimoAcceso: "Hoy, 08:40 AM",
-  },
-  {
-    id: "u-3",
-    nombres: "Carlos",
-    apellidos: "Reátegui",
-    username: "carlos.r",
-    email: "carlos@dulcerecuerdo.pe",
-    rol: "operador1",
-    activo: true,
-    ultimoAcceso: "Ayer, 18:20 PM",
-  },
-  {
-    id: "u-4",
-    nombres: "Jhon",
-    apellidos: "Torres",
-    username: "jhon.t",
-    email: "jhon@dulcerecuerdo.pe",
-    rol: "operador2",
-    activo: true,
-    ultimoAcceso: "Ayer, 15:05 PM",
-  },
-  {
-    id: "u-5",
-    nombres: "Rosa",
-    apellidos: "Medina",
-    username: "rosa.m",
-    email: "rosa@dulcerecuerdo.pe",
-    rol: "operador1",
-    activo: false,
-    ultimoAcceso: "12 Oct, 11:30 AM",
-  },
-];
-
 interface UsuarioForm {
-  nombres: string;
-  apellidos: string;
+  nombre: string;
   username: string;
   email: string;
   rol: Rol;
@@ -129,8 +72,7 @@ interface UsuarioForm {
 }
 
 const FORM_VACIO: UsuarioForm = {
-  nombres: "",
-  apellidos: "",
+  nombre: "",
   username: "",
   email: "",
   rol: "operador1",
@@ -138,6 +80,15 @@ const FORM_VACIO: UsuarioForm = {
   confirmPassword: "",
   activo: true,
 };
+
+function iniciales(nombre: string): string {
+  return nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p.charAt(0))
+    .join("");
+}
 
 function UsuarioModal({
   open,
@@ -148,9 +99,11 @@ function UsuarioModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   usuario: Usuario | null;
-  onGuardar: (data: UsuarioForm) => void;
+  onGuardar: (data: UsuarioForm) => Promise<boolean>;
 }) {
   const esEdicion = !!usuario;
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState<UsuarioForm>(FORM_VACIO);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [initedFor, setInitedFor] = useState<string | null>(null);
@@ -160,11 +113,10 @@ function UsuarioModal({
     setForm(
       usuario
         ? {
-            nombres: usuario.nombres,
-            apellidos: usuario.apellidos,
+            nombre: usuario.nombre,
             username: usuario.username,
             email: usuario.email,
-            rol: usuario.rol,
+            rol: usuario.rol_id,
             password: "",
             confirmPassword: "",
             activo: usuario.activo,
@@ -172,12 +124,18 @@ function UsuarioModal({
         : FORM_VACIO
     );
     setInitedFor(claveInit);
+    setError(null);
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onGuardar(form);
-    onOpenChange(false);
+    if (form.password && form.password.length < 8) return setError("La contraseña debe tener al menos 8 caracteres.");
+    if (form.password !== form.confirmPassword) return setError("Las contraseñas no coinciden.");
+    setError(null);
+    setGuardando(true);
+    const ok = await onGuardar(form);
+    setGuardando(false);
+    if (ok) onOpenChange(false);
   };
 
   return (
@@ -196,25 +154,14 @@ function UsuarioModal({
         </DialogDescription>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="nombres">Nombres</Label>
-              <Input
-                id="nombres"
-                required
-                value={form.nombres}
-                onChange={(e) => setForm((f) => ({ ...f, nombres: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="apellidos">Apellidos</Label>
-              <Input
-                id="apellidos"
-                required
-                value={form.apellidos}
-                onChange={(e) => setForm((f) => ({ ...f, apellidos: e.target.value }))}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="nombre">Nombre completo</Label>
+            <Input
+              id="nombre"
+              required
+              value={form.nombre}
+              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -300,13 +247,15 @@ function UsuarioModal({
             Cuenta activa (puede iniciar sesión)
           </label>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="operational">
+            <Button type="submit" variant="operational" disabled={guardando}>
               <ShieldCheckIcon className="size-4" />
-              {esEdicion ? "Guardar Cambios" : "Crear Usuario"}
+              {guardando ? "Guardando…" : esEdicion ? "Guardar Cambios" : "Crear Usuario"}
             </Button>
           </DialogFooter>
         </form>
@@ -317,7 +266,8 @@ function UsuarioModal({
 
 export default function UsuariosPage() {
   const navigate = useNavigate();
-  const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIALES);
+  const recurso = useRecurso(listarUsuarios);
+  const usuarios = useMemo(() => recurso.data ?? [], [recurso.data]);
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState<Rol | "todos">("todos");
   const [modalOpen, setModalOpen] = useState(false);
@@ -329,10 +279,10 @@ export default function UsuariosPage() {
     return usuarios.filter((u) => {
       const coincideTexto =
         !query ||
-        `${u.nombres} ${u.apellidos}`.toLowerCase().includes(query) ||
+        u.nombre.toLowerCase().includes(query) ||
         u.username.toLowerCase().includes(query) ||
         u.email.toLowerCase().includes(query);
-      const coincideRol = filtroRol === "todos" || u.rol === filtroRol;
+      const coincideRol = filtroRol === "todos" || u.rol_id === filtroRol;
       return coincideTexto && coincideRol;
     });
   }, [usuarios, busqueda, filtroRol]);
@@ -349,44 +299,40 @@ export default function UsuariosPage() {
     setModalOpen(true);
   };
 
-  const handleGuardar = (data: UsuarioForm) => {
-    if (usuarioEditar) {
-      setUsuarios((list) =>
-        list.map((u) =>
-          u.id === usuarioEditar.id
-            ? {
-                ...u,
-                nombres: data.nombres,
-                apellidos: data.apellidos,
-                username: data.username,
-                email: data.email,
-                rol: data.rol,
-                activo: data.activo,
-              }
-            : u
-        )
-      );
-      notifySuccess(`Usuario ${data.nombres} ${data.apellidos} actualizado correctamente.`);
-    } else {
-      const nuevo: Usuario = {
-        id: `u-${Date.now()}`,
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        username: data.username,
-        email: data.email,
-        rol: data.rol,
-        activo: data.activo,
-        ultimoAcceso: "Sin conexiones aún",
-      };
-      setUsuarios((list) => [nuevo, ...list]);
-      notifySuccess(`Cuenta creada para ${data.nombres} ${data.apellidos}.`);
+  const handleGuardar = async (data: UsuarioForm): Promise<boolean> => {
+    const cuerpo = {
+      nombre: data.nombre.trim(),
+      username: data.username.trim(),
+      email: data.email.trim(),
+      rol_id: data.rol,
+      activo: data.activo,
+      ...(data.password ? { password: data.password } : {}),
+    };
+    try {
+      if (usuarioEditar) {
+        await actualizarUsuario(usuarioEditar.id, cuerpo);
+        notifySuccess(`Usuario ${cuerpo.nombre} actualizado correctamente.`);
+      } else {
+        await crearUsuario({ ...cuerpo, password: data.password });
+        notifySuccess(`Cuenta creada para ${cuerpo.nombre}.`);
+      }
+      recurso.recargar();
+      return true;
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudo guardar el usuario."));
+      return false;
     }
   };
 
-  const handleConfirmarEliminar = () => {
+  const handleConfirmarEliminar = async () => {
     if (!usuarioEliminar) return;
-    setUsuarios((list) => list.filter((u) => u.id !== usuarioEliminar.id));
-    notifySuccess(`Usuario ${usuarioEliminar.nombres} ${usuarioEliminar.apellidos} eliminado.`);
+    try {
+      await eliminarUsuario(usuarioEliminar.id);
+      notifySuccess(`Usuario ${usuarioEliminar.nombre} eliminado.`);
+      recurso.recargar();
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudo eliminar el usuario."));
+    }
     setUsuarioEliminar(null);
   };
 
@@ -461,7 +407,7 @@ export default function UsuariosPage() {
               <KeyRoundIcon className="size-5" />
             </div>
           </div>
-          <div className="mt-3 text-xs text-slate-500">Administrador, Operador, Coordinador y Conductor</div>
+          <div className="mt-3 text-xs text-slate-500">Root, Admin, Operador 1 y Operador 2</div>
         </div>
       </section>
 
@@ -503,24 +449,23 @@ export default function UsuariosPage() {
                 <th className="py-3 px-5 font-semibold">Usuario</th>
                 <th className="py-3 px-4 font-semibold">Rol</th>
                 <th className="py-3 px-4 font-semibold">Estado</th>
-                <th className="py-3 px-4 font-semibold">Último Acceso</th>
+                <th className="py-3 px-4 font-semibold">Alta</th>
                 <th className="py-3 px-5 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {usuariosFiltrados.map((u) => {
-                const rol = rolMeta(u.rol);
+                const rol = rolMeta(u.rol_id);
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold uppercase shrink-0">
-                          {u.nombres.charAt(0)}
-                          {u.apellidos.charAt(0)}
+                          {iniciales(u.nombre)}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="text-sm font-semibold text-slate-900 truncate">
-                            {u.nombres} {u.apellidos}
+                            {u.nombre}
                           </span>
                           <span className="text-xs text-slate-500 truncate">
                             @{u.username} · {u.email}
@@ -544,7 +489,9 @@ export default function UsuariosPage() {
                         {u.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-xs text-slate-500">{u.ultimoAcceso}</td>
+                    <td className="py-4 px-4 text-xs text-slate-500">
+                      {new Date(u.created_at).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                    </td>
                     <td className="py-4 px-5 text-right">
                       <div className="inline-flex items-center gap-1.5">
                         <Button variant="outline" size="sm" onClick={() => handleEditar(u)}>
@@ -565,7 +512,21 @@ export default function UsuariosPage() {
                   </tr>
                 );
               })}
-              {usuariosFiltrados.length === 0 && (
+              {recurso.cargando && (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-sm text-slate-400">
+                    Cargando usuarios…
+                  </td>
+                </tr>
+              )}
+              {recurso.error && (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-sm text-red-600">
+                    {recurso.error}
+                  </td>
+                </tr>
+              )}
+              {!recurso.cargando && !recurso.error && usuariosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-sm text-slate-400">
                     No se encontraron usuarios con estos filtros.
@@ -595,7 +556,7 @@ export default function UsuariosPage() {
             <DialogDescription>
               Esta acción revocará el acceso al panel de forma inmediata para{" "}
               <strong className="text-slate-900 font-semibold">
-                {usuarioEliminar?.nombres} {usuarioEliminar?.apellidos}
+                {usuarioEliminar?.nombre}
               </strong>
               . No se puede deshacer.
             </DialogDescription>

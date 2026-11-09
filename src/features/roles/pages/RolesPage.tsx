@@ -1,27 +1,64 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, ShieldCheckIcon } from "lucide-react";
+import { ArrowLeftIcon, LoaderIcon, ShieldCheckIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { notifySuccess } from "@/shared/utils";
+import { notifyError, notifySuccess } from "@/shared/utils";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { getApiErrorMessage } from "@/shared/lib/http-error";
+import { useAuthStore } from "@/features/auth/store/auth.store";
+import { usuarioActual } from "@/features/auth/api";
 import { MODULOS, MODULOS_PROTEGIDOS, ROLES } from "../data/roles";
-import { useRolesStore } from "../store/roles.store";
+import { guardarModulosRol, listarRoles } from "../api";
 import type { ModuloId, RolId } from "../types";
 import { aplicarProtegidos } from "../utils/permisos";
 
 const GRUPOS = [...new Set(MODULOS.map((m) => m.grupo))];
 
+type PorRol = Record<RolId, ModuloId[]>;
+
 function mismosModulos(a: ModuloId[], b: ModuloId[]) {
   return a.length === b.length && a.every((m) => b.includes(m));
 }
 
-/** Permisos por rol: qué módulos puede abrir cada rol (spec roles.md). */
+/** Permisos por rol: qué módulos puede abrir cada rol (spec roles.md). Se guardan en el backend. */
 export default function RolesPage() {
+  const roles = useRecurso(listarRoles);
+
+  return (
+    <>
+      <Breadcrumbs
+        items={[
+          { label: "Catálogos & Administración" },
+          { label: "Usuarios" },
+          { label: "Roles y permisos" },
+        ]}
+      />
+      {roles.error && <p className="text-sm text-red-600">{roles.error}</p>}
+      {roles.cargando && (
+        <p className="flex items-center gap-2 text-sm text-slate-500">
+          <LoaderIcon className="size-4 animate-spin" /> Cargando roles…
+        </p>
+      )}
+      {roles.data && (
+        <MatrizRoles
+          key={JSON.stringify(roles.data)}
+          guardado={Object.fromEntries(
+            ROLES.map((r) => [r.id, aplicarProtegidos(r.id, roles.data!.find((x) => x.id === r.id)?.modulos ?? [])])
+          ) as PorRol}
+          onGuardado={roles.recargar}
+        />
+      )}
+    </>
+  );
+}
+
+function MatrizRoles({ guardado, onGuardado }: { guardado: PorRol; onGuardado: () => void }) {
   const navigate = useNavigate();
-  const guardado = useRolesStore((s) => s.modulosPorRol);
-  const setModulos = useRolesStore((s) => s.setModulos);
-  const [borrador, setBorrador] = useState(guardado);
+  const setModulosSesion = useAuthStore((s) => s.setModulos);
+  const [borrador, setBorrador] = useState<PorRol>(guardado);
+  const [guardando, setGuardando] = useState(false);
 
   const hayCambios = ROLES.some((r) => !mismosModulos(borrador[r.id], guardado[r.id]));
 
@@ -36,25 +73,25 @@ export default function RolesPage() {
     });
   };
 
-  const guardar = () => {
-    ROLES.forEach((r) => {
-      if (!mismosModulos(borrador[r.id], guardado[r.id])) setModulos(r.id, borrador[r.id]);
-    });
-    notifySuccess("Permisos de roles guardados.");
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      for (const r of ROLES) {
+        if (!mismosModulos(borrador[r.id], guardado[r.id])) await guardarModulosRol(r.id, borrador[r.id]);
+      }
+      // Si cambió el rol propio, el menú se actualiza al instante.
+      setModulosSesion((await usuarioActual()).modulos);
+      notifySuccess("Permisos de roles guardados.");
+      onGuardado();
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudieron guardar los permisos."));
+    } finally {
+      setGuardando(false);
+    }
   };
-
-  const descartar = () => setBorrador(guardado);
 
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { label: "Catálogos & Administración" },
-          { label: "Usuarios" },
-          { label: "Roles y permisos" },
-        ]}
-      />
-
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
@@ -90,12 +127,7 @@ export default function RolesPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {GRUPOS.map((grupo) => (
-              <GrupoFilas
-                key={grupo}
-                grupo={grupo}
-                borrador={borrador}
-                alternar={alternar}
-              />
+              <GrupoFilas key={grupo} grupo={grupo} borrador={borrador} alternar={alternar} />
             ))}
           </tbody>
         </table>
@@ -105,12 +137,12 @@ export default function RolesPage() {
             {hayCambios ? "Hay cambios sin guardar." : "Sin cambios pendientes."}
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={descartar} disabled={!hayCambios}>
+            <Button variant="ghost" onClick={() => setBorrador(guardado)} disabled={!hayCambios || guardando}>
               Descartar
             </Button>
-            <Button variant="operational" onClick={guardar} disabled={!hayCambios}>
+            <Button variant="operational" onClick={guardar} disabled={!hayCambios || guardando}>
               <ShieldCheckIcon className="size-4" />
-              Guardar cambios
+              {guardando ? "Guardando…" : "Guardar cambios"}
             </Button>
           </div>
         </div>
@@ -125,7 +157,7 @@ function GrupoFilas({
   alternar,
 }: {
   grupo: string;
-  borrador: Record<RolId, ModuloId[]>;
+  borrador: PorRol;
   alternar: (rol: RolId, modulo: ModuloId) => void;
 }) {
   return (
