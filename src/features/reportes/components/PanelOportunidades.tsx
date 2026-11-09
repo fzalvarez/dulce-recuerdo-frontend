@@ -50,12 +50,12 @@ export function PanelOportunidades({
       </p>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[440px]">
+        <table className="w-full text-left text-sm min-w-[480px]">
           <thead className="text-label uppercase tracking-wider text-slate-500">
             <tr className="border-b border-slate-200 dark:border-white/10">
               <th className="py-2 pr-3 font-semibold">Distrito</th>
               <th className="py-2 px-3 text-right font-semibold">Cremaciones</th>
-              <th className="py-2 px-3 text-right font-semibold">% de veterinarias</th>
+              <th className="py-2 px-3 font-semibold">Particulares y veterinarias</th>
               <th className="py-2 pl-3 text-right font-semibold">Ingreso</th>
             </tr>
           </thead>
@@ -90,7 +90,6 @@ export function PanelOportunidades({
 
 function FilaTabla({ fila }: { fila: FilaDistrito }) {
   const badges = (["altaDemanda", "ganaTerreno", "oportunidad"] as const).filter((k) => fila[k]);
-  const var_ = fila.variacionPct;
 
   return (
     <tr>
@@ -108,13 +107,21 @@ function FilaTabla({ fila }: { fila: FilaDistrito }) {
         </span>
       </td>
       <td className="py-2.5 px-3 text-right tabular-nums text-slate-900 dark:text-white">
-        <span className="block">{fila.cremaciones}</span>
-        <span className="block text-[11px] text-slate-400">
-          {var_ === null ? "sin período anterior" : `${var_ > 0 ? "+" : ""}${Math.round(var_)}% vs. período anterior`}
-        </span>
+        {fila.cremaciones}
       </td>
-      <td className="py-2.5 px-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
-        {Math.round(fila.pctVeterinarias)}%
+      <td className="py-2.5 px-3 min-w-[160px]">
+        <div
+          role="img"
+          aria-label={`Particulares ${Math.round(100 - fila.pctVeterinarias)}%, veterinarias ${Math.round(fila.pctVeterinarias)}%`}
+          className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--grid)]"
+        >
+          <div className="h-full" style={{ width: `${100 - fila.pctVeterinarias}%`, background: "var(--serie-1)" }} />
+          <div className="h-full" style={{ width: `${fila.pctVeterinarias}%`, background: "var(--baseline)" }} />
+        </div>
+        <div className="mt-1 flex justify-between text-[11px] text-slate-500 tabular-nums">
+          <span>Particulares {Math.round(100 - fila.pctVeterinarias)}%</span>
+          <span>Veterinarias {Math.round(fila.pctVeterinarias)}%</span>
+        </div>
       </td>
       <td className="py-2.5 pl-3 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-300">
         {formatoSolesCorto(fila.ingreso)}
