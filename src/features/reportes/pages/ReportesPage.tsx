@@ -25,6 +25,7 @@ import { BarrasVerticales, type GrupoBarra, type SerieBarra } from "../component
 import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizontales";
 import { PanelAbastecimiento } from "../components/PanelAbastecimiento";
 import { PanelOportunidades } from "../components/PanelOportunidades";
+import { PanelRendimientoVeterinarias } from "../components/PanelRendimientoVeterinarias";
 import {
   claveMes,
   contarPorMes,
@@ -401,6 +402,8 @@ export default function ReportesPage() {
       )}
 
       {reporte === "top-veterinarias" && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          <div className="flex flex-col gap-5 min-w-0">
         <ChartCard
           titulo="Top 5 veterinarias referidoras"
           subtitulo={`Cremaciones referidas por veterinarias aliadas · ${periodoLabel}`}
@@ -421,6 +424,9 @@ export default function ReportesPage() {
             <p className="text-sm text-slate-500">No hubo referidos de veterinarias en este período.</p>
           )}
         </ChartCard>
+          </div>
+          <PanelRendimientoVeterinarias casos={CASOS_EJEMPLO} ventana={ventana} ventanaPrevia={ventanaPrevia} />
+        </div>
       )}
 
       {reporte === "distritos" && (
