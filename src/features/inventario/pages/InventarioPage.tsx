@@ -46,6 +46,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { notifySuccess } from "@/shared/utils";
+import type { Proveedor } from "../types";
+import { ProveedoresDialog } from "../components/ProveedoresDialog";
 
 // TODO: reemplazar por datos reales del módulo `inventario` cuando se exponga el endpoint.
 type Categoria =
@@ -69,6 +71,7 @@ interface ItemInventario {
   stock: number;
   minimo: number;
   nivel: Nivel;
+  proveedores: Proveedor[];
 }
 
 const CATEGORIAS: { value: Categoria | "todos"; label: string }[] = [
@@ -94,6 +97,20 @@ const ITEMS: ItemInventario[] = [
     stock: 22,
     minimo: 8,
     nivel: "optimo",
+    proveedores: [
+      {
+        id: "prov-rob-1",
+        empresa: "Carpintería Huanca",
+        contacto: "Julio Huanca",
+        telefono: "01 445 2210",
+        celular: "983 110 245",
+        correo: "ventas@carpinteriahuanca.pe",
+        direccion: "Jr. Los Carpinteros 245, Lima",
+        diasEntrega: 21,
+        principal: true,
+        notas: "Pedidos los lunes. Pago al contado o transferencia.",
+      },
+    ],
   },
   {
     id: "urn-cao-02",
@@ -108,6 +125,7 @@ const ITEMS: ItemInventario[] = [
     stock: 3,
     minimo: 5,
     nivel: "bajo",
+    proveedores: [],
   },
   {
     id: "rec-hue-01",
@@ -122,6 +140,18 @@ const ITEMS: ItemInventario[] = [
     stock: 18,
     minimo: 10,
     nivel: "optimo",
+    proveedores: [
+      {
+        id: "prov-hue-1",
+        empresa: "Arcillas del Sur",
+        contacto: "Rocío Vega",
+        telefono: "054 221 780",
+        correo: "pedidos@arcillasdelsur.pe",
+        direccion: "Av. Los Alfareros 120, Arequipa",
+        diasEntrega: 10,
+        principal: true,
+      },
+    ],
   },
   {
     id: "rec-por-03",
@@ -136,6 +166,7 @@ const ITEMS: ItemInventario[] = [
     stock: 12,
     minimo: 6,
     nivel: "optimo",
+    proveedores: [],
   },
   {
     id: "rec-dij-02",
@@ -150,6 +181,7 @@ const ITEMS: ItemInventario[] = [
     stock: 1,
     minimo: 4,
     nivel: "critico",
+    proveedores: [],
   },
   {
     id: "sum-gua-01",
@@ -164,6 +196,18 @@ const ITEMS: ItemInventario[] = [
     stock: 12,
     minimo: 5,
     nivel: "optimo",
+    proveedores: [
+      {
+        id: "prov-gua-1",
+        empresa: "Papelera Andina",
+        contacto: "Mario Cárdenas",
+        telefono: "01 330 9911",
+        celular: "987 654 321",
+        direccion: "Av. Industrial 980, Ate",
+        diasEntrega: 7,
+        principal: true,
+      },
+    ],
   },
   {
     id: "sum-agu-02",
@@ -178,6 +222,7 @@ const ITEMS: ItemInventario[] = [
     stock: 4,
     minimo: 5,
     nivel: "bajo",
+    proveedores: [],
   },
   {
     id: "sum-pan-03",
@@ -192,6 +237,7 @@ const ITEMS: ItemInventario[] = [
     stock: 3,
     minimo: 4,
     nivel: "bajo",
+    proveedores: [],
   },
   {
     id: "med-eut-01",
@@ -206,6 +252,7 @@ const ITEMS: ItemInventario[] = [
     stock: 6,
     minimo: 4,
     nivel: "optimo",
+    proveedores: [],
   },
   {
     id: "med-lid-02",
@@ -220,6 +267,7 @@ const ITEMS: ItemInventario[] = [
     stock: 2,
     minimo: 4,
     nivel: "critico",
+    proveedores: [],
   },
   {
     id: "med-sed-03",
@@ -234,6 +282,7 @@ const ITEMS: ItemInventario[] = [
     stock: 5,
     minimo: 3,
     nivel: "optimo",
+    proveedores: [],
   },
   {
     id: "urn-bio-03",
@@ -248,6 +297,7 @@ const ITEMS: ItemInventario[] = [
     stock: 9,
     minimo: 5,
     nivel: "optimo",
+    proveedores: [],
   },
 ];
 
@@ -701,6 +751,7 @@ export default function InventarioPage() {
   const [nivelFiltro, setNivelFiltro] = useState<Nivel | "todos">("todos");
   const [itemEnMovimiento, setItemEnMovimiento] = useState<ItemInventario | null>(null);
   const [items, setItems] = useState<ItemInventario[]>(ITEMS);
+  const [proveedoresItemId, setProveedoresItemId] = useState<string | null>(null);
   const [elementoDialog, setElementoDialog] = useState<{
     open: boolean;
     item: ItemInventario | null;
@@ -736,7 +787,7 @@ export default function InventarioPage() {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...datos } : i)));
       notifySuccess(`Elemento "${valores.nombre}" actualizado.`);
     } else {
-      setItems((prev) => [...prev, { ...datos, id: `el-${Date.now()}` }]);
+      setItems((prev) => [...prev, { ...datos, proveedores: [], id: `el-${Date.now()}` }]);
       notifySuccess(`Elemento "${valores.nombre}" agregado al catálogo.`);
     }
   };
@@ -984,6 +1035,10 @@ export default function InventarioPage() {
                           <ArrowLeftRightIcon className="size-3.5" />
                           Movimiento
                         </Button>
+                        <Button variant="outline" size="sm" onClick={() => setProveedoresItemId(item.id)}>
+                          <TruckIcon className="size-3.5" />
+                          Proveedores ({item.proveedores.length})
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1038,6 +1093,18 @@ export default function InventarioPage() {
         item={itemEnMovimiento}
         onOpenChange={(open) => !open && setItemEnMovimiento(null)}
         onConfirmar={handleConfirmarMovimiento}
+      />
+
+      <ProveedoresDialog
+        open={proveedoresItemId !== null}
+        nombreItem={items.find((i) => i.id === proveedoresItemId)?.nombre ?? ""}
+        proveedores={items.find((i) => i.id === proveedoresItemId)?.proveedores ?? []}
+        onOpenChange={(open) => {
+          if (!open) setProveedoresItemId(null);
+        }}
+        onActualizar={(lista) =>
+          setItems((prev) => prev.map((i) => (i.id === proveedoresItemId ? { ...i, proveedores: lista } : i)))
+        }
       />
 
       <ElementoInventarioModal
