@@ -55,7 +55,7 @@ export function PanelOportunidades({
             <tr className="border-b border-slate-200 dark:border-white/10">
               <th className="py-2 pr-3 font-semibold">Distrito</th>
               <th className="py-2 px-3 text-right font-semibold">Cremaciones</th>
-              <th className="py-2 px-3 text-right font-semibold">Veterinarias</th>
+              <th className="py-2 px-3 text-right font-semibold">% de veterinarias</th>
               <th className="py-2 pl-3 text-right font-semibold">Ingreso</th>
             </tr>
           </thead>
@@ -110,7 +110,7 @@ function FilaTabla({ fila }: { fila: FilaDistrito }) {
       <td className="py-2.5 px-3 text-right tabular-nums text-slate-900 dark:text-white">
         <span className="block">{fila.cremaciones}</span>
         <span className="block text-[11px] text-slate-400">
-          ({var_ === null ? "sin base" : `${var_ > 0 ? "+" : ""}${Math.round(var_)}%`})
+          {var_ === null ? "sin período anterior" : `${var_ > 0 ? "+" : ""}${Math.round(var_)}% vs. período anterior`}
         </span>
       </td>
       <td className="py-2.5 px-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
