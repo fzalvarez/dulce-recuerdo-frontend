@@ -1,45 +1,30 @@
 import type { CasoReportable, PlanId } from "../types";
-import { DIAS_ALERTA, DIAS_COLCHON, HORIZONTE_MESES, INSUMOS, type Insumo, type InsumoId, MESES_TENDENCIA, receta } from "../data/abastecimiento.mock";
+import { DIAS_ALERTA, DIAS_COLCHON, HORIZONTE_MESES, INSUMOS, type Insumo, MESES_TENDENCIA, receta } from "../data/abastecimiento.mock";
 import { rangoDePeso, ventanaMeses } from "./reportes";
-
-export const PLANES_CON_RECETA: PlanId[] = ["clasico", "paz", "eco"];
-
-export const PLAN_CORTO: Record<PlanId, string> = {
-  clasico: "Clásico",
-  paz: "Paz",
-  eco: "Eco",
-  "sin-clasificar": "Sin clasificar",
-};
 
 export type EstadoInsumo = "critico" | "atencion" | "ok";
 
 export interface FilaInsumo {
   insumo: Insumo;
-  /** Cantidad consumida en el período elegido. */
-  consumoPeriodo: number;
   /** Consumo mensual proyectado según la tendencia de ventas. */
-  consumoMesProyectado: number;
-  /** Lo que se necesitará en el horizonte (3 meses). */
-  necesidadHorizonte: number;
+  consumoMes: number;
+  /** Lo que se usará en el horizonte (3 meses). */
+  necesidad: number;
   /** Días de stock al ritmo proyectado; null si no hay consumo. */
   coberturaDias: number | null;
-  /** Días que faltan para hacer el pedido sin quedarse sin stock; null si no hay consumo. */
-  diasHastaPedir: number | null;
-  /** Cantidad sugerida para comprar. */
+  /** Cuántas unidades comprar; 0 si no hace falta. */
   comprar: number;
   estado: EstadoInsumo;
-  /** Fecha sugerida del pedido, YYYY-MM-DD. */
+  /** Fecha sugerida del pedido, YYYY-MM-DD; null si no hace falta. */
   fechaPedir: string | null;
-  /** Consumo del período por plan, para explicar de dónde sale. */
-  porPlan: Record<PlanId, number>;
+  /** Hoy hay que pedir (ya no alcanza el tiempo de entrega). */
+  pedirYa: boolean;
 }
 
 export interface ResultadoAbastecimiento {
   filas: FilaInsumo[];
   /** Cremaciones del período sin plan clasificado: no tienen receta. */
   sinClasificar: number;
-  /** Ventas por plan en el período y su tendencia proyectada por mes. */
-  planes: { plan: PlanId; ventasPeriodo: number; proyeccionMes: number }[];
 }
 
 export function fechaISO(fecha: Date): string {
@@ -76,20 +61,18 @@ export function proyeccionMedia(serie: number[], pasos: number): number {
   return suma / pasos;
 }
 
+const PLANES: PlanId[] = ["clasico", "paz", "eco"];
+
 interface Entrada {
   casos: CasoReportable[];
   casosPeriodo: CasoReportable[];
   finClave: string;
   longitud: number;
-  planFiltro: PlanId | "todos";
   hoy: string;
 }
 
 export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
-  const planes: PlanId[] = e.planFiltro === "todos" ? PLANES_CON_RECETA : [e.planFiltro];
-  const enFiltro = (p: PlanId) => planes.includes(p);
-
-  // Tendencia por plan: ventas mensuales de los últimos 12 meses.
+  // Tendencia por plan con los últimos 12 meses de ventas.
   const meses = ventanaMeses(e.finClave, MESES_TENDENCIA);
   const conteoMes: Record<string, Record<string, number>> = {};
   for (const c of e.casos) {
@@ -98,53 +81,49 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
     conteoMes[c.plan][mes] = (conteoMes[c.plan][mes] ?? 0) + 1;
   }
 
+  // Factor de tendencia por plan: proyección mensual frente al promedio del período.
   const ventasPeriodo: Record<PlanId, number> = { clasico: 0, paz: 0, eco: 0, "sin-clasificar": 0 };
   for (const c of e.casosPeriodo) ventasPeriodo[c.plan] += 1;
 
-  const factorPlan: Record<string, number> = {};
-  const planesInfo = planes.map((plan) => {
+  const factor: Partial<Record<PlanId, number>> = {};
+  for (const plan of PLANES) {
     const serie = meses.map((m) => conteoMes[plan]?.[m] ?? 0);
-    const proyeccionMes = proyeccionMedia(serie, HORIZONTE_MESES);
-    const promedioPeriodo = ventasPeriodo[plan] / e.longitud;
-    factorPlan[plan] = promedioPeriodo > 0 ? proyeccionMes / promedioPeriodo : 1;
-    return { plan, ventasPeriodo: ventasPeriodo[plan], proyeccionMes };
-  });
+    const proyeccion = proyeccionMedia(serie, HORIZONTE_MESES);
+    const promedio = ventasPeriodo[plan] / e.longitud;
+    factor[plan] = promedio > 0 ? proyeccion / promedio : 1;
+  }
 
-  // Consumo del período por insumo y plan, según la receta de cada variante.
-  const consumo: Record<string, Record<string, number>> = {};
+  // Consumo del período por insumo, según la receta de cada cremación.
+  const consumoPeriodo: Record<string, Partial<Record<PlanId, number>>> = {};
   for (const c of e.casosPeriodo) {
-    if (!enFiltro(c.plan) || c.pesoKg === undefined) continue;
+    if (c.pesoKg === undefined || c.plan === "sin-clasificar") continue;
     const r = receta(c.plan, rangoDePeso(c.pesoKg));
-    for (const [insumo, cantidad] of Object.entries(r) as [InsumoId, number][]) {
-      consumo[insumo] ??= {};
-      consumo[insumo][c.plan] = (consumo[insumo][c.plan] ?? 0) + cantidad;
+    for (const [insumo, cantidad] of Object.entries(r)) {
+      consumoPeriodo[insumo] ??= {};
+      consumoPeriodo[insumo][c.plan] = (consumoPeriodo[insumo][c.plan] ?? 0) + (cantidad ?? 0);
     }
   }
 
   const filas: FilaInsumo[] = INSUMOS.map((insumo) => {
-    const porPlan = { clasico: 0, paz: 0, eco: 0, "sin-clasificar": 0 } as Record<PlanId, number>;
-    let consumoPeriodo = 0;
-    let consumoMesProyectado = 0;
-    for (const plan of planes) {
-      const q = consumo[insumo.id]?.[plan] ?? 0;
-      porPlan[plan] = q;
-      consumoPeriodo += q;
-      consumoMesProyectado += (q / e.longitud) * (factorPlan[plan] ?? 1);
+    // Consumo mensual proyectado: lo del período por plan, escalado por la tendencia.
+    // Los insumos compartidos (sobre, bolsa, certificado) se cuentan una sola vez por cremación.
+    let consumoMes = 0;
+    for (const plan of PLANES) {
+      consumoMes += ((consumoPeriodo[insumo.id]?.[plan] ?? 0) / e.longitud) * (factor[plan] ?? 1);
     }
+    const necesidad = consumoMes * HORIZONTE_MESES;
 
-    const necesidadHorizonte = consumoMesProyectado * HORIZONTE_MESES;
-    if (consumoMesProyectado <= 0) {
+    if (consumoMes <= 0) {
       return {
-        insumo, consumoPeriodo, consumoMesProyectado, necesidadHorizonte,
-        coberturaDias: null, diasHastaPedir: null, comprar: 0,
-        estado: insumo.stock < insumo.minimo ? "atencion" : "ok", fechaPedir: null, porPlan,
+        insumo, consumoMes, necesidad, coberturaDias: null, comprar: 0,
+        estado: insumo.stock < insumo.minimo ? "atencion" : "ok", fechaPedir: null, pedirYa: false,
       };
     }
 
-    const consumoDiario = consumoMesProyectado / 30;
+    const consumoDiario = consumoMes / 30;
     const coberturaDias = insumo.stock / consumoDiario;
     const diasHastaPedir = coberturaDias - insumo.leadTimeDias;
-    // Cubrir lo que se consume mientras llega el pedido, más un mes de colchón, sin bajar del mínimo.
+    // Lo necesario hasta que llegue el pedido, más un mes de colchón, sin bajar del mínimo.
     const objetivo = Math.max(consumoDiario * (insumo.leadTimeDias + DIAS_COLCHON), insumo.minimo);
     const comprar = Math.max(0, Math.ceil(objetivo - insumo.stock));
 
@@ -152,55 +131,40 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
     if (coberturaDias < insumo.leadTimeDias) estado = "critico";
     else if (diasHastaPedir <= DIAS_ALERTA || insumo.stock < insumo.minimo) estado = "atencion";
 
-    const fechaPedir = diasHastaPedir <= 0 ? e.hoy : sumarDias(e.hoy, Math.round(diasHastaPedir));
-
-    return {
-      insumo, consumoPeriodo, consumoMesProyectado, necesidadHorizonte,
-      coberturaDias, diasHastaPedir, comprar, estado, fechaPedir, porPlan,
-    };
+    // Con stock OK no se muestra acción de compra: solo se sugiere cuando hay alerta.
+    if (estado === "ok") {
+      return { insumo, consumoMes, necesidad, coberturaDias, comprar: 0, estado, fechaPedir: null, pedirYa: false };
+    }
+    const pedirYa = diasHastaPedir <= 0;
+    const fechaPedir = pedirYa ? e.hoy : sumarDias(e.hoy, Math.round(diasHastaPedir));
+    return { insumo, consumoMes, necesidad, coberturaDias, comprar, estado, fechaPedir, pedirYa };
   });
 
   const orden: Record<EstadoInsumo, number> = { critico: 0, atencion: 1, ok: 2 };
   filas.sort(
     (a, b) =>
       orden[a.estado] - orden[b.estado] ||
-      (a.diasHastaPedir ?? Infinity) - (b.diasHastaPedir ?? Infinity) ||
+      (a.coberturaDias ?? Infinity) - (b.coberturaDias ?? Infinity) ||
       a.insumo.nombre.localeCompare(b.insumo.nombre, "es")
   );
 
-  return { filas, sinClasificar: ventasPeriodo["sin-clasificar"], planes: planesInfo };
+  return { filas, sinClasificar: ventasPeriodo["sin-clasificar"] };
 }
 
-/** Frases para la sección de conclusiones. Se generan solo a partir de los números. */
+/** Dos o tres conclusiones cortas, solo con los insumos que requieren acción. */
 export function conclusiones(r: ResultadoAbastecimiento): string[] {
-  const out: string[] = [];
-  for (const f of r.filas.filter((x) => x.estado !== "ok").slice(0, 3)) {
-    const { nombre, unidad, leadTimeDias, proveedor } = f.insumo;
-    const dias = f.coberturaDias === null ? null : Math.round(f.coberturaDias);
-    const reparto = (Object.entries(f.porPlan) as [PlanId, number][])
-      .filter(([, q]) => q > 0)
-      .sort((a, b) => b[1] - a[1]);
-    const total = reparto.reduce((acc, [, q]) => acc + q, 0);
-    const principal = reparto[0];
-    const pctPrincipal = principal && total > 0 ? Math.round((principal[1] / total) * 100) : 0;
-    const quien = principal && reparto.length > 1 ? ` ${PLAN_CORTO[principal[0]]} explica el ${pctPrincipal}% del consumo.` : "";
-
+  const alerta = r.filas.filter((f) => f.estado !== "ok").slice(0, 3);
+  const out = alerta.map((f) => {
+    const { nombre, unidad, leadTimeDias } = f.insumo;
+    const dias = f.coberturaDias === null ? 0 : Math.round(f.coberturaDias);
     if (f.estado === "critico") {
-      out.push(
-        `${nombre} (${proveedor}): quedan unos ${dias} días de stock y la entrega tarda ${leadTimeDias} días. No llega a tiempo: comprar ${f.comprar} ${unidad} de inmediato.${quien}`
-      );
-    } else {
-      const cuando = f.diasHastaPedir !== null && f.diasHastaPedir <= 0 ? "ya" : `antes del ${formatoFechaCorta(f.fechaPedir ?? "")}`;
-      out.push(
-        `${nombre}: quedan unos ${dias} días de stock. Pedir ${cuando} para recibir a tiempo (entrega ${leadTimeDias} días).${quien}`
-      );
+      return `${nombre}: quedan ${dias} días y la entrega tarda ${leadTimeDias}. Comprar ${f.comprar} ${unidad} hoy.`;
     }
-  }
+    return `${nombre}: quedan ${dias} días. Pedir antes del ${formatoFechaCorta(f.fechaPedir ?? "")}.`;
+  });
   if (r.sinClasificar > 0) {
-    out.push(`${r.sinClasificar} ventas sin clasificar no tienen receta: no consumen insumos en este cálculo.`);
+    out.push(`${r.sinClasificar} cremaciones sin plan clasificado no tienen receta y no descuentan insumos.`);
   }
-  if (out.length === 0 || r.filas.every((f) => f.estado === "ok")) {
-    out.unshift("Todos los insumos tienen cobertura suficiente para el período.");
-  }
+  if (alerta.length === 0) out.unshift("Todos los insumos tienen cobertura para el período.");
   return out;
 }
