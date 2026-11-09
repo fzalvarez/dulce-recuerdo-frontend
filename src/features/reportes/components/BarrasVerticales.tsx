@@ -56,22 +56,28 @@ export function BarrasVerticales({
         </ul>
       )}
 
-      <div className="overflow-x-auto pt-10 pb-1">
+      {/* En móvil el gráfico se desplaza; desde sm no hay barra: el sobrante de pocos px cae en el padding de la tarjeta. */}
+      <div className="overflow-x-auto sm:overflow-visible pt-10 pb-1">
         <div
           role="img"
           aria-label={descripcion}
-          className="flex w-full min-w-[640px]"
+          className="flex w-full min-w-[520px] sm:min-w-0"
         >
-          {grupos.map((g) => {
+          {grupos.map((g, idx) => {
             const tooltip = `${g.etiqueta}: ${series
               .map((s) => `${s.label} ${formatoValor(g.valores[s.key] ?? 0)}`)
               .join(" · ")}`;
+            // El tooltip se alinea hacia dentro en los extremos para no salirse del gráfico.
+            const posicion = idx === 0 ? "left-0" : idx === grupos.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2";
             return (
-              <div key={g.etiqueta} className="group relative flex flex-1 flex-col items-center px-2">
+              <div key={g.etiqueta} className="group relative flex min-w-0 flex-1 flex-col items-center px-2">
                 {/* Tooltip al pasar el cursor */}
                 <div
                   role="tooltip"
-                  className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-md bg-slate-900 dark:bg-slate-100 px-2 py-1 text-xs text-white dark:text-slate-900 opacity-0 transition-opacity group-hover:opacity-100"
+                  className={cn(
+                    "pointer-events-none absolute -top-9 z-10 whitespace-nowrap rounded-md bg-slate-900 dark:bg-slate-100 px-2 py-1 text-xs text-white dark:text-slate-900 opacity-0 transition-opacity group-hover:opacity-100",
+                    posicion
+                  )}
                 >
                   {tooltip}
                 </div>

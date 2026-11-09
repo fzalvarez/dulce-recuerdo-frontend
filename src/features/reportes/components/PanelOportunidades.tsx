@@ -50,7 +50,7 @@ export function PanelOportunidades({
       </p>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[480px]">
+        <table className="w-full text-left text-sm">
           <thead className="text-label uppercase tracking-wider text-slate-500">
             <tr className="border-b border-slate-200 dark:border-white/10">
               <th className="py-2 pr-3 font-semibold">Distrito</th>

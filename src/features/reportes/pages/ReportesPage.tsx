@@ -451,7 +451,7 @@ export default function ReportesPage() {
       )}
 
       {reporte === "top-veterinarias" && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 min-[1360px]:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-5 min-w-0">
         <ChartCard
           titulo="Top 5 veterinarias referidoras"
@@ -479,7 +479,7 @@ export default function ReportesPage() {
       )}
 
       {reporte === "distritos" && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 min-[1360px]:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-5 min-w-0">
         <ChartCard
           titulo="Distritos que pidieron cremaciones"
@@ -503,7 +503,7 @@ export default function ReportesPage() {
       )}
 
       {reporte === "planes" && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 min-[1360px]:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-5 min-w-0">
           <ChartCard
             titulo="Planes vendidos"
