@@ -3,7 +3,7 @@
 Actualizado el 2026-11-09 (Fase 9: conexión con el backend).
 
 **Todas las pantallas leen y guardan en la API del backend.** No quedan datos de ejemplo
-en el código. La reglas de negocio (precios, estados, reportes, alertas) las calcula el
+en el código. Las reglas de negocio (precios, estados, reportes, alertas) las calcula el
 backend; el front solo muestra y envía.
 
 Verificado con `tsc`, `oxlint`, `vite build` y la prueba de contrato del backend
