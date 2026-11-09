@@ -173,3 +173,15 @@ Cada reporte tiene su propia URL, para compartirlo y abrirlo directo:
 | Peso de la mascota | `/reportes/peso-mascota` |
 
 `/reportes` redirige a `/reportes/cremaciones-mes`. El período y el mes final se conservan al cambiar de reporte.
+
+## 11. Ingresos por mes (2026-11-08)
+
+Reporte aparte de "Cremaciones por mes", con la misma temporalidad. Ruta: `/reportes/ingresos-mes`.
+
+- **Importe cobrado:** pagos con fecha de cobro en el mes, incluidos los anticipos.
+- **Cremaciones:** las realizadas en el mes, por fecha de cremación.
+- **Precio promedio:** precio de lista de las cremaciones del mes con plan clasificado.
+  No cambia con los pagos, así que se mide por fecha de cremación.
+- Las cremaciones sin plan clasificado no tienen precio y no suman al importe ni al promedio.
+
+Maqueta: uno de cada cinco casos se paga como anticipo, el mes anterior a la cremación.

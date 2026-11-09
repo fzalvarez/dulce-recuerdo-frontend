@@ -31,11 +31,14 @@ export function BarrasVerticales({
   series,
   descripcion,
   etiquetaVariacion,
+  formatoValor = (v: number) => String(v),
 }: {
   grupos: GrupoBarra[];
   series: SerieBarra[];
   descripcion: string;
   etiquetaVariacion: string;
+  /** Cómo se escribe cada valor sobre la barra. */
+  formatoValor?: (v: number) => string;
 }) {
   const max = Math.max(1, ...grupos.flatMap((g) => series.map((s) => g.valores[s.key] ?? 0)));
   const mostrarVariacion = grupos.some((g) => g.variacion !== undefined);
@@ -61,7 +64,7 @@ export function BarrasVerticales({
         >
           {grupos.map((g) => {
             const tooltip = `${g.etiqueta}: ${series
-              .map((s) => `${s.label} ${g.valores[s.key] ?? 0}`)
+              .map((s) => `${s.label} ${formatoValor(g.valores[s.key] ?? 0)}`)
               .join(" · ")}`;
             return (
               <div key={g.etiqueta} className="group relative flex flex-1 flex-col items-center px-2">
@@ -85,7 +88,7 @@ export function BarrasVerticales({
                         style={{ height: ALTURA_BARRAS + ALTURA_ETIQUETA }}
                       >
                         <span className="text-xs font-semibold leading-none mb-1 text-[var(--ink)] tabular-nums">
-                          {valor}
+                          {formatoValor(valor)}
                         </span>
                         <div
                           className="w-7 rounded-t-[4px]"

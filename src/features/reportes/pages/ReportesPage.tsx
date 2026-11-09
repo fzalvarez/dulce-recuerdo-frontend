@@ -26,6 +26,7 @@ import { BarrasHorizontales, type FilaRanking } from "../components/BarrasHorizo
 import { PanelAbastecimiento } from "../components/PanelAbastecimiento";
 import { PanelOportunidades } from "../components/PanelOportunidades";
 import { PanelRendimientoVeterinarias } from "../components/PanelRendimientoVeterinarias";
+import { calcularIngresosMes, soles } from "../utils/ingresos";
 import {
   claveMes,
   contarPorMes,
@@ -47,6 +48,7 @@ import "../reportes.css";
 
 type ReporteKey =
   | "mensual"
+  | "ingresos"
   | "interanual"
   | "particulares"
   | "veterinarias"
@@ -57,6 +59,7 @@ type ReporteKey =
 
 const REPORTES: { key: ReporteKey; slug: string; label: string }[] = [
   { key: "mensual", slug: "cremaciones-mes", label: "Cremaciones por mes" },
+  { key: "ingresos", slug: "ingresos-mes", label: "Ingresos por mes" },
   { key: "interanual", slug: "vs-anio-anterior", label: "Vs. año anterior" },
   { key: "particulares", slug: "particulares", label: "Particulares" },
   { key: "veterinarias", slug: "veterinarias-aliadas", label: "Veterinarias aliadas" },
@@ -152,6 +155,7 @@ export default function ReportesPage() {
       };
     });
   }
+  const filasIngresos = calcularIngresosMes(CASOS_EJEMPLO, ventana);
   const grupos2 = gruposInteranuales(TOTAL_MES);
   const grupos3 = gruposInteranuales(PARTICULAR_MES);
   const grupos4 = gruposInteranuales(VETERINARIA_MES);
@@ -325,6 +329,51 @@ export default function ReportesPage() {
             series={[{ key: "total", label: "Cremaciones", color: "var(--serie-1)" }]}
             descripcion={`Cremaciones por mes, ${periodoLabel}`}
             etiquetaVariacion="contra el mes anterior"
+          />
+        </ChartCard>
+      )}
+
+      {reporte === "ingresos" && (
+        <ChartCard
+          titulo="Ingresos por mes"
+          subtitulo={`Importe cobrado, cremaciones y precio promedio · ${periodoLabel}`}
+          nota={
+            <>
+              <p>
+                Importe cobrado: pagos con fecha de cobro en el mes, incluidos los anticipos. Precio promedio: precio de
+                lista de las cremaciones del mes. Las cremaciones sin plan clasificado no tienen precio y no suman.
+              </p>
+              {notaParcial && <p className="mt-1">{notaParcial}</p>}
+            </>
+          }
+          tabla={{
+            columnas: ["Mes", "Cremaciones", "Importe cobrado", "Precio promedio"],
+            filas: [
+              ...filasIngresos.map((f) => [
+                f.etiqueta + (f.clave === MES_EN_CURSO ? " (parcial)" : ""),
+                f.cremaciones,
+                soles(f.importeCobrado),
+                f.precioPromedio === null ? "—" : soles(f.precioPromedio),
+              ]),
+              [
+                "Total",
+                sumar(filasIngresos.map((f) => f.cremaciones)),
+                soles(sumar(filasIngresos.map((f) => f.importeCobrado))),
+                "—",
+              ],
+            ],
+          }}
+        >
+          <BarrasVerticales
+            grupos={filasIngresos.map((f) => ({
+              etiqueta: f.etiqueta,
+              parcial: f.clave === MES_EN_CURSO,
+              valores: { importe: f.importeCobrado },
+            }))}
+            series={[{ key: "importe", label: "Importe cobrado", color: "var(--serie-1)" }]}
+            descripcion={`Importe cobrado por mes, ${periodoLabel}`}
+            etiquetaVariacion=""
+            formatoValor={soles}
           />
         </ChartCard>
       )}

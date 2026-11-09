@@ -19,4 +19,8 @@ export interface CasoReportable {
   eutanasia: boolean;
   /** Peso de la mascota al momento del servicio, en kg. */
   pesoKg: number;
+  /** Precio de lista del plan y peso, en S/. 0 si no tiene plan clasificado. */
+  precio: number;
+  /** Fecha en que se cobra, YYYY-MM-DD. Puede ser un mes antes de la cremación (anticipo). */
+  fechaCobro: string;
 }

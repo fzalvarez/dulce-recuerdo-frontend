@@ -1,4 +1,6 @@
 import type { CasoReportable, PlanId } from "../types";
+import { PRECIO_PLAN } from "../../casos/data/tarifas";
+import { desplazarMes, rangoDePeso } from "../utils/reportes";
 
 // TODO: reemplazar por datos reales cuando el back exponga GET /reportes/cremaciones.
 // Datos sintéticos: los totales mensuales son fijos y los casos se generan con una
@@ -174,10 +176,14 @@ function generarCasos(): CasoReportable[] {
       base.forEach((b, idx) => {
         n += 1;
         const id = `c-${n}`;
+        const precio = b.plan === "sin-clasificar" || b.pesoKg === undefined ? 0 : PRECIO_PLAN[b.plan][rangoDePeso(b.pesoKg)];
+        // MAQUETA: uno de cada cinco casos se paga como anticipo, el mes anterior a la cremación.
+        const fechaCobro = n % 5 === 0 ? `${desplazarMes(mes, -1)}-${b.fecha.slice(8, 10)}` : b.fecha;
+        const datos = { id, ...b, precio, fechaCobro };
         if (esVet.has(idx)) {
-          casos.push({ id, ...b, canal: "veterinaria", veterinariaId: elegirPonderado(rnd, pesosVet) });
+          casos.push({ ...datos, canal: "veterinaria", veterinariaId: elegirPonderado(rnd, pesosVet) });
         } else {
-          casos.push({ id, ...b, canal: "particular" });
+          casos.push({ ...datos, canal: "particular" });
         }
       });
     });
