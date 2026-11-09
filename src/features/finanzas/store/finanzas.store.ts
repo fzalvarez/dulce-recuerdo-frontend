@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { GastoFijo, GastoVariable } from "../types";
 import { GASTOS_FIJOS_INICIALES, GASTOS_VARIABLES_EJEMPLO } from "../data/finanzas.mock";
 
-type GastoFijoPatch = Partial<Pick<GastoFijo, "nombre" | "montoMensual" | "saldoPendiente">>;
+type GastoFijoPatch = Partial<Pick<GastoFijo, "nombre" | "monto" | "saldoPendiente">>;
 type GastoVariableData = Omit<GastoVariable, "id">;
 
 interface FinanzasState {

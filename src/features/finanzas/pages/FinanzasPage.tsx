@@ -31,6 +31,7 @@ import {
   etiquetaMes,
   formatFechaCorta,
   formatSoles,
+  montoDelMes,
   ingresosDelMes,
   mesKey,
 } from "../utils/periodo";
@@ -62,14 +63,14 @@ export default function FinanzasPage() {
   );
 
   const totalIngresos = sumar(ingresos.map((i) => i.monto));
-  const totalFijos = sumar(gastosFijos.map((g) => g.montoMensual));
+  const totalFijos = sumar(gastosFijos.map((g) => montoDelMes(g, mes)));
   const totalVariables = sumar(variables.map((g) => g.monto));
   const totalGastos = totalFijos + totalVariables;
   const resultado = totalIngresos - totalGastos;
 
   const gastosPorGrupo = GRUPOS_GASTO.map((grupo) => {
     const items = gastosFijos.filter((g) => g.grupo === grupo);
-    return { grupo, items, subtotal: sumar(items.map((g) => g.montoMensual)) };
+    return { grupo, items, subtotal: sumar(items.map((g) => montoDelMes(g, mes))) };
   });
 
   const totalesPorCategoria = CATEGORIAS_GASTO_VARIABLE.map((categoria) => ({
@@ -79,7 +80,7 @@ export default function FinanzasPage() {
 
   const handleSaveGastoFijo = (
     id: string,
-    patch: { nombre: string; montoMensual: number; saldoPendiente?: number }
+    patch: { nombre: string; monto: number; saldoPendiente?: number }
   ) => {
     updateGastoFijo(id, patch);
     notifySuccess("Gasto fijo actualizado");
@@ -193,7 +194,7 @@ export default function FinanzasPage() {
           <header className="px-5 py-4 border-b border-slate-100">
             <h2 className="text-sm font-bold text-slate-800">Gastos fijos</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Se aplican cada mes. Edita un monto para cambiarlo de forma permanente.
+              Los mensuales se aplican cada mes; los anuales, en su mes de pago. Edita un monto para cambiarlo.
             </p>
           </header>
 
@@ -219,8 +220,11 @@ export default function FinanzasPage() {
                           </p>
                         )}
                       </div>
-                      <span className="text-sm font-semibold text-slate-900 whitespace-nowrap">
-                        {formatSoles(g.montoMensual)}
+                      <span className="text-right whitespace-nowrap">
+                        <span className="block text-sm font-semibold text-slate-900">{formatSoles(g.monto)}</span>
+                        <span className="block text-[11px] text-slate-400">
+                          {g.frecuencia === "mensual" ? "mensual" : `anual · ${MESES_NOMBRE[(g.mesPago ?? 1) - 1]}`}
+                        </span>
                       </span>
                       <IconButton
                         label={`Editar ${g.nombre}`}
@@ -341,6 +345,8 @@ export default function FinanzasPage() {
     </>
   );
 }
+
+const MESES_NOMBRE = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
 function sumar(valores: number[]): number {
   return valores.reduce((acc, v) => acc + v, 0);

@@ -14,7 +14,7 @@ import type { GastoFijo } from "../types";
 
 interface GastoPatch {
   nombre: string;
-  montoMensual: number;
+  monto: number;
   saldoPendiente?: number;
 }
 
@@ -56,7 +56,7 @@ function GastoFijoForm({
 }) {
   const esPrestamo = gasto.grupo === "Préstamos";
   const [nombre, setNombre] = useState(gasto.nombre);
-  const [monto, setMonto] = useState(String(gasto.montoMensual));
+  const [monto, setMonto] = useState(String(gasto.monto));
   const [saldo, setSaldo] = useState(
     gasto.saldoPendiente !== undefined ? String(gasto.saldoPendiente) : ""
   );
@@ -75,7 +75,7 @@ function GastoFijoForm({
         return setError("El saldo pendiente debe ser un número mayor o igual a 0.");
       }
     }
-    onSave({ nombre: nombre.trim(), montoMensual: montoNum, saldoPendiente: saldoNum });
+    onSave({ nombre: nombre.trim(), monto: montoNum, saldoPendiente: saldoNum });
   };
 
   return (

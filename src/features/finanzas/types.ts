@@ -1,13 +1,20 @@
-export type GastoGrupo = "Local" | "Servicios" | "Personal" | "Préstamos";
+export type GastoGrupo = "Local" | "Servicios" | "Administración" | "Personal" | "Préstamos";
 
-export const GRUPOS_GASTO: GastoGrupo[] = ["Local", "Servicios", "Personal", "Préstamos"];
+export const GRUPOS_GASTO: GastoGrupo[] = ["Local", "Servicios", "Administración", "Personal", "Préstamos"];
 
-/** Gasto que se repite cada mes (luz, sueldos, cuotas de préstamos, etc.). */
+/** Mensual: se paga cada mes. Anual: se paga una vez al año, en `mesPago`. */
+export type Frecuencia = "mensual" | "anual";
+
+/** Gasto que se repite (luz, sueldos, cuotas de préstamos, seguros, etc.). */
 export interface GastoFijo {
   id: string;
   nombre: string;
   grupo: GastoGrupo;
-  montoMensual: number;
+  /** Monto de cada pago: mensual si la frecuencia es mensual, por año si es anual. */
+  monto: number;
+  frecuencia: Frecuencia;
+  /** Solo anuales: mes en que se paga (1 a 12). */
+  mesPago?: number;
   /** Solo para préstamos: saldo que aún queda por pagar. */
   saldoPendiente?: number;
 }

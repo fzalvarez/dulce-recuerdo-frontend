@@ -77,3 +77,14 @@ de `gastos_recurrentes`, `prestamos` y eventos de vehículo) y el resumen mensua
 
 - `docs/ESTADO.md`: fila de `/finanzas`.
 - Backend: `docs/FRONTEND_SPEC.md` y `docs/STATUS.md` cuando se conecte la API.
+
+## 9. Gastos mensuales y anuales (2026-11-08)
+
+Cada gasto fijo tiene un monto y una frecuencia:
+- **Mensual:** se aplica cada mes.
+- **Anual:** se aplica solo en su mes de pago (`mesPago`). Por ejemplo, el seguro del vehículo se paga en enero.
+
+Los gastos fijos de un mes suman los mensuales y los anuales que se pagan ese mes.
+Valores confirmados por el dueño: alquiler, internet y 2 líneas móviles, contabilidad, Susii,
+declaración anual de contabilidad (abril) y seguro del vehículo (enero). Luz, agua, sueldos y
+préstamos siguen con valores de ejemplo, pendientes de confirmar.

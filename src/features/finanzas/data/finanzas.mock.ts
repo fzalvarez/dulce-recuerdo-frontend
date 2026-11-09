@@ -76,37 +76,25 @@ export const GASTOS_VARIABLES_EJEMPLO: GastoVariable[] = [
 
 // TODO: reemplazar los montos de ejemplo por los valores reales de la empresa.
 export const GASTOS_FIJOS_INICIALES: GastoFijo[] = [
-  { id: "alquiler-local", nombre: "Alquiler del local", grupo: "Local", montoMensual: 1500 },
+  // Datos reales confirmados por el dueño.
+  { id: "alquiler-local", nombre: "Alquiler del local", grupo: "Local", monto: 4500, frecuencia: "mensual" },
+  { id: "internet", nombre: "Internet y 2 líneas móviles", grupo: "Servicios", monto: 265, frecuencia: "mensual" },
+  { id: "contabilidad", nombre: "Contabilidad", grupo: "Administración", monto: 826, frecuencia: "mensual" },
+  { id: "susii", nombre: "Sistema de facturación Susii", grupo: "Administración", monto: 39, frecuencia: "mensual" },
+  { id: "declaracion-anual", nombre: "Declaración anual (contabilidad)", grupo: "Administración", monto: 1652, frecuencia: "anual", mesPago: 4 },
+  { id: "seguro-vehiculo", nombre: "Seguro del vehículo", grupo: "Administración", monto: 1679, frecuencia: "anual", mesPago: 1 },
 
-  { id: "luz", nombre: "Luz", grupo: "Servicios", montoMensual: 180 },
-  { id: "agua", nombre: "Agua", grupo: "Servicios", montoMensual: 60 },
-  { id: "internet", nombre: "Internet", grupo: "Servicios", montoMensual: 90 },
+  // Pendientes de confirmar con el dueño: siguen con valores de ejemplo.
+  { id: "luz", nombre: "Luz", grupo: "Servicios", monto: 180, frecuencia: "mensual" },
+  { id: "agua", nombre: "Agua", grupo: "Servicios", monto: 60, frecuencia: "mensual" },
 
-  { id: "sueldo-persona-1", nombre: "Sueldo Persona 1", grupo: "Personal", montoMensual: 1200 },
-  { id: "sueldo-persona-2", nombre: "Sueldo Persona 2", grupo: "Personal", montoMensual: 1200 },
-  { id: "sueldo-persona-3", nombre: "Sueldo Persona 3", grupo: "Personal", montoMensual: 1200 },
+  { id: "sueldo-persona-1", nombre: "Sueldo Persona 1", grupo: "Personal", monto: 1200, frecuencia: "mensual" },
+  { id: "sueldo-persona-2", nombre: "Sueldo Persona 2", grupo: "Personal", monto: 1200, frecuencia: "mensual" },
+  { id: "sueldo-persona-3", nombre: "Sueldo Persona 3", grupo: "Personal", monto: 1200, frecuencia: "mensual" },
 
-  {
-    id: "deuda-1",
-    nombre: "Deuda 1",
-    grupo: "Préstamos",
-    montoMensual: 350,
-    saldoPendiente: 4200,
-  },
-  {
-    id: "deuda-2",
-    nombre: "Deuda 2",
-    grupo: "Préstamos",
-    montoMensual: 220,
-    saldoPendiente: 2640,
-  },
-  {
-    id: "deuda-3",
-    nombre: "Deuda 3",
-    grupo: "Préstamos",
-    montoMensual: 500,
-    saldoPendiente: 6000,
-  },
+  { id: "deuda-1", nombre: "Deuda 1", grupo: "Préstamos", monto: 350, frecuencia: "mensual", saldoPendiente: 4200 },
+  { id: "deuda-2", nombre: "Deuda 2", grupo: "Préstamos", monto: 220, frecuencia: "mensual", saldoPendiente: 2640 },
+  { id: "deuda-3", nombre: "Deuda 3", grupo: "Préstamos", monto: 500, frecuencia: "mensual", saldoPendiente: 6000 },
 ];
 
 // Datos de ejemplo. En el futuro se alimentan de los casos realizados.
