@@ -1,479 +1,542 @@
-import { useMemo, useState } from "react";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PencilIcon,
-  PlusIcon,
-  ReceiptTextIcon,
-  Trash2Icon,
-  TrendingDownIcon,
-  TrendingUpIcon,
-  WalletIcon,
-} from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronLeftIcon, ChevronRightIcon, PencilIcon, PlusCircleIcon, SettingsIcon, Trash2Icon, Undo2Icon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { notifySuccess } from "@/shared/utils";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { ejecutar } from "@/shared/utils/ejecutar";
+import { Modal } from "@/features/casos/components/Dialogos";
+import { soles } from "@/features/casos/utils/casos";
+import * as F from "../api";
 import {
-  CATEGORIAS_GASTO_VARIABLE,
-  GRUPOS_GASTO,
+  CATEGORIA_LABEL,
+  GRUPO_LABEL,
+  type CategoriaGasto,
+  type Frecuencia,
+  type Gasto,
   type GastoFijo,
-  type GastoVariable,
+  type GastoFijoDelMes,
+  type GrupoGastoFijo,
 } from "../types";
-import { INGRESOS_EJEMPLO } from "../data/finanzas.mock";
-import { useFinanzasStore } from "../store/finanzas.store";
-import { EditGastoFijoDialog } from "../components/EditGastoFijoDialog";
-import { GastoVariableDialog, type GastoVariableData } from "../components/GastoVariableDialog";
-import {
-  desplazarMes,
-  etiquetaMes,
-  formatFechaCorta,
-  formatSoles,
-  montoDelMes,
-  ingresosDelMes,
-  mesKey,
-} from "../utils/periodo";
+import { desplazarMes, etiquetaMes, formatFechaCorta, hoyISO, mesKey } from "../utils/periodo";
 
+const ORIGEN_LABEL = { MANUAL: "", VEHICULO: "Vehículo", INVENTARIO: "Inventario" } as const;
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+type Dialogo =
+  | { tipo: "mes"; fila: GastoFijoDelMes }
+  | { tipo: "fijos" }
+  | { tipo: "gasto"; gasto: Gasto | null };
+
+/** Ingresos y Gastos del mes (spec finanzas). Los ingresos salen de los casos realizados. */
 export default function FinanzasPage() {
-  const gastosFijos = useFinanzasStore((s) => s.gastosFijos);
-  const gastosVariables = useFinanzasStore((s) => s.gastosVariables);
-  const updateGastoFijo = useFinanzasStore((s) => s.updateGastoFijo);
-  const addGastoVariable = useFinanzasStore((s) => s.addGastoVariable);
-  const updateGastoVariable = useFinanzasStore((s) => s.updateGastoVariable);
-  const deleteGastoVariable = useFinanzasStore((s) => s.deleteGastoVariable);
-
   const [mes, setMes] = useState(() => mesKey(new Date()));
-  const [gastoFijoEditando, setGastoFijoEditando] = useState<GastoFijo | null>(null);
-  const [variableDialog, setVariableDialog] = useState<{
-    open: boolean;
-    gasto: GastoVariable | null;
-  }>({ open: false, gasto: null });
-  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
-
-  // Ingresos y gastos variables dependen del mes; los fijos se aplican todos los meses.
-  const ingresos = useMemo(() => ingresosDelMes(INGRESOS_EJEMPLO, mes), [mes]);
-  const variables = useMemo(
-    () =>
-      gastosVariables
-        .filter((g) => g.fecha.startsWith(mes))
-        .sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [gastosVariables, mes]
-  );
-
-  const totalIngresos = sumar(ingresos.map((i) => i.monto));
-  const totalFijos = sumar(gastosFijos.map((g) => montoDelMes(g, mes)));
-  const totalVariables = sumar(variables.map((g) => g.monto));
-  const totalGastos = totalFijos + totalVariables;
-  const resultado = totalIngresos - totalGastos;
-
-  const gastosPorGrupo = GRUPOS_GASTO.map((grupo) => {
-    const items = gastosFijos.filter((g) => g.grupo === grupo);
-    return { grupo, items, subtotal: sumar(items.map((g) => montoDelMes(g, mes))) };
-  });
-
-  const totalesPorCategoria = CATEGORIAS_GASTO_VARIABLE.map((categoria) => ({
-    categoria,
-    total: sumar(variables.filter((g) => g.categoria === categoria).map((g) => g.monto)),
-  })).filter((c) => c.total > 0);
-
-  const handleSaveGastoFijo = (
-    id: string,
-    patch: { nombre: string; monto: number; saldoPendiente?: number }
-  ) => {
-    updateGastoFijo(id, patch);
-    notifySuccess("Gasto fijo actualizado");
+  const recurso = useRecurso(() => F.cargarMes(mes), [mes]);
+  const [dialogo, setDialogo] = useState<Dialogo | null>(null);
+  const cerrar = () => setDialogo(null);
+  const hecho = () => {
+    recurso.recargar();
+    cerrar();
   };
+  const d = recurso.data;
+  const resultado = Number(d?.resumen.resultado ?? 0);
 
-  const handleSaveVariable = (data: GastoVariableData) => {
-    const editando = variableDialog.gasto;
-    if (editando) {
-      updateGastoVariable(editando.id, data);
-      notifySuccess("Gasto actualizado");
-    } else {
-      addGastoVariable(data);
-      notifySuccess("Gasto registrado");
-    }
+  const anular = async (fila: GastoFijoDelMes) => {
+    if (await ejecutar(() => F.anularMes(fila.gasto_fijo_id, mes), "Registro anulado: vuelve al monto base.", "No se pudo anular.")) recurso.recargar();
   };
-
-  const handleDeleteVariable = (id: string) => {
-    if (confirmandoId !== id) {
-      setConfirmandoId(id);
-      return;
-    }
-    deleteGastoVariable(id);
-    setConfirmandoId(null);
-    notifySuccess("Gasto eliminado");
+  const borrarGasto = async (g: Gasto) => {
+    if (await ejecutar(() => F.eliminarGasto(g.id), "Gasto eliminado.", "No se pudo eliminar.")) recurso.recargar();
   };
 
   return (
     <>
       <Breadcrumbs items={[{ label: "Finanzas" }, { label: "Ingresos y Gastos" }]} />
-
       <ModuleHeader
         title="Ingresos y Gastos"
-        description="Ingresos por servicios realizados y gastos del mes."
+        description="Ingresos de los servicios realizados, gastos fijos (registrados o estimados) y gastos variables del mes."
         actions={
-          <MesSelector
-            label={etiquetaMes(mes)}
-            onPrev={() => setMes((m) => desplazarMes(m, -1))}
-            onNext={() => setMes((m) => desplazarMes(m, 1))}
-          />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon-sm" title="Mes anterior" onClick={() => setMes((m) => desplazarMes(m, -1))}>
+              <ChevronLeftIcon className="size-4" />
+            </Button>
+            <span className="text-sm font-semibold min-w-36 text-center">{etiquetaMes(mes)}</span>
+            <Button variant="outline" size="icon-sm" title="Mes siguiente" onClick={() => setMes((m) => desplazarMes(m, 1))}>
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </div>
         }
       />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
-          label="Ingresos del mes"
-          value={formatSoles(totalIngresos)}
-          hint={`${ingresos.length} ${ingresos.length === 1 ? "servicio realizado" : "servicios realizados"}`}
-          icon={TrendingUpIcon}
-          tone="positive"
+      {recurso.error && <p className="text-sm text-red-600">{recurso.error}</p>}
+
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi titulo="Ingresos" valor={soles(d?.resumen.ingresos.total)} pie={`${d?.resumen.ingresos.cantidad ?? 0} servicios realizados`} />
+        <Kpi
+          titulo="Gastos fijos"
+          valor={soles(d?.resumen.gastos_fijos.total)}
+          pie={`${soles(d?.resumen.gastos_fijos.registrado)} registrado · ${soles(d?.resumen.gastos_fijos.estimado)} estimado`}
         />
-        <KpiCard
-          label="Gastos del mes"
-          value={formatSoles(totalGastos)}
-          hint={`Fijos ${formatSoles(totalFijos)} · Variables ${formatSoles(totalVariables)}`}
-          icon={TrendingDownIcon}
-          tone="negative"
-        />
-        <KpiCard
-          label="Resultado del mes"
-          value={formatSoles(resultado)}
-          hint={resultado >= 0 ? "Superávit" : "Déficit"}
-          icon={WalletIcon}
-          tone={resultado >= 0 ? "positive" : "negative"}
-        />
-      </div>
+        <Kpi titulo="Gastos variables" valor={soles(d?.resumen.gastos_variables.total)} pie={`${d?.variables.length ?? 0} gastos`} />
+        <Kpi titulo="Resultado" valor={soles(resultado)} pie="Ingresos − gastos" clase={resultado < 0 ? "text-red-600" : "text-emerald-600"} />
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ingresos */}
-        <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col">
-          <header className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-800">Ingresos del mes</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Se generan solos al realizar un servicio. No se ingresan a mano.
-            </p>
-          </header>
-
-          {ingresos.length === 0 ? (
-            <EmptyState text="Todavía no hay servicios realizados en este mes." />
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {ingresos.map((ing) => (
-                <li key={ing.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-12 shrink-0">
-                    <p className="text-xs font-semibold text-slate-700">
-                      {formatFechaCorta(ing.fecha)}
-                    </p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
-                      {ing.mascota}
-                      <span className="ml-2 text-xs font-medium text-slate-400">
-                        Caso #{ing.casoId}
-                      </span>
-                    </p>
-                    <p className="text-xs text-slate-500 truncate">{ing.servicio}</p>
-                  </div>
-                  <span className="text-sm font-bold text-emerald-700 whitespace-nowrap">
-                    {formatSoles(ing.monto)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <Footer label="Total ingresos" value={formatSoles(totalIngresos)} tone="positive" />
-        </section>
-
-        {/* Gastos fijos */}
-        <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col">
-          <header className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-800">Gastos fijos</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Los mensuales se aplican cada mes; los anuales, en su mes de pago. Edita un monto para cambiarlo.
-            </p>
-          </header>
-
-          <div className="divide-y divide-slate-100">
-            {gastosPorGrupo.map(({ grupo, items, subtotal }) => (
-              <div key={grupo}>
-                <div className="px-5 py-2 bg-slate-50/60 flex items-center justify-between">
-                  <span className="text-label font-semibold uppercase tracking-wider text-slate-500">
-                    {grupo}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-600">
-                    {formatSoles(subtotal)}
-                  </span>
-                </div>
-                <ul className="divide-y divide-slate-100">
-                  {items.map((g) => (
-                    <li key={g.id} className="px-5 py-3 flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-800 truncate">{g.nombre}</p>
-                        {g.saldoPendiente !== undefined && (
-                          <p className="text-xs text-slate-400">
-                            Saldo pendiente: {formatSoles(g.saldoPendiente)}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-right whitespace-nowrap">
-                        <span className="block text-sm font-semibold text-slate-900">{formatSoles(g.monto)}</span>
-                        <span className="block text-[11px] text-slate-400">
-                          {g.frecuencia === "mensual" ? "mensual" : `anual · ${MESES_NOMBRE[(g.mesPago ?? 1) - 1]}`}
-                        </span>
-                      </span>
-                      <IconButton
-                        label={`Editar ${g.nombre}`}
-                        onClick={() => setGastoFijoEditando(g)}
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </IconButton>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <Footer label="Total gastos fijos" value={formatSoles(totalFijos)} tone="negative" />
-        </section>
-
-        {/* Gastos variables */}
-        <section className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col">
-          <header className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800">Gastos variables del mes</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Combustible, urnas, reparaciones, caja chica y otros que ocurren cuando se necesitan.
-              </p>
-            </div>
-            <Button size="sm" onClick={() => setVariableDialog({ open: true, gasto: null })}>
-              <PlusIcon className="w-4 h-4" />
-              Registrar gasto
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <Panel
+          titulo="Gastos fijos del mes"
+          descripcion="Sin registro se usa el monto base (estimado). Registra el monto real cuando cambie, por ejemplo en julio y diciembre."
+          accion={
+            <Button variant="outline" size="sm" onClick={() => setDialogo({ tipo: "fijos" })}>
+              <SettingsIcon className="size-4" />
+              Administrar
             </Button>
-          </header>
-
-          {variables.length === 0 ? (
-            <EmptyState text="No hay gastos variables registrados en este mes." />
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {variables.map((g) => (
-                <li key={g.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-12 shrink-0">
-                    <p className="text-xs font-semibold text-slate-700">
-                      {formatFechaCorta(g.fecha)}
-                    </p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary">{g.categoria}</Badge>
-                      {g.origen === "vehiculo" && <Badge variant="outline">Vehículo</Badge>}
-                      <p className="text-sm font-medium text-slate-800 truncate">{g.concepto}</p>
-                    </div>
-                    {g.proveedor && (
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">{g.proveedor}</p>
-                    )}
-                    {g.observaciones && (
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">{g.observaciones}</p>
-                    )}
-                  </div>
-                  <span className="text-sm font-semibold text-slate-900 whitespace-nowrap">
-                    {formatSoles(g.monto)}
+          }
+        >
+          <ul className="divide-y divide-slate-100 dark:divide-white/5">
+            {d?.fijos.map((f) => (
+              <li key={f.gasto_fijo_id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block font-medium truncate">{f.nombre}</span>
+                  <span className="text-xs text-slate-500">
+                    {GRUPO_LABEL[f.grupo]}
+                    {f.frecuencia === "ANUAL" ? " · anual" : ""}
+                    {f.saldo_pendiente != null ? ` · saldo ${soles(f.saldo_pendiente)}` : ""}
+                    {f.observaciones ? ` · ${f.observaciones}` : ""}
                   </span>
-                  <IconButton
-                    label={`Editar ${g.concepto}`}
-                    onClick={() => setVariableDialog({ open: true, gasto: g })}
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </IconButton>
-                  <IconButton
-                    label={
-                      confirmandoId === g.id
-                        ? `Confirmar eliminar ${g.concepto}`
-                        : `Eliminar ${g.concepto}`
-                    }
-                    danger
-                    confirming={confirmandoId === g.id}
-                    onClick={() => handleDeleteVariable(g.id)}
-                  >
-                    <Trash2Icon className="w-4 h-4" />
-                  </IconButton>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {totalesPorCategoria.length > 0 && (
-            <div className="px-5 py-3 border-t border-slate-100 flex flex-wrap gap-2">
-              {totalesPorCategoria.map((c) => (
-                <span
-                  key={c.categoria}
-                  className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1"
-                >
-                  {c.categoria}: <span className="font-semibold">{formatSoles(c.total)}</span>
                 </span>
-              ))}
-            </div>
-          )}
+                <span className="inline-flex items-center gap-2 shrink-0">
+                  <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", f.estado === "REGISTRADO" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                    {f.estado === "REGISTRADO" ? "Real" : "Estimado"}
+                  </span>
+                  <span className="font-semibold w-24 text-right">{soles(f.monto)}</span>
+                  <Button variant="ghost" size="icon-sm" title="Registrar monto real" onClick={() => setDialogo({ tipo: "mes", fila: f })}>
+                    <PencilIcon className="size-4" />
+                  </Button>
+                  {f.estado === "REGISTRADO" && (
+                    <Button variant="ghost" size="icon-sm" title="Anular registro" onClick={() => anular(f)}>
+                      <Undo2Icon className="size-4" />
+                    </Button>
+                  )}
+                </span>
+              </li>
+            ))}
+            {d && d.fijos.length === 0 && <li className="py-3 text-sm text-slate-400">No hay gastos fijos para este mes.</li>}
+          </ul>
+        </Panel>
 
-          <Footer label="Total gastos variables" value={formatSoles(totalVariables)} tone="negative" />
-        </section>
+        <Panel
+          titulo="Gastos variables"
+          descripcion="Los del vehículo y las compras de inventario se corrigen en su módulo."
+          accion={
+            <Button variant="operational" size="sm" onClick={() => setDialogo({ tipo: "gasto", gasto: null })}>
+              <PlusCircleIcon className="size-4" />
+              Nuevo gasto
+            </Button>
+          }
+        >
+          <ul className="divide-y divide-slate-100 dark:divide-white/5">
+            {d?.variables.map((g) => (
+              <li key={g.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block font-medium truncate">{g.concepto}</span>
+                  <span className="text-xs text-slate-500">
+                    {formatFechaCorta(g.fecha.slice(0, 10))} · {CATEGORIA_LABEL[g.categoria]}
+                    {g.proveedor ? ` · ${g.proveedor}` : ""}
+                    {g.origen !== "MANUAL" ? ` · desde ${ORIGEN_LABEL[g.origen]}` : ""}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1 shrink-0">
+                  <span className="font-semibold w-24 text-right">{soles(g.monto)}</span>
+                  {g.origen === "MANUAL" && (
+                    <>
+                      <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setDialogo({ tipo: "gasto", gasto: g })}>
+                        <PencilIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" title="Eliminar" className="text-slate-400 hover:text-red-600" onClick={() => borrarGasto(g)}>
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+            {d && d.variables.length === 0 && <li className="py-3 text-sm text-slate-400">Sin gastos variables este mes.</li>}
+          </ul>
+        </Panel>
       </div>
 
-      <EditGastoFijoDialog
-        gasto={gastoFijoEditando}
-        onOpenChange={(open) => {
-          if (!open) setGastoFijoEditando(null);
-        }}
-        onSave={handleSaveGastoFijo}
-      />
+      <Panel titulo="Ingresos del mes" descripcion="Cada servicio realizado, en la fecha del servicio, por su precio.">
+        <ul className="divide-y divide-slate-100 dark:divide-white/5">
+          {d?.ingresos.map((i) => (
+            <li key={i.caso_id} className="flex items-center justify-between gap-3 py-2 text-sm">
+              <span>
+                <span className="font-medium">{i.mascota}</span>
+                <span className="text-xs text-slate-500">
+                  {" "}· {formatFechaCorta(i.fecha.slice(0, 10))} · {i.servicio}
+                  {i.canal_origen === "VETERINARIA_REFERIDORA" ? " · veterinaria" : ""}
+                </span>
+              </span>
+              <span className="font-semibold">{soles(i.monto)}</span>
+            </li>
+          ))}
+          {d && d.ingresos.length === 0 && <li className="py-3 text-sm text-slate-400">Sin servicios realizados este mes.</li>}
+        </ul>
+      </Panel>
 
-      <GastoVariableDialog
-        open={variableDialog.open}
-        gasto={variableDialog.gasto}
-        fechaDefault={`${mes}-01`}
-        onOpenChange={(open) => {
-          setVariableDialog((prev) => ({ ...prev, open }));
-          if (!open) setConfirmandoId(null);
-        }}
-        onSave={handleSaveVariable}
-      />
+      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho={dialogo?.tipo === "fijos" ? "sm:max-w-3xl" : "sm:max-w-lg"}>
+        {dialogo?.tipo === "mes" && <MesForm fila={dialogo.fila} mes={mes} onCerrar={cerrar} onHecho={hecho} />}
+        {dialogo?.tipo === "fijos" && <AdministrarFijos onCambio={recurso.recargar} />}
+        {dialogo?.tipo === "gasto" && <GastoForm gasto={dialogo.gasto} onCerrar={cerrar} onHecho={hecho} />}
+      </Modal>
     </>
   );
 }
 
-const MESES_NOMBRE = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-
-function sumar(valores: number[]): number {
-  return valores.reduce((acc, v) => acc + v, 0);
+function Kpi({ titulo, valor, pie, clase }: { titulo: string; valor: string; pie: string; clase?: string }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5">
+      <span className="text-label uppercase tracking-wider text-slate-400 font-semibold">{titulo}</span>
+      <span className={cn("block text-2xl font-bold text-slate-900 dark:text-white mt-1", clase)}>{valor}</span>
+      <span className="block text-xs text-slate-500 mt-1">{pie}</span>
+    </div>
+  );
 }
 
-function IconButton({
-  label,
-  onClick,
-  danger,
-  confirming,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-  confirming?: boolean;
-  children: React.ReactNode;
-}) {
+function Panel({ titulo, descripcion, accion, children }: { titulo: string; descripcion: string; accion?: ReactNode; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={cn(
-        "p-1.5 rounded-md transition-colors",
-        confirming
-          ? "bg-red-600 text-white hover:bg-red-700"
-          : danger
-            ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
-            : "text-slate-400 hover:text-brand-500 hover:bg-brand-50"
-      )}
-    >
+    <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{titulo}</h2>
+          <p className="text-xs text-slate-500">{descripcion}</p>
+        </div>
+        {accion}
+      </div>
       {children}
-    </button>
+    </section>
   );
 }
 
-function Footer({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "positive" | "negative";
-}) {
+function Pie({ onCerrar, onGuardar, guardando, error, texto = "Guardar" }: { onCerrar: () => void; onGuardar: () => void; guardando: boolean; error: string | null; texto?: string }) {
   return (
-    <footer className="mt-auto px-5 py-3 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between rounded-b-xl">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
-      <span
-        className={cn("text-sm font-bold", tone === "positive" ? "text-emerald-700" : "text-red-700")}
-      >
-        {value}
-      </span>
-    </footer>
+    <>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
+          Cancelar
+        </Button>
+        <Button variant="operational" onClick={onGuardar} disabled={guardando}>
+          {guardando ? "Guardando…" : texto}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
-function MesSelector({
-  label,
-  onPrev,
-  onNext,
-}: {
-  label: string;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
+function leerMonto(t: string): string | null {
+  const n = Number(t.trim().replace(",", "."));
+  return t.trim() !== "" && Number.isFinite(n) && n > 0 ? n.toFixed(2) : null;
+}
+
+function MesForm({ fila, mes, onCerrar, onHecho }: { fila: GastoFijoDelMes; mes: string; onCerrar: () => void; onHecho: () => void }) {
+  const [monto, setMonto] = useState(String(Number(fila.monto)));
+  const [obs, setObs] = useState(fila.observaciones ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async () => {
+    const m = leerMonto(monto);
+    if (!m) return setError("El monto debe ser mayor a 0.");
+    setGuardando(true);
+    const ok = await ejecutar(() => F.registrarMes(fila.gasto_fijo_id, mes, m, obs.trim() || null), "Monto del mes registrado.", "No se pudo registrar.");
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
   return (
-    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-xs">
-      <Button variant="ghost" size="icon" onClick={onPrev} aria-label="Mes anterior">
-        <ChevronLeftIcon className="w-4 h-4" />
-      </Button>
-      <span className="min-w-[10rem] text-center text-sm font-semibold text-slate-800">
-        {label}
-      </span>
-      <Button variant="ghost" size="icon" onClick={onNext} aria-label="Mes siguiente">
-        <ChevronRightIcon className="w-4 h-4" />
-      </Button>
-    </div>
+    <>
+      <DialogHeader>
+        <DialogTitle>{fila.nombre} · {etiquetaMes(mes)}</DialogTitle>
+        <DialogDescription>
+          Monto base: {soles(fila.monto_base)}.
+          {fila.saldo_pendiente != null ? ` El pago descuenta el saldo del préstamo (${soles(fila.saldo_pendiente)}).` : ""}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="me-monto">Monto real (S/)</Label>
+          <Input id="me-monto" type="number" min={0} step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="me-obs">Nota (opcional)</Label>
+          <Input id="me-obs" value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Gratificación" />
+        </div>
+      </div>
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Registrar" />
+    </>
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: "positive" | "negative";
-}) {
+function AdministrarFijos({ onCambio }: { onCambio: () => void }) {
+  const fijos = useRecurso(F.listarFijos);
+  const [editando, setEditando] = useState<GastoFijo | "nuevo" | null>(null);
+  const recargar = () => {
+    fijos.recargar();
+    onCambio();
+  };
+
+  if (editando) {
+    return (
+      <FijoForm
+        fijo={editando === "nuevo" ? null : editando}
+        onCerrar={() => setEditando(null)}
+        onHecho={() => {
+          setEditando(null);
+          recargar();
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex items-start gap-4">
-      <div
-        className={cn(
-          "w-10 h-10 shrink-0 rounded-lg flex items-center justify-center",
-          tone === "positive" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+    <>
+      <DialogHeader>
+        <DialogTitle>Gastos fijos</DialogTitle>
+        <DialogDescription>Monto base, frecuencia y saldo de préstamos. Un gasto con meses registrados no se borra: se desactiva.</DialogDescription>
+      </DialogHeader>
+      {fijos.error && <p className="text-sm text-red-600">{fijos.error}</p>}
+      <ul className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
+        {fijos.data?.map((f) => (
+          <li key={f.id} className="flex items-center justify-between gap-3 py-2">
+            <span className={cn(!f.activo && "text-slate-400")}>
+              <span className="font-medium">{f.nombre}</span>
+              <span className="text-xs text-slate-500">
+                {" "}· {GRUPO_LABEL[f.grupo]} · {soles(f.monto)} {f.frecuencia === "ANUAL" ? `anual (${MESES[(f.mes_pago ?? 1) - 1]})` : "mensual"}
+                {f.saldo_pendiente != null ? ` · saldo ${soles(f.saldo_pendiente)}` : ""}
+                {!f.activo ? " · inactivo" : ""}
+              </span>
+            </span>
+            <span className="inline-flex gap-1">
+              <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setEditando(f)}>
+                <PencilIcon className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Eliminar"
+                className="text-slate-400 hover:text-red-600"
+                onClick={async () => (await ejecutar(() => F.eliminarFijo(f.id), "Gasto fijo eliminado.", "No se pudo eliminar.")) && recargar()}
+              >
+                <Trash2Icon className="size-4" />
+              </Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <DialogFooter>
+        <Button variant="operational" onClick={() => setEditando("nuevo")}>
+          <PlusCircleIcon className="size-4" />
+          Nuevo gasto fijo
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function FijoForm({ fijo, onCerrar, onHecho }: { fijo: GastoFijo | null; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState({
+    nombre: fijo?.nombre ?? "",
+    grupo: (fijo?.grupo ?? "SERVICIOS") as GrupoGastoFijo,
+    monto: fijo ? String(Number(fijo.monto)) : "",
+    frecuencia: (fijo?.frecuencia ?? "MENSUAL") as Frecuencia,
+    mes_pago: String(fijo?.mes_pago ?? 1),
+    saldo: fijo?.saldo_pendiente != null ? String(Number(fijo.saldo_pendiente)) : "",
+    activo: fijo?.activo ?? true,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const esPrestamo = f.grupo === "PRESTAMOS";
+
+  const guardar = async () => {
+    const monto = leerMonto(f.monto);
+    if (!f.nombre.trim()) return setError("Escribe el nombre.");
+    if (!monto) return setError("El monto base debe ser mayor a 0.");
+    let saldo: string | null = null;
+    if (esPrestamo && f.saldo.trim() !== "") {
+      const n = Number(f.saldo);
+      if (!Number.isFinite(n) || n < 0) return setError("El saldo no es válido.");
+      saldo = n.toFixed(2);
+    }
+    const cuerpo: F.GastoFijoCuerpo = {
+      nombre: f.nombre.trim(),
+      grupo: f.grupo,
+      monto,
+      frecuencia: f.frecuencia,
+      mes_pago: f.frecuencia === "ANUAL" ? Number(f.mes_pago) : null,
+      saldo_pendiente: saldo,
+      activo: f.activo,
+      observaciones: null,
+    };
+    setGuardando(true);
+    const ok = await ejecutar(() => (fijo ? F.editarFijo(fijo.id, cuerpo) : F.crearFijo(cuerpo)), "Gasto fijo guardado.", "No se pudo guardar.");
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{fijo ? "Editar gasto fijo" : "Nuevo gasto fijo"}</DialogTitle>
+        <DialogDescription>Cambiar el monto base no altera los meses ya registrados.</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="gf-nombre">Nombre</Label>
+          <Input id="gf-nombre" value={f.nombre} onChange={(e) => setF((x) => ({ ...x, nombre: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="gf-grupo">Grupo</Label>
+          <Select value={f.grupo} onValueChange={(v) => setF((x) => ({ ...x, grupo: v as GrupoGastoFijo }))}>
+            <SelectTrigger id="gf-grupo" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(GRUPO_LABEL) as GrupoGastoFijo[]).map((g) => (
+                <SelectItem key={g} value={g}>{GRUPO_LABEL[g]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="gf-monto">{esPrestamo ? "Cuota (S/)" : "Monto base (S/)"}</Label>
+          <Input id="gf-monto" type="number" min={0} step="0.01" value={f.monto} onChange={(e) => setF((x) => ({ ...x, monto: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="gf-frecuencia">Frecuencia</Label>
+          <Select value={f.frecuencia} onValueChange={(v) => setF((x) => ({ ...x, frecuencia: v as Frecuencia }))}>
+            <SelectTrigger id="gf-frecuencia" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MENSUAL">Mensual</SelectItem>
+              <SelectItem value="ANUAL">Anual</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {f.frecuencia === "ANUAL" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="gf-mes">Mes de pago</Label>
+            <Select value={f.mes_pago} onValueChange={(v) => setF((x) => ({ ...x, mes_pago: v }))}>
+              <SelectTrigger id="gf-mes" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MESES.map((m, i) => (
+                  <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
-      >
-        <Icon className="w-5 h-5" />
+        {esPrestamo && (
+          <div className="space-y-1.5">
+            <Label htmlFor="gf-saldo">Saldo pendiente (S/)</Label>
+            <Input id="gf-saldo" type="number" min={0} step="0.01" value={f.saldo} onChange={(e) => setF((x) => ({ ...x, saldo: e.target.value }))} />
+          </div>
+        )}
       </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-        <p
-          className={cn(
-            "text-xl font-bold mt-1",
-            tone === "positive" ? "text-emerald-700" : "text-red-700"
-          )}
-        >
-          {value}
-        </p>
-        <p className="text-xs text-slate-400 mt-0.5">{hint}</p>
-      </div>
-    </div>
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" className="size-4 accent-brand-500" checked={f.activo} onChange={(e) => setF((x) => ({ ...x, activo: e.target.checked }))} />
+        Activo (se estima en los meses sin registro)
+      </label>
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} />
+    </>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function GastoForm({ gasto, onCerrar, onHecho }: { gasto: Gasto | null; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState({
+    fecha: gasto?.fecha.slice(0, 10) ?? hoyISO(),
+    concepto: gasto?.concepto ?? "",
+    categoria: (gasto?.categoria ?? "COMPRAS_VARIAS") as CategoriaGasto,
+    monto: gasto ? String(Number(gasto.monto)) : "",
+    proveedor: gasto?.proveedor ?? "",
+    observaciones: gasto?.observaciones ?? "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async () => {
+    const monto = leerMonto(f.monto);
+    if (!f.concepto.trim()) return setError("Escribe el concepto.");
+    if (!monto) return setError("El monto debe ser mayor a 0.");
+    const cuerpo: F.GastoCuerpo = {
+      fecha: `${f.fecha}T12:00:00`,
+      concepto: f.concepto.trim(),
+      categoria: f.categoria,
+      monto,
+      proveedor: f.proveedor.trim() || null,
+      observaciones: f.observaciones.trim() || null,
+    };
+    setGuardando(true);
+    const ok = await ejecutar(() => (gasto ? F.editarGasto(gasto.id, cuerpo) : F.crearGasto(cuerpo)), "Gasto guardado.", "No se pudo guardar.");
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8 text-center">
-      <ReceiptTextIcon className="w-8 h-8 text-slate-300" />
-      <p className="text-xs text-slate-400 max-w-xs">{text}</p>
-    </div>
+    <>
+      <DialogHeader>
+        <DialogTitle>{gasto ? "Editar gasto" : "Nuevo gasto variable"}</DialogTitle>
+        <DialogDescription>Combustible y mantenimiento se registran mejor desde Vehículo; las compras de urnas, desde Inventario.</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="ga-fecha">Fecha</Label>
+          <DatePicker id="ga-fecha" value={f.fecha} onChange={(v) => setF((x) => ({ ...x, fecha: v }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ga-categoria">Categoría</Label>
+          <Select value={f.categoria} onValueChange={(v) => setF((x) => ({ ...x, categoria: v as CategoriaGasto }))}>
+            <SelectTrigger id="ga-categoria" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CATEGORIA_LABEL) as CategoriaGasto[]).map((c) => (
+                <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="ga-concepto">Concepto</Label>
+          <Input id="ga-concepto" value={f.concepto} onChange={(e) => setF((x) => ({ ...x, concepto: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ga-monto">Monto (S/)</Label>
+          <Input id="ga-monto" type="number" min={0} step="0.01" value={f.monto} onChange={(e) => setF((x) => ({ ...x, monto: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ga-proveedor">Proveedor (opcional)</Label>
+          <Input id="ga-proveedor" value={f.proveedor} onChange={(e) => setF((x) => ({ ...x, proveedor: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="ga-obs">Observaciones</Label>
+          <Input id="ga-obs" value={f.observaciones} onChange={(e) => setF((x) => ({ ...x, observaciones: e.target.value }))} />
+        </div>
+      </div>
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} />
+    </>
   );
 }

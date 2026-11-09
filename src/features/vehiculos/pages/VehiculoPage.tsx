@@ -1,28 +1,11 @@
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  TruckIcon,
-  ShieldCheckIcon,
-  ClipboardCheckIcon,
-  WrenchIcon,
-  FuelIcon,
-  PlusIcon,
-  PlusCircleIcon,
-  PrinterIcon,
-  PencilIcon,
-  BellRingIcon,
-  DownloadIcon,
-  FileTextIcon,
-  CheckCircle2Icon,
-  ArrowRightIcon,
-  GaugeIcon,
-  PiggyBankIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { FileCheckIcon, FuelIcon, PencilIcon, PlusCircleIcon, ShieldCheckIcon, Trash2Icon, TruckIcon, WrenchIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
+import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -30,786 +13,431 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { DatePicker } from "@/components/ui/date-picker";
-import { notifySuccess } from "@/shared/utils";
-import { useFinanzasStore } from "@/features/finanzas/store/finanzas.store";
-import type { CategoriaGastoVariable, GastoVariable } from "@/features/finanzas/types";
-import { formatFechaLarga, formatSoles, hoyISO } from "@/features/finanzas/utils/periodo";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { useRecurso } from "@/shared/hooks/useRecurso";
+import { ejecutar } from "@/shared/utils/ejecutar";
+import { Modal } from "@/features/casos/components/Dialogos";
+import { soles } from "@/features/casos/utils/casos";
+import { formatFechaLarga, hoyISO } from "@/features/finanzas/utils/periodo";
+import * as V from "../api";
 
-// TODO: reemplazar por datos reales del módulo `vehiculos` cuando se exponga el endpoint.
-const FICHA = {
-  placa: "BXY-842",
-  codigoMovil: "Móvil 01",
-  ciudad: "Lima, Perú",
-  sede: "Sede San Borja, Lima",
-  modelo: "Glory 330 S",
-  tipoUnidad: "Furgoneta de Custodia Especializada",
-  anioFabricacion: 2022,
-  estadoOperativo: "Operativo en Ruta / Sede",
-};
-
-const SOAT = {
-  aseguradora: "Rímac Seguros",
-  poliza: "N° 4029-881290",
-  vigenciaHasta: "15 Noviembre 2025",
-  diasParaVencer: 42,
-};
-
-const CITV = {
-  certificado: "N° 99318-LIM",
-  vigenteHasta: "Marzo 2026",
-  planta: "Planta Autorizada Lince",
-};
-
-const MANTENIMIENTO = {
-  proximoServicio: "Cambio de Aceite & Filtros (50,000 km)",
-  faltanKm: 1750,
-  taller: "Servicio Mecánico Automotriz San Borja",
-  progresoPct: 65,
-  ultimoHitoKm: "45k km",
-  metaKm: "50k km",
-  diasEstimados: 20,
-  planKm: "5,000 km",
-};
-
-const HISTORIAL_MANTENIMIENTO = [
-  { km: "45,000 km", detalle: "Preventivo General y Frenos", fecha: "12 Ago 2025 • Taller San Borja" },
-  { km: "40,000 km", detalle: "Neumáticos Delanteros & Alineación", fecha: "24 Abr 2025 • Taller San Borja" },
-  { km: "35,000 km", detalle: "Mantenimiento de Rutina 35k", fecha: "10 Ene 2025 • Taller San Borja" },
-];
-
-const COMBUSTIBLE = {
-  rendimientoPromedio: "42 km / galón",
-  gastoPromedioMensual: "S/ 680.00 PEN",
-};
-
-
-function SectionCard({
-  icon: Icon,
-  title,
-  subtitle,
-  action,
-  children,
-  footer,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  subtitle: string;
-  action?: ReactNode;
-  children: ReactNode;
-  footer?: ReactNode;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 lg:p-6 flex flex-col justify-between">
-      <div className="flex flex-col">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
-              <Icon className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-              <span className="text-xs text-slate-500">{subtitle}</span>
-            </div>
-          </div>
-          {action}
-        </div>
-        {children}
-      </div>
-      {footer}
-    </div>
-  );
+function diasHasta(fecha: string | null): number | null {
+  if (!fecha) return null;
+  const hoy = new Date(`${hoyISO()}T00:00:00`).getTime();
+  return Math.round((new Date(`${fecha}T00:00:00`).getTime() - hoy) / 86_400_000);
 }
 
-type TipoRegistro =
-  | "combustible"
-  | "mantenimiento-programado"
-  | "mantenimiento-correctivo"
-  | "lavado"
-  | "peajes";
-
-// Cada tipo de registro se guarda en Gastos con su categoría correspondiente.
-const TIPOS_REGISTRO: Record<
-  TipoRegistro,
-  { label: string; categoria: CategoriaGastoVariable; concepto: string }
-> = {
-  combustible: {
-    label: "Combustible (Gasolina 95)",
-    categoria: "Combustible",
-    concepto: "Gasolina 95",
-  },
-  "mantenimiento-programado": {
-    label: "Mantenimiento Preventivo Programado",
-    categoria: "Mantenimiento del auto",
-    concepto: "Mantenimiento preventivo programado",
-  },
-  "mantenimiento-correctivo": {
-    label: "Mantenimiento Correctivo / Imprevisto",
-    categoria: "Mantenimiento del auto",
-    concepto: "Mantenimiento correctivo / imprevisto",
-  },
-  lavado: {
-    label: "Lavado y Desinfección Biocida",
-    categoria: "Lavado y desinfección",
-    concepto: "Lavado y desinfección biocida",
-  },
-  peajes: {
-    label: "Peajes y Estacionamientos",
-    categoria: "Peajes y estacionamiento",
-    concepto: "Peajes y estacionamiento",
-  },
-};
-
-type RegistroData = Omit<GastoVariable, "id">;
-
-interface RegistroForm {
-  tipo: TipoRegistro;
-  fecha: string;
-  kilometraje: string;
-  galones: string;
-  monto: string;
-  proveedor: string;
-  notas: string;
+function Vence({ fecha }: { fecha: string | null }) {
+  const dias = diasHasta(fecha);
+  if (dias === null) return <span className="text-xs text-slate-400">Sin fecha registrada</span>;
+  const clase = dias < 0 ? "bg-red-50 text-red-700" : dias <= 30 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700";
+  const texto = dias < 0 ? `Vencido hace ${-dias} días` : `Vence en ${dias} días`;
+  return <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", clase)}>{texto}</span>;
 }
 
-function registroInicial(): RegistroForm {
-  return {
-    tipo: "combustible",
-    fecha: hoyISO(),
-    kilometraje: "",
-    galones: "",
-    monto: "",
-    proveedor: "",
-    notas: "",
-  };
-}
-
-function RegistroModal({
-  open,
-  onOpenChange,
-  onGuardar,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onGuardar: (data: RegistroData) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        {/* Radix desmonta el contenido al cerrar: el formulario se reinicia solo. */}
-        <RegistroFormulario
-          onCancel={() => onOpenChange(false)}
-          onGuardar={(data) => {
-            onGuardar(data);
-            onOpenChange(false);
-          }}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RegistroFormulario({
-  onCancel,
-  onGuardar,
-}: {
-  onCancel: () => void;
-  onGuardar: (data: RegistroData) => void;
-}) {
-  const [form, setForm] = useState<RegistroForm>(registroInicial);
-  const [error, setError] = useState<string | null>(null);
-  const esCombustible = form.tipo === "combustible";
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const monto = Number(form.monto);
-    const km = Number(form.kilometraje);
-    const galones = Number(form.galones);
-    const meta = TIPOS_REGISTRO[form.tipo];
-
-    if (!form.fecha) return setError("Indica la fecha del registro.");
-    if (!Number.isFinite(km) || km <= 0) return setError("Ingresa el kilometraje actual.");
-    if (esCombustible && (!Number.isFinite(galones) || galones <= 0)) {
-      return setError("Ingresa los galones cargados.");
-    }
-    if (!Number.isFinite(monto) || monto <= 0) return setError("El monto debe ser mayor a 0.");
-    if (!form.proveedor.trim()) return setError("Indica el establecimiento o taller.");
-
-    onGuardar({
-      fecha: form.fecha,
-      categoria: meta.categoria,
-      concepto: esCombustible ? `${meta.concepto} · ${galones} gal` : meta.concepto,
-      monto,
-      origen: "vehiculo",
-      proveedor: form.proveedor.trim(),
-      kilometraje: km,
-      galones: esCombustible ? galones : undefined,
-      observaciones: form.notas.trim() || undefined,
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <DialogHeader>
-        <div className="w-8 h-8 rounded-lg bg-operational/10 text-operational flex items-center justify-center shrink-0">
-          <PlusCircleIcon className="size-5" />
-        </div>
-        <DialogTitle>Registrar Evento de {FICHA.codigoMovil}</DialogTitle>
-      </DialogHeader>
-      <DialogDescription>
-        Se guarda en la bitácora del vehículo y también en Gastos, dentro de Finanzas.
-      </DialogDescription>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="tipo-registro">Tipo de Registro</Label>
-        <Select
-          value={form.tipo}
-          onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as TipoRegistro }))}
-        >
-          <SelectTrigger id="tipo-registro">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(TIPOS_REGISTRO) as TipoRegistro[]).map((t) => (
-              <SelectItem key={t} value={t}>
-                {TIPOS_REGISTRO[t].label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="fecha-registro">Fecha</Label>
-          <DatePicker
-            id="fecha-registro"
-            value={form.fecha}
-            onChange={(v) => setForm((f) => ({ ...f, fecha: v }))}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="km-actual">Kilometraje Actual</Label>
-          <Input
-            id="km-actual"
-            type="number"
-            min={0}
-            placeholder="Ej: 48250"
-            value={form.kilometraje}
-            onChange={(e) => setForm((f) => ({ ...f, kilometraje: e.target.value }))}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {esCombustible && (
-          <div className="space-y-1.5">
-            <Label htmlFor="galones">Galones cargados</Label>
-            <Input
-              id="galones"
-              type="number"
-              min={0}
-              step="0.1"
-              placeholder="Ej: 10.5"
-              value={form.galones}
-              onChange={(e) => setForm((f) => ({ ...f, galones: e.target.value }))}
-            />
-          </div>
-        )}
-        <div className="space-y-1.5">
-          <Label htmlFor="monto-total">Monto Total (S/.)</Label>
-          <Input
-            id="monto-total"
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder="0.00"
-            value={form.monto}
-            onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="proveedor">Establecimiento / Taller / Proveedor</Label>
-        <Input
-          id="proveedor"
-          placeholder="Ej: Primax Benavides o Taller San Borja"
-          value={form.proveedor}
-          onChange={(e) => setForm((f) => ({ ...f, proveedor: e.target.value }))}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="notas">Notas u Observaciones</Label>
-        <Textarea
-          id="notas"
-          rows={2}
-          placeholder="Detalles adicionales del comprobante o estado del móvil..."
-          value={form.notas}
-          onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
-        />
-      </div>
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
-
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" variant="operational">
-          Guardar en Bitácora y Gastos
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-}
-
+/** Vehículo: ficha, documentos y bitácora. Cada registro crea su gasto (spec finanzas §2.4). */
 export default function VehiculoPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const gastos = useFinanzasStore((s) => s.gastosVariables);
-  const addGastoVariable = useFinanzasStore((s) => s.addGastoVariable);
-
-  // La bitácora de combustible sale del mismo registro que usa Finanzas.
-  const registrosCombustible = useMemo(
-    () =>
-      gastos
-        .filter((g) => g.origen === "vehiculo" && g.categoria === "Combustible")
-        .sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [gastos]
-  );
-
-  const handleGuardar = (data: RegistroData) => {
-    addGastoVariable(data);
-    notifySuccess(
-      `${data.categoria} registrado por ${formatSoles(data.monto)}. Ya aparece en Gastos del mes.`
-    );
-  };
+  const vehiculos = useRecurso(V.listar);
+  const [elegidoId, setElegidoId] = useState<string | null>(null);
+  const lista = vehiculos.data ?? [];
+  const vehiculo = lista.find((v) => v.id === elegidoId) ?? lista[0] ?? null;
+  const [dialogo, setDialogo] = useState<"ficha" | "nuevo" | "evento" | null>(null);
 
   return (
     <>
       <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Vehículo" }]} />
-
-      {/* Encabezado */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-md bg-brand-100 text-brand-700 text-xs font-semibold tracking-wide">
-              {FICHA.codigoMovil}
-            </span>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{FICHA.estadoOperativo}</span>
-            </div>
-            <span className="text-slate-300 text-xs">•</span>
-            <span className="text-slate-500 text-xs">{FICHA.sede}</span>
+      <ModuleHeader
+        title="Vehículo"
+        description="Ficha, SOAT, CITV y bitácora. Cada carga o mantenimiento aparece también en Ingresos y Gastos."
+        actions={
+          <div className="flex items-center gap-2">
+            {lista.length > 1 && (
+              <Select value={vehiculo?.id ?? ""} onValueChange={setElegidoId}>
+                <SelectTrigger className="w-44" aria-label="Vehículo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {lista.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.codigo_movil ?? v.placa}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button variant="outline" onClick={() => setDialogo("nuevo")}>
+              <PlusCircleIcon className="size-4" />
+              Agregar vehículo
+            </Button>
           </div>
-          <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
-            Vehículo de Operaciones y Traslado
-          </h1>
-          <p className="text-xs text-slate-500 max-w-3xl">
-            Ficha técnica de la unidad única de custodia y logística digna. Monitoreo de estado
-            mecánico, SOAT y consumos operativos.
-          </p>
+        }
+      />
+
+      {vehiculos.error && <p className="text-sm text-red-600">{vehiculos.error}</p>}
+      {!vehiculos.cargando && !vehiculo && <p className="text-sm text-slate-500">Aún no hay vehículos registrados.</p>}
+
+      {vehiculo && <Panel key={vehiculo.id} vehiculo={vehiculo} onEditar={() => setDialogo("ficha")} onRegistrar={() => setDialogo("evento")} recargarVehiculo={vehiculos.recargar} dialogoEvento={dialogo === "evento"} cerrarEvento={() => setDialogo(null)} />}
+
+      <Modal open={dialogo === "ficha" || dialogo === "nuevo"} onOpenChange={(o) => !o && setDialogo(null)} ancho="sm:max-w-2xl">
+        {(dialogo === "ficha" || dialogo === "nuevo") && (
+          <FichaForm
+            vehiculo={dialogo === "ficha" ? vehiculo : null}
+            onCerrar={() => setDialogo(null)}
+            onHecho={() => {
+              vehiculos.recargar();
+              setDialogo(null);
+            }}
+          />
+        )}
+      </Modal>
+    </>
+  );
+}
+
+function Tarjeta({ icono: Icono, titulo, accion, children }: { icono: typeof TruckIcon; titulo: string; accion?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500 shrink-0">
+            <Icono className="size-5" />
+          </div>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{titulo}</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            className="gap-1.5 h-10"
-            onClick={() =>
-              notifySuccess("Generando expediente técnico vehicular en PDF...")
-            }
-          >
-            <PrinterIcon className="size-4" />
-            Exportar Ficha
-          </Button>
-          <Button variant="operational" className="gap-1.5 h-10" onClick={() => setModalOpen(true)}>
-            <PlusCircleIcon className="size-4" />
-            Registrar Mantenimiento / Gasto
-          </Button>
-        </div>
+        {accion}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-slate-500">{etiqueta}</span>
+      <span className="font-medium text-right">{valor ?? "—"}</span>
+    </div>
+  );
+}
+
+function Panel({
+  vehiculo: v,
+  onEditar,
+  onRegistrar,
+  recargarVehiculo,
+  dialogoEvento,
+  cerrarEvento,
+}: {
+  vehiculo: V.Vehiculo;
+  onEditar: () => void;
+  onRegistrar: () => void;
+  recargarVehiculo: () => void;
+  dialogoEvento: boolean;
+  cerrarEvento: () => void;
+}) {
+  const eventos = useRecurso(() => V.eventos(v.id), [v.id]);
+  const [ahora] = useState(() => Date.now());
+  const lista = useMemo(() => eventos.data ?? [], [eventos.data]);
+
+  const combustible = useMemo(() => {
+    const cargas = lista.filter((e) => e.tipo === "COMBUSTIBLE").sort((a, b) => a.kilometraje - b.kilometraje);
+    let km = 0;
+    let gal = 0;
+    for (let i = 1; i < cargas.length; i++) {
+      km += cargas[i].kilometraje - cargas[i - 1].kilometraje;
+      gal += Number(cargas[i].galones ?? 0);
+    }
+    const hace30 = new Date(ahora - 30 * 86_400_000).toISOString().slice(0, 10);
+    const gasto30 = cargas.filter((c) => c.fecha >= hace30).reduce((a, c) => a + Number(c.monto), 0);
+    return { rendimiento: gal > 0 ? km / gal : null, gasto30 };
+  }, [lista, ahora]);
+
+  const recargar = () => {
+    eventos.recargar();
+    recargarVehiculo();
+  };
+
+  return (
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Tarjeta icono={TruckIcon} titulo={`${v.codigo_movil ?? "Vehículo"} · ${v.placa}`} accion={<Button variant="ghost" size="icon-sm" title="Editar ficha" onClick={onEditar}><PencilIcon className="size-4" /></Button>}>
+          <Dato etiqueta="Modelo" valor={v.modelo} />
+          <Dato etiqueta="Tipo de unidad" valor={v.tipo_unidad} />
+          <Dato etiqueta="Año" valor={v.anio_fabricacion} />
+          <Dato etiqueta="Kilometraje" valor={v.kilometraje_actual != null ? `${v.kilometraje_actual.toLocaleString("es-PE")} km` : null} />
+          <Dato etiqueta="Estado" valor={v.estado === "ACTIVO" ? "Operativo" : "Inactivo"} />
+        </Tarjeta>
+        <Tarjeta icono={ShieldCheckIcon} titulo="SOAT" accion={<Vence fecha={v.soat_vence} />}>
+          <Dato etiqueta="Aseguradora" valor={v.soat_aseguradora} />
+          <Dato etiqueta="Póliza" valor={v.soat_poliza} />
+          <Dato etiqueta="Vigencia hasta" valor={v.soat_vence ? formatFechaLarga(v.soat_vence) : null} />
+        </Tarjeta>
+        <Tarjeta icono={FileCheckIcon} titulo="Inspección técnica (CITV)" accion={<Vence fecha={v.citv_vence} />}>
+          <Dato etiqueta="Certificado" valor={v.citv_certificado} />
+          <Dato etiqueta="Planta" valor={v.citv_planta} />
+          <Dato etiqueta="Vigente hasta" valor={v.citv_vence ? formatFechaLarga(v.citv_vence) : null} />
+        </Tarjeta>
       </div>
 
-      {/* Ficha del vehículo (hero) */}
-      <section className="relative overflow-hidden bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 lg:p-8">
-        <div className="absolute -right-20 -bottom-20 w-96 h-96 rounded-full bg-gradient-to-tl from-brand-100/60 to-transparent pointer-events-none" />
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-start gap-4 min-w-0 max-w-xl">
-            <div className="w-16 h-16 rounded-xl bg-brand-50 flex items-center justify-center shrink-0 text-brand-500">
-              <TruckIcon className="size-8" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-2xl font-bold text-slate-900 tracking-tight">
-                  {FICHA.placa}
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-label font-semibold uppercase">
-                  {FICHA.ciudad}
-                </span>
-              </div>
-              <span className="text-sm text-brand-500 font-semibold mt-0.5 truncate">
-                {FICHA.modelo}
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                {FICHA.tipoUnidad} • Fabricación {FICHA.anioFabricacion}
-              </span>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Tarjeta icono={FuelIcon} titulo="Combustible">
+          <Dato etiqueta="Rendimiento promedio" valor={combustible.rendimiento ? `${combustible.rendimiento.toFixed(1)} km / galón` : "Faltan cargas para calcularlo"} />
+          <Dato etiqueta="Gasto en los últimos 30 días" valor={soles(combustible.gasto30)} />
+        </Tarjeta>
+        <Tarjeta icono={WrenchIcon} titulo="Últimos mantenimientos">
+          {lista.filter((e) => e.tipo.startsWith("MANTENIMIENTO")).slice(0, 3).map((e) => (
+            <Dato key={e.id} etiqueta={`${formatFechaLarga(e.fecha)} · ${e.kilometraje.toLocaleString("es-PE")} km`} valor={`${V.TIPO_EVENTO_LABEL[e.tipo]} · ${soles(e.monto)}`} />
+          ))}
+          {!lista.some((e) => e.tipo.startsWith("MANTENIMIENTO")) && <p className="text-sm text-slate-400">Sin mantenimientos registrados.</p>}
+        </Tarjeta>
+      </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3 lg:pt-0 shrink-0">
-            <div className="flex flex-col p-3 rounded-lg bg-slate-50 min-w-[220px]">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">Kilometraje Actual</span>
-                <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Hace 2h
-                </span>
-              </div>
-              <span className="text-lg font-bold text-slate-900 mt-0.5">48,250 km</span>
-              <Button
-                variant="outline-brand"
-                size="sm"
-                className="mt-2 w-full"
-                onClick={() =>
-                  notifySuccess("Apertura de formulario rápido de odómetro manual.")
-                }
-              >
-                <PencilIcon className="size-3.5" />
-                Actualizar Kilometraje
-              </Button>
-            </div>
-            <Button className="gap-1.5 h-11 shrink-0" onClick={() => setModalOpen(true)}>
-              <FuelIcon className="size-4" />
-              Registrar Consumo de Combustible
-            </Button>
-          </div>
-        </div>
-
-      </section>
-
-      {/* Documentación legal + Mantenimiento */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Columna izquierda: SOAT + CITV */}
-        <div className="flex flex-col gap-6">
-          <SectionCard
-            icon={ShieldCheckIcon}
-            title="SOAT (Seguro Obligatorio)"
-            subtitle="Regulación MTC / Cobertura de Accidentes"
-            action={
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Vence en {SOAT.diasParaVencer} días
-                </div>
-                <Button
-                  variant="outline-brand"
-                  size="sm"
-                  onClick={() =>
-                    notifySuccess("Formulario para ingresar póliza y comprobante de renovación.")
-                  }
-                >
-                  <PlusIcon className="size-4" />
-                  Registrar SOAT / Renovar
-                </Button>
-              </div>
-            }
-            footer={
-              <div className="mt-4 pt-2">
-                <Button
-                  variant="soft"
-                  className="w-full"
-                  onClick={() =>
-                    notifySuccess("Abriendo visualizador seguro de PDF oficial Rímac.")
-                  }
-                >
-                  <DownloadIcon className="size-4" />
-                  Ver Certificado Digital SOAT (PDF)
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-3 my-1">
-              <div className="p-3 rounded-lg bg-slate-50 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-xs text-slate-500">Póliza SOAT Electrónica</span>
-                  <span className="text-sm font-bold text-slate-900 mt-0.5">
-                    {SOAT.aseguradora} • {SOAT.poliza}
-                  </span>
-                  <span className="text-xs text-slate-500">Vigencia: {SOAT.vigenciaHasta}</span>
-                </div>
-                <CheckCircle2Icon className="size-6 text-brand-500 shrink-0" />
-              </div>
-              <div className="p-3 rounded-lg bg-brand-50 flex items-start gap-3">
-                <BellRingIcon className="size-5 text-brand-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-slate-900">
-                    Alerta preventiva configurada
-                  </span>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Alarma automática programada a 30 días del vencimiento (16 Octubre) para
-                    renovación directa sin paralizar traslados.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            icon={ClipboardCheckIcon}
-            title="Inspección Técnica Vehicular (CITV)"
-            subtitle="Certificación mecánica y de gases (MTC)"
-            action={
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                  Al día / Vigente
-                </span>
-                <Button
-                  variant="outline-brand"
-                  size="sm"
-                  onClick={() =>
-                    notifySuccess("Apertura de carga de certificado de revisión técnica.")
-                  }
-                >
-                  <PlusIcon className="size-4" />
-                  Registrar Inspección
-                </Button>
-              </div>
-            }
-            footer={
-              <div className="mt-4 pt-2">
-                <Button
-                  variant="soft"
-                  className="w-full"
-                  onClick={() =>
-                    notifySuccess("Abriendo visualizador de certificado técnico vehicular.")
-                  }
-                >
-                  <FileTextIcon className="size-4" />
-                  Ver Certificado CITV (PDF)
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-3 my-1">
-              <div className="p-3 rounded-lg bg-slate-50 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-xs text-slate-500">
-                    Certificado de Inspección Técnica Vigente
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 mt-0.5">
-                    Certificado {CITV.certificado}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    Vigente hasta {CITV.vigenteHasta} • {CITV.planta}
-                  </span>
-                </div>
-                <ClipboardCheckIcon className="size-6 text-brand-500 shrink-0" />
-              </div>
-              <p className="text-xs text-slate-500 px-1">
-                Revisión reglamentaria obligatoria anual conforme a la normativa del MTC para
-                vehículos de transporte de servicios fúnebres.
-              </p>
-            </div>
-          </SectionCard>
-        </div>
-
-        {/* Columna derecha: Mantenimientos preventivos */}
-        <SectionCard
-          icon={WrenchIcon}
-          title="Mantenimientos Preventivos"
-          subtitle="Ciclo de vida y afinamiento del motor"
-          action={<span className="text-xs text-brand-500 font-semibold">Plan {MANTENIMIENTO.planKm}</span>}
-          footer={
-            <div className="mt-4 text-right">
-              <button
-                type="button"
-                onClick={() =>
-                  notifySuccess("Mostrando todos los registros de taller de la unidad.")
-                }
-                className="text-xs text-brand-500 font-semibold hover:underline inline-flex items-center gap-1"
-              >
-                Ver historial mecánico completo
-                <ArrowRightIcon className="size-3.5" />
-              </button>
-            </div>
-          }
-        >
-          <div className="p-4 rounded-xl bg-brand-500 text-white mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-label uppercase tracking-wider font-semibold text-brand-100">
-                Próximo Servicio Recomendado
-              </span>
-              <span className="text-label bg-white/15 px-2 py-0.5 rounded">
-                En ~{MANTENIMIENTO.diasEstimados} días
-              </span>
-            </div>
-            <h3 className="text-sm font-bold">{MANTENIMIENTO.proximoServicio}</h3>
-            <p className="text-xs text-brand-100 mt-1">
-              Faltan {MANTENIMIENTO.faltanKm.toLocaleString("es-PE")} km • Taller:{" "}
-              <strong className="text-white">{MANTENIMIENTO.taller}</strong>
-            </p>
-            <div className="w-full bg-white/15 rounded-full h-2 mt-3 overflow-hidden">
-              <div
-                className="bg-emerald-300 h-2 rounded-full"
-                style={{ width: `${MANTENIMIENTO.progresoPct}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-xs text-brand-100 mt-1">
-              <span>Último: {MANTENIMIENTO.ultimoHitoKm}</span>
-              <span>Meta: {MANTENIMIENTO.metaKm}</span>
-            </div>
-          </div>
-
-          <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider block mb-2">
-            Últimas Intervenciones Conformes
-          </span>
-          <div className="space-y-2">
-            {HISTORIAL_MANTENIMIENTO.map((item) => (
-              <div
-                key={item.km}
-                className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2Icon className="size-5 text-emerald-500 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-900">
-                      {item.km} • {item.detalle}
-                    </span>
-                    <span className="text-xs text-slate-500">{item.fecha}</span>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-emerald-700 px-2 py-0.5 rounded bg-emerald-50 shrink-0">
-                  Conforme
-                </span>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      </section>
-
-      {/* Bitácora de combustible */}
-      <section className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 lg:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+      <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between gap-3 p-5">
           <div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500">
-                <FuelIcon className="size-5" />
-              </div>
-              <h2 className="text-sm font-semibold text-slate-900">
-                Bitácora de Consumo de Combustible
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Sincronizado en tiempo real con el libro de gastos operativos del crematorio. No
-              requiere doble registro contable.
-            </p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bitácora</h2>
+            <p className="text-xs text-slate-500">El kilometraje debe respetar el orden de las fechas. Borrar un registro borra su gasto.</p>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50">
-              <GaugeIcon className="size-4 text-brand-400" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-label text-slate-500">Rendimiento Promedio</span>
-                <span className="text-sm font-bold text-slate-900">
-                  {COMBUSTIBLE.rendimientoPromedio}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50">
-              <PiggyBankIcon className="size-4 text-emerald-600" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-label text-slate-500">Gasto Promedio Mensual</span>
-                <span className="text-sm font-bold text-brand-500">
-                  {COMBUSTIBLE.gastoPromedioMensual}
-                </span>
-              </div>
-            </div>
-            <Button className="gap-1.5 h-11" onClick={() => setModalOpen(true)}>
-              <FuelIcon className="size-4" />
-              Registrar Consumo
-            </Button>
-          </div>
+          <Button variant="operational" onClick={onRegistrar}>
+            <PlusCircleIcon className="size-4" />
+            Registrar
+          </Button>
         </div>
-
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-label uppercase tracking-wider">
-                <th className="py-3 px-4 rounded-l-lg font-semibold">Fecha</th>
-                <th className="py-3 px-4 font-semibold">Estación de Servicio</th>
-                <th className="py-3 px-4 font-semibold">Tipo &amp; Cantidad</th>
-                <th className="py-3 px-4 font-semibold">Kilometraje Registrado</th>
-                <th className="py-3 px-4 text-right rounded-r-lg font-semibold">Importe Total</th>
+          <table className="w-full text-left text-sm min-w-[720px]">
+            <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="py-3 px-4 font-semibold">Fecha</th>
+                <th className="py-3 px-4 font-semibold">Tipo</th>
+                <th className="py-3 px-4 font-semibold">Kilometraje</th>
+                <th className="py-3 px-4 font-semibold">Galones</th>
+                <th className="py-3 px-4 font-semibold">Proveedor</th>
+                <th className="py-3 px-4 font-semibold text-right">Monto</th>
+                <th className="py-3 px-4" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {registrosCombustible.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-4 px-4 text-sm font-medium text-slate-900">
-                    {formatFechaLarga(r.fecha)}
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <FuelIcon className="size-4 text-slate-400" />
-                      <span className="text-sm font-semibold text-slate-900">
-                        {r.proveedor ?? "—"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-xs">
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
-                      Gasolina 95
-                    </span>
-                    <span className="text-slate-500 ml-1.5">
-                      {r.galones !== undefined ? `${r.galones} gal` : "—"}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-xs text-slate-500">
-                    {r.kilometraje !== undefined
-                      ? `${r.kilometraje.toLocaleString("es-PE")} km`
-                      : "—"}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-bold text-brand-500">
-                    {formatSoles(r.monto)}
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              {lista.map((e) => (
+                <tr key={e.id}>
+                  <td className="py-2.5 px-4 whitespace-nowrap">{formatFechaLarga(e.fecha)}</td>
+                  <td className="py-2.5 px-4">{V.TIPO_EVENTO_LABEL[e.tipo]}</td>
+                  <td className="py-2.5 px-4">{e.kilometraje.toLocaleString("es-PE")} km</td>
+                  <td className="py-2.5 px-4">{e.galones ? Number(e.galones) : "—"}</td>
+                  <td className="py-2.5 px-4">{e.proveedor}</td>
+                  <td className="py-2.5 px-4 text-right font-semibold">{soles(e.monto)}</td>
+                  <td className="py-2.5 px-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Eliminar registro"
+                      className="text-slate-400 hover:text-red-600"
+                      onClick={async () => (await ejecutar(() => V.eliminarEvento(v.id, e.id), "Registro y su gasto eliminados.", "No se pudo eliminar.")) && recargar()}
+                    >
+                      <Trash2Icon className="size-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}
-              {registrosCombustible.length === 0 && (
+              {!eventos.cargando && lista.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-slate-400">
-                    Todavía no hay cargas de combustible registradas.
-                  </td>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">Sin registros.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 text-slate-500 text-xs">
-          <span className="flex items-center gap-1.5">
-            <RefreshCwIcon className="size-3.5 text-brand-400" />
-            Último ticket sincronizado automáticamente desde la App de Conductor Móvil.
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              notifySuccess("Exportando historial de combustible en formato Excel.")
-            }
-            className="hover:text-brand-500 font-semibold transition-colors"
-          >
-            Exportar Libro de Combustible (.CSV)
-          </button>
-        </div>
       </section>
 
-      <RegistroModal open={modalOpen} onOpenChange={setModalOpen} onGuardar={handleGuardar} />
+      <Modal open={dialogoEvento} onOpenChange={(o) => !o && cerrarEvento()}>
+        {dialogoEvento && (
+          <EventoForm
+            vehiculo={v}
+            onCerrar={cerrarEvento}
+            onHecho={() => {
+              recargar();
+              cerrarEvento();
+            }}
+          />
+        )}
+      </Modal>
+    </>
+  );
+}
+
+function EventoForm({ vehiculo, onCerrar, onHecho }: { vehiculo: V.Vehiculo; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState({
+    tipo: "COMBUSTIBLE" as V.TipoEvento,
+    fecha: hoyISO(),
+    kilometraje: vehiculo.kilometraje_actual != null ? String(vehiculo.kilometraje_actual) : "",
+    galones: "",
+    monto: "",
+    proveedor: "",
+    observaciones: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const esCombustible = f.tipo === "COMBUSTIBLE";
+
+  const guardar = async () => {
+    const km = Number(f.kilometraje);
+    const monto = Number(f.monto);
+    const galones = Number(f.galones);
+    if (!Number.isInteger(km) || km <= 0) return setError("Ingresa el kilometraje actual (entero).");
+    if (esCombustible && (!Number.isFinite(galones) || galones <= 0)) return setError("Ingresa los galones cargados.");
+    if (!Number.isFinite(monto) || monto <= 0) return setError("El monto debe ser mayor a 0.");
+    if (!f.proveedor.trim()) return setError("Indica el establecimiento o taller.");
+    setGuardando(true);
+    const ok = await ejecutar(
+      () =>
+        V.registrarEvento(vehiculo.id, {
+          tipo: f.tipo,
+          fecha: f.fecha,
+          kilometraje: km,
+          galones: esCombustible ? galones.toFixed(2) : null,
+          monto: monto.toFixed(2),
+          proveedor: f.proveedor.trim(),
+          observaciones: f.observaciones.trim() || null,
+        }),
+      "Registro guardado. También aparece en Ingresos y Gastos.",
+      "No se pudo registrar."
+    );
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
+  const campo = (k: "kilometraje" | "galones" | "monto" | "proveedor" | "observaciones", label: string, tipo = "text") => (
+    <div className="space-y-1.5">
+      <Label htmlFor={`ev-${k}`}>{label}</Label>
+      <Input id={`ev-${k}`} type={tipo} value={f[k]} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+    </div>
+  );
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Registrar · {vehiculo.codigo_movil ?? vehiculo.placa}</DialogTitle>
+        <DialogDescription>Se guarda en la bitácora y en Gastos.</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="ev-tipo">Tipo</Label>
+          <Select value={f.tipo} onValueChange={(t) => setF((x) => ({ ...x, tipo: t as V.TipoEvento }))}>
+            <SelectTrigger id="ev-tipo" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(V.TIPO_EVENTO_LABEL) as V.TipoEvento[]).map((t) => (
+                <SelectItem key={t} value={t}>{V.TIPO_EVENTO_LABEL[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ev-fecha">Fecha</Label>
+          <DatePicker id="ev-fecha" value={f.fecha} onChange={(d) => setF((x) => ({ ...x, fecha: d }))} />
+        </div>
+        {campo("kilometraje", "Kilometraje", "number")}
+        {esCombustible && campo("galones", "Galones", "number")}
+        {campo("monto", "Monto (S/)", "number")}
+        {campo("proveedor", "Establecimiento o taller")}
+        <div className="sm:col-span-2">{campo("observaciones", "Notas")}</div>
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>Cancelar</Button>
+        <Button variant="operational" onClick={guardar} disabled={guardando}>{guardando ? "Guardando…" : "Registrar"}</Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function FichaForm({ vehiculo, onCerrar, onHecho }: { vehiculo: V.Vehiculo | null; onCerrar: () => void; onHecho: () => void }) {
+  const [f, setF] = useState(() => ({
+    placa: vehiculo?.placa ?? "",
+    codigo_movil: vehiculo?.codigo_movil ?? "",
+    modelo: vehiculo?.modelo ?? "",
+    tipo_unidad: vehiculo?.tipo_unidad ?? "",
+    anio_fabricacion: vehiculo?.anio_fabricacion != null ? String(vehiculo.anio_fabricacion) : "",
+    kilometraje_actual: vehiculo?.kilometraje_actual != null ? String(vehiculo.kilometraje_actual) : "",
+    soat_aseguradora: vehiculo?.soat_aseguradora ?? "",
+    soat_poliza: vehiculo?.soat_poliza ?? "",
+    soat_vence: vehiculo?.soat_vence ?? "",
+    citv_certificado: vehiculo?.citv_certificado ?? "",
+    citv_planta: vehiculo?.citv_planta ?? "",
+    citv_vence: vehiculo?.citv_vence ?? "",
+    activo: vehiculo ? vehiculo.estado === "ACTIVO" : true,
+  }));
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  type Clave = Exclude<keyof typeof f, "activo" | "soat_vence" | "citv_vence">;
+  const campo = (k: Clave, label: string, tipo = "text") => (
+    <div className="space-y-1.5">
+      <Label htmlFor={`fi-${k}`}>{label}</Label>
+      <Input id={`fi-${k}`} type={tipo} value={f[k]} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+    </div>
+  );
+  const fecha = (k: "soat_vence" | "citv_vence", label: string) => (
+    <div className="space-y-1.5">
+      <Label htmlFor={`fi-${k}`}>{label}</Label>
+      <DatePicker id={`fi-${k}`} value={f[k]} onChange={(d) => setF((x) => ({ ...x, [k]: d }))} />
+    </div>
+  );
+
+  const guardar = async () => {
+    if (!f.placa.trim()) return setError("La placa es obligatoria.");
+    const t = (s: string) => s.trim() || null;
+    const n = (s: string) => (s.trim() === "" ? null : Number(s));
+    const cuerpo: V.VehiculoCuerpo = {
+      placa: f.placa.trim(),
+      descripcion: vehiculo?.descripcion ?? null,
+      estado: f.activo ? "ACTIVO" : "INACTIVO",
+      codigo_movil: t(f.codigo_movil),
+      modelo: t(f.modelo),
+      tipo_unidad: t(f.tipo_unidad),
+      anio_fabricacion: n(f.anio_fabricacion),
+      kilometraje_actual: n(f.kilometraje_actual),
+      soat_aseguradora: t(f.soat_aseguradora),
+      soat_poliza: t(f.soat_poliza),
+      soat_vence: f.soat_vence || null,
+      citv_certificado: t(f.citv_certificado),
+      citv_planta: t(f.citv_planta),
+      citv_vence: f.citv_vence || null,
+    };
+    setGuardando(true);
+    const ok = await ejecutar(() => (vehiculo ? V.editar(vehiculo.id, cuerpo) : V.crear(cuerpo)), "Vehículo guardado.", "No se pudo guardar.");
+    setGuardando(false);
+    if (ok) onHecho();
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{vehiculo ? "Editar ficha" : "Nuevo vehículo"}</DialogTitle>
+        <DialogDescription>El kilometraje no puede quedar por debajo del último registro de la bitácora.</DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {campo("placa", "Placa")}
+        {campo("codigo_movil", "Código (Móvil 01)")}
+        {campo("modelo", "Modelo")}
+        {campo("tipo_unidad", "Tipo de unidad")}
+        {campo("anio_fabricacion", "Año", "number")}
+        {campo("kilometraje_actual", "Kilometraje", "number")}
+        {campo("soat_aseguradora", "SOAT · aseguradora")}
+        {campo("soat_poliza", "SOAT · póliza")}
+        {fecha("soat_vence", "SOAT · vence")}
+        {campo("citv_certificado", "CITV · certificado")}
+        {campo("citv_planta", "CITV · planta")}
+        {fecha("citv_vence", "CITV · vence")}
+      </div>
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" className="size-4 accent-brand-500" checked={f.activo} onChange={(e) => setF((x) => ({ ...x, activo: e.target.checked }))} />
+        Operativo
+      </label>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>Cancelar</Button>
+        <Button variant="operational" onClick={guardar} disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</Button>
+      </DialogFooter>
     </>
   );
 }

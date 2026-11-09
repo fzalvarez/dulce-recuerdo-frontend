@@ -1,5 +1,3 @@
-import type { GastoFijo, Ingreso } from "../types";
-
 const moneyFormatter = new Intl.NumberFormat("es-PE", {
   style: "currency",
   currency: "PEN",
@@ -32,12 +30,6 @@ export function etiquetaMes(key: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-export function ingresosDelMes(ingresos: Ingreso[], key: string): Ingreso[] {
-  return ingresos
-    .filter((i) => i.fecha.startsWith(key))
-    .sort((a, b) => b.fecha.localeCompare(a.fecha));
-}
-
 /** Fecha de hoy en formato YYYY-MM-DD (hora local). */
 export function hoyISO(): string {
   const hoy = new Date();
@@ -62,11 +54,4 @@ export function formatFechaCorta(fecha: string): string {
     day: "2-digit",
     month: "short",
   });
-}
-
-/** Monto que aplica en el mes `clave` (YYYY-MM): mensual siempre; anual solo en su mes de pago. */
-export function montoDelMes(g: GastoFijo, clave: string): number {
-  if (g.frecuencia === "mensual") return g.monto;
-  const mes = Number(clave.slice(5, 7));
-  return mes === g.mesPago ? g.monto : 0;
 }
