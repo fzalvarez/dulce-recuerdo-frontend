@@ -33,19 +33,24 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { notifySuccess } from "@/shared/utils";
+import { useNavigate } from "react-router-dom";
+import { ROLES } from "@/features/roles/data/roles";
+import type { RolId } from "@/features/roles/types";
 
 // TODO: reemplazar por datos reales del módulo `usuarios` cuando se exponga el endpoint.
-type Rol = "administrador" | "operador-central" | "coordinador-convenios" | "conductor";
+type Rol = RolId;
 
-const ROLES: { value: Rol; label: string; badgeClass: string }[] = [
-  { value: "administrador", label: "Administrador", badgeClass: "bg-violet-100 text-violet-700" },
-  { value: "operador-central", label: "Operador Central", badgeClass: "bg-brand-100 text-brand-700" },
-  { value: "coordinador-convenios", label: "Coordinador de Convenios", badgeClass: "bg-emerald-100 text-emerald-700" },
-  { value: "conductor", label: "Conductor / Logística", badgeClass: "bg-amber-100 text-amber-700" },
-];
+// Colores de los cuatro roles fijos (spec roles.md, R1). Nombres en ../../roles/data/roles.ts
+const BADGE_ROL: Record<RolId, string> = {
+  root: "bg-violet-100 text-violet-700",
+  admin: "bg-brand-100 text-brand-700",
+  operador1: "bg-emerald-100 text-emerald-700",
+  operador2: "bg-amber-100 text-amber-700",
+};
 
 function rolMeta(rol: Rol) {
-  return ROLES.find((r) => r.value === rol)!;
+  const def = ROLES.find((r) => r.id === rol)!;
+  return { label: def.nombre, badgeClass: BADGE_ROL[rol] };
 }
 
 interface Usuario {
@@ -66,7 +71,7 @@ const USUARIOS_INICIALES: Usuario[] = [
     apellidos: "Gutiérrez",
     username: "marcos.g",
     email: "marcos@dulcerecuerdo.pe",
-    rol: "administrador",
+    rol: "root",
     activo: true,
     ultimoAcceso: "Hoy, 09:12 AM",
   },
@@ -76,7 +81,7 @@ const USUARIOS_INICIALES: Usuario[] = [
     apellidos: "Reyes",
     username: "paola.r",
     email: "paola@dulcerecuerdo.pe",
-    rol: "operador-central",
+    rol: "admin",
     activo: true,
     ultimoAcceso: "Hoy, 08:40 AM",
   },
@@ -86,7 +91,7 @@ const USUARIOS_INICIALES: Usuario[] = [
     apellidos: "Reátegui",
     username: "carlos.r",
     email: "carlos@dulcerecuerdo.pe",
-    rol: "coordinador-convenios",
+    rol: "operador1",
     activo: true,
     ultimoAcceso: "Ayer, 18:20 PM",
   },
@@ -96,7 +101,7 @@ const USUARIOS_INICIALES: Usuario[] = [
     apellidos: "Torres",
     username: "jhon.t",
     email: "jhon@dulcerecuerdo.pe",
-    rol: "conductor",
+    rol: "operador2",
     activo: true,
     ultimoAcceso: "Ayer, 15:05 PM",
   },
@@ -106,7 +111,7 @@ const USUARIOS_INICIALES: Usuario[] = [
     apellidos: "Medina",
     username: "rosa.m",
     email: "rosa@dulcerecuerdo.pe",
-    rol: "operador-central",
+    rol: "operador1",
     activo: false,
     ultimoAcceso: "12 Oct, 11:30 AM",
   },
@@ -128,7 +133,7 @@ const FORM_VACIO: UsuarioForm = {
   apellidos: "",
   username: "",
   email: "",
-  rol: "operador-central",
+  rol: "operador1",
   password: "",
   confirmPassword: "",
   activo: true,
@@ -242,8 +247,8 @@ function UsuarioModal({
               </SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -311,6 +316,7 @@ function UsuarioModal({
 }
 
 export default function UsuariosPage() {
+  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIALES);
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState<Rol | "todos">("todos");
@@ -400,6 +406,10 @@ export default function UsuariosPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button variant="outline" className="gap-1.5 h-10" onClick={() => navigate("/usuarios/roles")}>
+            <ShieldCheckIcon className="size-4" />
+            Roles y permisos
+          </Button>
           <Button variant="operational" className="gap-1.5 h-10" onClick={handleNuevo}>
             <UserPlusIcon className="size-4" />
             Nuevo Usuario
@@ -475,8 +485,8 @@ export default function UsuariosPage() {
             <SelectContent>
               <SelectItem value="todos">Todos los Roles</SelectItem>
               {ROLES.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
+                <SelectItem key={r.id} value={r.id}>
+                  {r.nombre}
                 </SelectItem>
               ))}
             </SelectContent>

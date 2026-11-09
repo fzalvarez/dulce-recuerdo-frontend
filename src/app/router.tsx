@@ -11,6 +11,7 @@ import VeterinariasPage from "@/features/veterinarias/pages/VeterinariasPage";
 import PlanesPage from "@/features/planes/pages/PlanesPage";
 import InventarioPage from "@/features/inventario/pages/InventarioPage";
 import UsuariosPage from "@/features/usuarios/pages/UsuariosPage";
+import RolesPage from "@/features/roles/pages/RolesPage";
 import ServiciosPage from "@/features/servicios/pages/ServiciosPage";
 import VehiculoPage from "@/features/vehiculos/pages/VehiculoPage";
 import EntregasPage from "@/features/entregas/pages/EntregasPage";
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
           { path: "planes", element: <PlanesPage /> },
           { path: "inventario", element: <InventarioPage /> },
           { path: "usuarios", element: <UsuariosPage /> },
+          { path: "usuarios/roles", element: <RolesPage /> },
           { path: "servicios", element: <ServiciosPage /> },
           { path: "vehiculos", element: <VehiculoPage /> },
           { path: "entregas", element: <EntregasPage /> },

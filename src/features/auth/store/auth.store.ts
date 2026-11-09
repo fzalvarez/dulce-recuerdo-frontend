@@ -7,6 +7,8 @@ interface JwtPayload {
   sub?: string;
   name?: string;
   userId?: string;
+  /** Rol del usuario: root | admin | operador1 | operador2. */
+  rol?: string;
 }
 
 interface AuthState {
@@ -16,6 +18,7 @@ interface AuthState {
   isTokenExpired: () => boolean;
   getUserEmail: () => string;
   getUserName: () => string;
+  getUserRol: () => string;
   logout: () => void;
   setHasHydrated: (value: boolean) => void;
   clearStore: () => void;
@@ -55,6 +58,16 @@ export const useAuthStore = create<AuthState>()(
         if (!token) return "";
         try {
           return jwtDecode<JwtPayload>(token).name ?? "";
+        } catch {
+          return "";
+        }
+      },
+
+      getUserRol: () => {
+        const token = get().token;
+        if (!token) return "";
+        try {
+          return jwtDecode<JwtPayload>(token).rol ?? "";
         } catch {
           return "";
         }

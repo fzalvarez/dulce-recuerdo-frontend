@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useSidebarStore } from "@/shared/store/sidebar.store";
+import { useModulosPermitidos } from "@/features/roles/store/roles.store";
+import { moduloDeRuta } from "@/features/roles/utils/permisos";
 
 // Eutanasia y cremación: pipeline por Caso (evento único, no cliente recurrente).
 const DESPEDIDAS_ITEMS = [
@@ -102,6 +104,20 @@ export function AppSidebar() {
   const getUserEmail = useAuthStore((s) => s.getUserEmail);
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobileSidebar = useSidebarStore((s) => s.closeMobileSidebar);
+  const permitidos = useModulosPermitidos();
+
+  // Solo se muestran los módulos que el rol de la sesión incluye (spec roles.md, R5).
+  const visible = (to: string) => {
+    const id = moduloDeRuta(to);
+    return id !== null && permitidos.includes(id);
+  };
+  const grupos = [
+    { titulo: "Despedidas", items: DESPEDIDAS_ITEMS },
+    { titulo: "Atención Veterinaria", items: ATENCION_VETERINARIA_ITEMS },
+    { titulo: "Finanzas", items: FINANZAS_ITEMS },
+    { titulo: "Reportes", items: REPORTES_ITEMS },
+    { titulo: "Catálogos & Administración", items: CATALOGO_ITEMS },
+  ];
 
   return (
     <aside
@@ -132,67 +148,43 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">
-        <NavItem
-          label="Dashboard"
-          icon={LayoutDashboardIcon}
-          to="/"
-          end
-          onClick={closeMobileSidebar}
-        />
-
-        <div className="pt-4 pb-1">
-          <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Despedidas
-          </p>
-        </div>
-        {DESPEDIDAS_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
-        ))}
-
-        <div className="pt-4 pb-1">
-          <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Atención Veterinaria
-          </p>
-        </div>
-        {ATENCION_VETERINARIA_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
-        ))}
-
-        <div className="pt-4 pb-1">
-          <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Finanzas
-          </p>
-        </div>
-        {FINANZAS_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
-        ))}
-
-        <div className="pt-4 pb-1">
-          <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Reportes
-          </p>
-        </div>
-        {REPORTES_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
-        ))}
-
-        <div className="pt-4 pb-1">
-          <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Catálogos & Administración
-          </p>
-        </div>
-        {CATALOGO_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
-        ))}
-
-        <div className="pt-2">
+        {visible("/") && (
           <NavItem
-            label="Configuración"
-            icon={SettingsIcon}
-            to="/configuracion"
+            label="Dashboard"
+            icon={LayoutDashboardIcon}
+            to="/"
+            end
             onClick={closeMobileSidebar}
           />
-        </div>
+        )}
+
+        {grupos.map((grupo) => {
+          const items = grupo.items.filter((item) => visible(item.to));
+          if (items.length === 0) return null;
+          return (
+            <div key={grupo.titulo} className="space-y-1">
+              <div className="pt-4 pb-1">
+                <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  {grupo.titulo}
+                </p>
+              </div>
+              {items.map((item) => (
+                <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
+              ))}
+            </div>
+          );
+        })}
+
+        {visible("/configuracion") && (
+          <div className="pt-2">
+            <NavItem
+              label="Configuración"
+              icon={SettingsIcon}
+              to="/configuracion"
+              onClick={closeMobileSidebar}
+            />
+          </div>
+        )}
       </nav>
 
       {/* Footer: System status & operator card */}

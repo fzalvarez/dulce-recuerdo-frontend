@@ -13,7 +13,7 @@ import { useAuthStore } from "../store/auth.store";
 // JWT de desarrollo: exp año 2286, sin verificación de firma
 const DEV_TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-  btoa(JSON.stringify({ sub: "admin@dulcerecuerdo.com", name: "Admin", exp: 9999999999 }))
+  btoa(JSON.stringify({ sub: "admin@dulcerecuerdo.com", name: "Admin", rol: "root", exp: 9999999999 }))
     .replace(/=/g, "")
     .replace(/\+/g, "-")
     .replace(/\//g, "_") +
