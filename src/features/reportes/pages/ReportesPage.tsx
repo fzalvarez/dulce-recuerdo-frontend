@@ -286,18 +286,18 @@ export default function ReportesPage() {
         />
       </section>
 
-      {/* Selector de reporte */}
-      <nav className="flex flex-wrap gap-3" aria-label="Reportes">
+      {/* Selector de reporte: un solo bloque, como las categorías de Inventario */}
+      <nav aria-label="Reportes" className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-4 flex flex-wrap items-center gap-2">
         {REPORTES.map((r) => (
           <Link
             key={r.key}
             to={`/reportes/${r.slug}`}
             aria-current={reporte === r.key ? "page" : undefined}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors",
+              "px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
               reporte === r.key
-                ? "bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-500/12 dark:text-brand-400 dark:border-brand-500/30"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-gray-900 dark:text-slate-300 dark:border-white/10"
+                ? "bg-brand-500 text-white shadow-sm font-semibold"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-white/5"
             )}
           >
             {r.label}
