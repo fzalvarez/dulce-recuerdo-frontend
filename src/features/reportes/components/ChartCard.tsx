@@ -61,7 +61,7 @@ export function ChartCard({
     <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-5">
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{titulo}</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{titulo}</h2>
           {subtitulo && <p className="text-xs text-slate-500 mt-0.5">{subtitulo}</p>}
         </div>
         <div className="flex rounded-lg bg-slate-100 dark:bg-white/5 p-0.5 text-xs font-semibold shrink-0 self-start">

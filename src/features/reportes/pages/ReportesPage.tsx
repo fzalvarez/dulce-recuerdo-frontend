@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -228,34 +229,42 @@ export default function ReportesPage() {
         description="Revisión de la empresa: cremaciones, canales, veterinarias, distritos, planes y peso."
       />
 
-      {/* Filtros: una sola fila para todos los reportes */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-        <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as Longitud)}>
-          <SelectTrigger className="md:w-60 whitespace-nowrap">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {LONGITUDES.map((l) => (
-              <SelectItem key={l} value={String(l)}>
-                Período de {l} meses
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={finClave} onValueChange={setFinClave}>
-          <SelectTrigger className="md:w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {OPCIONES_FIN.map((m) => (
-              <SelectItem key={m} value={m}>
-                Termina en {etiquetaMesLarga(m)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className="text-xs text-slate-500 md:ml-2">{periodoLabel}</span>
-      </div>
+      {/* Filtros: un solo bloque, como en Inventario */}
+      <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="filtro-periodo" className="whitespace-nowrap">Período:</Label>
+            <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as Longitud)}>
+              <SelectTrigger id="filtro-periodo" className="w-44 whitespace-nowrap">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LONGITUDES.map((l) => (
+                  <SelectItem key={l} value={String(l)}>
+                    {l} meses
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="filtro-fin" className="whitespace-nowrap">Termina en:</Label>
+            <Select value={finClave} onValueChange={setFinClave}>
+              <SelectTrigger id="filtro-fin" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OPCIONES_FIN.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {etiquetaMesLarga(m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <span className="text-sm text-slate-500">{periodoLabel}</span>
+      </section>
 
       {/* Resumen del período */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">

@@ -34,7 +34,7 @@ export function PanelOportunidades({
     <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-5 lg:p-6 flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Oportunidades comerciales</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Oportunidades comerciales</h2>
           <span className="px-2 py-0.5 rounded-full text-label font-semibold bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             Datos de maqueta
           </span>
