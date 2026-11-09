@@ -24,6 +24,14 @@ interface AuthState {
   clearStore: () => void;
 }
 
+function tokenTieneRol(token: string): boolean {
+  try {
+    return !!jwtDecode<JwtPayload>(token).rol;
+  } catch {
+    return false;
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -82,6 +90,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-storage",
       onRehydrateStorage: () => (state) => {
+        // Un token sin claim `rol` es de antes de los roles: se cierra la sesión para
+        // volver a iniciarla (spec roles.md, R7).
+        if (state?.token && !tokenTieneRol(state.token)) state.setToken(null);
         state?.setHasHydrated(true);
       },
       partialize: (state) => ({ token: state.token }),
