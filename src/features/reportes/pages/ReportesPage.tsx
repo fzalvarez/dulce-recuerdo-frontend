@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { cn } from "@/lib/utils";
@@ -52,15 +53,15 @@ type ReporteKey =
   | "planes"
   | "peso";
 
-const REPORTES: { key: ReporteKey; label: string }[] = [
-  { key: "mensual", label: "Cremaciones por mes" },
-  { key: "interanual", label: "Vs. año anterior" },
-  { key: "particulares", label: "Particulares" },
-  { key: "veterinarias", label: "Veterinarias aliadas" },
-  { key: "top-veterinarias", label: "Top 5 veterinarias" },
-  { key: "distritos", label: "Distritos" },
-  { key: "planes", label: "Planes vendidos" },
-  { key: "peso", label: "Peso de la mascota" },
+const REPORTES: { key: ReporteKey; slug: string; label: string }[] = [
+  { key: "mensual", slug: "cremaciones-mes", label: "Cremaciones por mes" },
+  { key: "interanual", slug: "vs-anio-anterior", label: "Vs. año anterior" },
+  { key: "particulares", slug: "particulares", label: "Particulares" },
+  { key: "veterinarias", slug: "veterinarias-aliadas", label: "Veterinarias aliadas" },
+  { key: "top-veterinarias", slug: "top-veterinarias", label: "Top 5 veterinarias" },
+  { key: "distritos", slug: "distritos", label: "Distritos" },
+  { key: "planes", slug: "planes-vendidos", label: "Planes vendidos" },
+  { key: "peso", slug: "peso-mascota", label: "Peso de la mascota" },
 ];
 
 type Longitud = 3 | 6 | 9 | 12;
@@ -93,7 +94,9 @@ export default function ReportesPage() {
     return anterior < PRIMER_MES_OPCION ? PRIMER_MES_OPCION : anterior;
   });
   const [longitud, setLongitud] = useState<Longitud>(6);
-  const [reporte, setReporte] = useState<ReporteKey>("mensual");
+  // El reporte activo sale de la URL: /reportes/<slug>.
+  const { reporte: slug } = useParams();
+  const reporte: ReporteKey = REPORTES.find((r) => r.slug === slug)?.key ?? "mensual";
 
   const ventana = useMemo(() => ventanaMeses(finClave, longitud), [finClave, longitud]);
   const ventanaPrevia = useMemo(
@@ -277,11 +280,10 @@ export default function ReportesPage() {
       {/* Selector de reporte */}
       <nav className="flex flex-wrap gap-3" aria-label="Reportes">
         {REPORTES.map((r) => (
-          <button
+          <Link
             key={r.key}
-            type="button"
-            aria-pressed={reporte === r.key}
-            onClick={() => setReporte(r.key)}
+            to={`/reportes/${r.slug}`}
+            aria-current={reporte === r.key ? "page" : undefined}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors",
               reporte === r.key
@@ -290,7 +292,7 @@ export default function ReportesPage() {
             )}
           >
             {r.label}
-          </button>
+          </Link>
         ))}
       </nav>
 

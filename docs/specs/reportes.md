@@ -156,3 +156,20 @@ anterior.
 
 - ¿El peso se toma al ingreso del cuerpo o al momento de la venta? Afecta a qué precio por kilo aplica.
 - ¿"Sin clasificar" significa venta sin plan asignado o plan que aún no se define?
+
+## 10. Rutas por reporte (2026-11-08)
+
+Cada reporte tiene su propia URL, para compartirlo y abrirlo directo:
+
+| Reporte | Ruta |
+|---|---|
+| Cremaciones por mes | `/reportes/cremaciones-mes` |
+| Vs. año anterior | `/reportes/vs-anio-anterior` |
+| Particulares | `/reportes/particulares` |
+| Veterinarias aliadas | `/reportes/veterinarias-aliadas` |
+| Top 5 veterinarias | `/reportes/top-veterinarias` |
+| Distritos | `/reportes/distritos` |
+| Planes vendidos | `/reportes/planes-vendidos` |
+| Peso de la mascota | `/reportes/peso-mascota` |
+
+`/reportes` redirige a `/reportes/cremaciones-mes`. El período y el mes final se conservan al cambiar de reporte.

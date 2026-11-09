@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedLayout } from "./layouts/ProtectedLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import AuthLayout from "./layouts/AuthLayout";
@@ -46,7 +46,8 @@ export const router = createBrowserRouter([
           { path: "entregas", element: <EntregasPage /> },
           { path: "finanzas", element: <FinanzasPage /> },
           { path: "activos", element: <ActivosPage /> },
-          { path: "reportes", element: <ReportesPage /> },
+          { path: "reportes", element: <Navigate to="/reportes/cremaciones-mes" replace /> },
+          { path: "reportes/:reporte", element: <ReportesPage /> },
           { path: "configuracion", element: <ConfiguracionPage /> },
         ],
       },
