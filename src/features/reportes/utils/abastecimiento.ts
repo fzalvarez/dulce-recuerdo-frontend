@@ -1,5 +1,5 @@
 import type { CasoReportable, PlanId } from "../types";
-import { DIAS_ALERTA, DIAS_COLCHON, HORIZONTE_MESES, INSUMOS, type Insumo, MESES_TENDENCIA, receta } from "../data/abastecimiento.mock";
+import { DIAS_ALERTA, HORIZONTE_MESES, INSUMOS, type Insumo, MESES_TENDENCIA, receta } from "../data/abastecimiento.mock";
 import { rangoDePeso, ventanaMeses } from "./reportes";
 
 export type EstadoInsumo = "critico" | "atencion" | "ok";
@@ -12,33 +12,17 @@ export interface FilaInsumo {
   necesidad: number;
   /** Días de stock al ritmo proyectado; null si no hay consumo. */
   coberturaDias: number | null;
-  /** Cuántas unidades comprar; 0 si no hace falta. */
-  comprar: number;
+  /**
+   * Crítico: la cobertura es menor que el tiempo de entrega, así que se agota antes de que llegue un pedido.
+   * Atención: quedan pocos días para el tiempo de entrega, o el stock está bajo el mínimo.
+   */
   estado: EstadoInsumo;
-  /** Fecha sugerida del pedido, YYYY-MM-DD; null si no hace falta. */
-  fechaPedir: string | null;
-  /** Hoy hay que pedir (ya no alcanza el tiempo de entrega). */
-  pedirYa: boolean;
 }
 
 export interface ResultadoAbastecimiento {
   filas: FilaInsumo[];
   /** Cremaciones del período sin plan clasificado: no tienen receta. */
   sinClasificar: number;
-}
-
-export function fechaISO(fecha: Date): string {
-  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
-}
-
-function sumarDias(fecha: string, dias: number): string {
-  const d = new Date(`${fecha}T00:00:00`);
-  d.setDate(d.getDate() + dias);
-  return fechaISO(d);
-}
-
-export function formatoFechaCorta(fecha: string): string {
-  return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-PE", { day: "numeric", month: "short" });
 }
 
 export function formatoCantidad(n: number): string {
@@ -68,7 +52,6 @@ interface Entrada {
   casosPeriodo: CasoReportable[];
   finClave: string;
   longitud: number;
-  hoy: string;
 }
 
 export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
@@ -93,7 +76,7 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
     factor[plan] = promedio > 0 ? proyeccion / promedio : 1;
   }
 
-  // Consumo del período por insumo, según la receta de cada cremación.
+  // Consumo del período por insumo y plan, según la receta de cada cremación.
   const consumoPeriodo: Record<string, Partial<Record<PlanId, number>>> = {};
   for (const c of e.casosPeriodo) {
     if (c.pesoKg === undefined || c.plan === "sin-clasificar") continue;
@@ -105,7 +88,7 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
   }
 
   const filas: FilaInsumo[] = INSUMOS.map((insumo) => {
-    // Consumo mensual proyectado: lo del período por plan, escalado por la tendencia.
+    // Consumo mensual proyectado: lo del período por plan, escalado por la tendencia de cada plan.
     // Los insumos compartidos (sobre, bolsa, certificado) se cuentan una sola vez por cremación.
     let consumoMes = 0;
     for (const plan of PLANES) {
@@ -115,29 +98,20 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
 
     if (consumoMes <= 0) {
       return {
-        insumo, consumoMes, necesidad, coberturaDias: null, comprar: 0,
-        estado: insumo.stock < insumo.minimo ? "atencion" : "ok", fechaPedir: null, pedirYa: false,
+        insumo,
+        consumoMes,
+        necesidad,
+        coberturaDias: null,
+        estado: insumo.stock < insumo.minimo ? "atencion" : "ok",
       };
     }
 
-    const consumoDiario = consumoMes / 30;
-    const coberturaDias = insumo.stock / consumoDiario;
-    const diasHastaPedir = coberturaDias - insumo.leadTimeDias;
-    // Lo necesario hasta que llegue el pedido, más un mes de colchón, sin bajar del mínimo.
-    const objetivo = Math.max(consumoDiario * (insumo.leadTimeDias + DIAS_COLCHON), insumo.minimo);
-    const comprar = Math.max(0, Math.ceil(objetivo - insumo.stock));
-
+    const coberturaDias = insumo.stock / (consumoMes / 30);
     let estado: EstadoInsumo = "ok";
     if (coberturaDias < insumo.leadTimeDias) estado = "critico";
-    else if (diasHastaPedir <= DIAS_ALERTA || insumo.stock < insumo.minimo) estado = "atencion";
+    else if (coberturaDias - insumo.leadTimeDias <= DIAS_ALERTA || insumo.stock < insumo.minimo) estado = "atencion";
 
-    // Con stock OK no se muestra acción de compra: solo se sugiere cuando hay alerta.
-    if (estado === "ok") {
-      return { insumo, consumoMes, necesidad, coberturaDias, comprar: 0, estado, fechaPedir: null, pedirYa: false };
-    }
-    const pedirYa = diasHastaPedir <= 0;
-    const fechaPedir = pedirYa ? e.hoy : sumarDias(e.hoy, Math.round(diasHastaPedir));
-    return { insumo, consumoMes, necesidad, coberturaDias, comprar, estado, fechaPedir, pedirYa };
+    return { insumo, consumoMes, necesidad, coberturaDias, estado };
   });
 
   const orden: Record<EstadoInsumo, number> = { critico: 0, atencion: 1, ok: 2 };
@@ -151,20 +125,20 @@ export function calcularAbastecimiento(e: Entrada): ResultadoAbastecimiento {
   return { filas, sinClasificar: ventasPeriodo["sin-clasificar"] };
 }
 
-/** Dos o tres conclusiones cortas, solo con los insumos que requieren acción. */
+/** Conclusiones con hechos: cobertura frente al tiempo de entrega. Decidir cuándo y cuánto pedir es del admin. */
 export function conclusiones(r: ResultadoAbastecimiento): string[] {
   const alerta = r.filas.filter((f) => f.estado !== "ok").slice(0, 3);
   const out = alerta.map((f) => {
-    const { nombre, unidad, leadTimeDias } = f.insumo;
-    const dias = f.coberturaDias === null ? 0 : Math.round(f.coberturaDias);
+    const { nombre, leadTimeDias } = f.insumo;
+    const dias = f.coberturaDias === null ? 0 : Math.floor(f.coberturaDias);
     if (f.estado === "critico") {
-      return `${nombre}: quedan ${dias} días y la entrega tarda ${leadTimeDias}. Comprar ${f.comprar} ${unidad} hoy.`;
+      return `${nombre}: el stock alcanza para ${dias} días y la entrega tarda ${leadTimeDias}. Se agota antes de que llegue un pedido.`;
     }
-    return `${nombre}: quedan ${dias} días. Pedir antes del ${formatoFechaCorta(f.fechaPedir ?? "")}.`;
+    return `${nombre}: el stock alcanza para ${dias} días y la entrega tarda ${leadTimeDias}.`;
   });
   if (r.sinClasificar > 0) {
     out.push(`${r.sinClasificar} cremaciones sin plan clasificado no tienen receta y no descuentan insumos.`);
   }
-  if (alerta.length === 0) out.unshift("Todos los insumos tienen cobertura para el período.");
+  if (alerta.length === 0) out.unshift("Todos los insumos tienen cobertura mayor que su tiempo de entrega.");
   return out;
 }
