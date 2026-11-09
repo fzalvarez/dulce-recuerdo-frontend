@@ -8,7 +8,7 @@ export interface Plan {
   id: string;
   nombre: string;
   descripcion: string | null;
-  estado: "ACTIVO" | "INACTIVO";
+  estado: "Activo" | "Inactivo";
 }
 
 export interface Zona {

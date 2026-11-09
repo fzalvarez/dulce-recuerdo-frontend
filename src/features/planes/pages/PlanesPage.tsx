@@ -139,8 +139,8 @@ export default function PlanesPage() {
                 <td key={r.id} className="px-3 py-2 whitespace-nowrap">{verMonto(tarifas.planes[p.id]?.[r.id])}</td>
               ))}
               <td className="px-3 py-2">
-                <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", p.estado === "ACTIVO" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
-                  {p.estado === "ACTIVO" ? "Activo" : "Inactivo"}
+                <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", p.estado === "Activo" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                  {p.estado === "Activo" ? "Activo" : "Inactivo"}
                 </span>
               </td>
               <td className="px-3 py-2 text-right">
@@ -353,7 +353,7 @@ function leerFila(rangos: Rango[], valores: Record<string, string>): T.PreciosRa
 function PlanForm({ plan, rangos, precios, onCerrar, onHecho }: FormProps & { plan: T.Plan | null; rangos: Rango[]; precios: Record<string, string> }) {
   const [nombre, setNombre] = useState(plan?.nombre ?? "");
   const [descripcion, setDescripcion] = useState(plan?.descripcion ?? "");
-  const [activo, setActivo] = useState(plan ? plan.estado === "ACTIVO" : true);
+  const [activo, setActivo] = useState(plan ? plan.estado === "Activo" : true);
   const [valores, setValores] = useState<Record<string, string>>(() => Object.fromEntries(rangos.map((r) => [r.id, montoTexto(precios[r.id])])));
   const g = useGuardar(onHecho);
 
@@ -361,7 +361,7 @@ function PlanForm({ plan, rangos, precios, onCerrar, onHecho }: FormProps & { pl
     if (!nombre.trim()) return g.setError("Escribe el nombre del plan.");
     const fila = leerFila(rangos, valores);
     if (!fila) return g.setError("Revisa los precios: deben ser números positivos.");
-    const cuerpo = { nombre: nombre.trim(), descripcion: descripcion.trim() || null, estado: activo ? ("ACTIVO" as const) : ("INACTIVO" as const) };
+    const cuerpo = { nombre: nombre.trim(), descripcion: descripcion.trim() || null, estado: activo ? ("Activo" as const) : ("Inactivo" as const) };
     g.guardar(async () => {
       const p = plan ? await T.editarPlan(plan.id, cuerpo) : await T.crearPlan(cuerpo);
       await T.preciosPlan(p.id, fila);
