@@ -1,14 +1,20 @@
-// Activos: equipos durables. Se controlan por estado y ubicación, no por stock.
+// Activos: equipos durables. Se controlan por estado y ubicación, no por stock (spec inventario §3).
 
-export const CATEGORIAS_ACTIVO = ["Traslado", "Atención", "Cremación", "Mobiliario"] as const;
-export type CategoriaActivo = (typeof CATEGORIAS_ACTIVO)[number];
+export type CategoriaActivo = "TRASLADO" | "ATENCION" | "CREMACION" | "MOBILIARIO";
+export type EstadoActivo = "OPERATIVO" | "EN_REPARACION" | "DADO_DE_BAJA";
 
-export const ESTADOS_ACTIVO = {
-  operativo: "Operativo",
-  reparacion: "En reparación",
-  baja: "Dado de baja",
-} as const;
-export type EstadoActivo = keyof typeof ESTADOS_ACTIVO;
+export const CATEGORIA_LABEL: Record<CategoriaActivo, string> = {
+  TRASLADO: "Traslado",
+  ATENCION: "Atención",
+  CREMACION: "Cremación",
+  MOBILIARIO: "Mobiliario",
+};
+
+export const ESTADO_LABEL: Record<EstadoActivo, string> = {
+  OPERATIVO: "Operativo",
+  EN_REPARACION: "En reparación",
+  DADO_DE_BAJA: "Dado de baja",
+};
 
 export interface Activo {
   id: string;
@@ -16,18 +22,14 @@ export interface Activo {
   codigo: string;
   nombre: string;
   categoria: CategoriaActivo;
-  /** Unidades que se registran bajo este código (ej. 4 tapers iguales). */
   cantidad: number;
-  /** Fecha de compra, formato YYYY-MM-DD. */
-  fechaCompra: string;
-  /** Costo total pagado en S/. */
-  costo: number;
+  fecha_compra: string | null;
+  /** Costo total en S/ (texto decimal). */
+  costo: string;
   estado: EstadoActivo;
-  /** Dónde está: sede, furgoneta, sala, taller... */
-  ubicacion: string;
-  /** Próxima revisión o mantenimiento, YYYY-MM-DD (opcional). */
-  proximaRevision?: string;
-  observaciones?: string;
+  ubicacion: string | null;
+  proxima_revision: string | null;
+  observaciones: string | null;
 }
 
-export type ActivoData = Omit<Activo, "id">;
+export type ActivoCuerpo = Omit<Activo, "id">;
