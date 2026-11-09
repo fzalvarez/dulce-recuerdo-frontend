@@ -17,9 +17,6 @@ import {
   GaugeIcon,
   PiggyBankIcon,
   RefreshCwIcon,
-  HeartHandshakeIcon,
-  SnowflakeIcon,
-  AccessibilityIcon,
 } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -53,16 +50,11 @@ const FICHA = {
   codigoMovil: "Móvil 01",
   ciudad: "Lima, Perú",
   sede: "Sede San Borja, Lima",
-  modelo: "Renault Kangoo Maxi 1.6",
+  modelo: "Glory 330 S",
   tipoUnidad: "Furgoneta de Custodia Especializada",
   anioFabricacion: 2022,
   estadoOperativo: "Operativo en Ruta / Sede",
 };
-
-const EQUIPAMIENTO = [
-  { icon: SnowflakeIcon, label: "Cámara climatizada biocustodia (12°C - 16°C)" },
-  { icon: AccessibilityIcon, label: "Rampa asistida de carga suave" },
-];
 
 const SOAT = {
   aseguradora: "Rímac Seguros",
@@ -500,21 +492,6 @@ export default function VehiculoPage() {
           </div>
         </div>
 
-        {/* Equipamiento de custodia */}
-        <div className="mt-6 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/60 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-brand-500 shrink-0">
-            <HeartHandshakeIcon className="size-5" />
-            <span className="text-sm font-semibold text-slate-900">Equipamiento de Custodia:</span>
-          </div>
-          <div className="flex items-center gap-5 flex-wrap">
-            {EQUIPAMIENTO.map(({ icon: Icon, label }) => (
-              <span key={label} className="flex items-center gap-1.5 text-xs text-slate-600">
-                <Icon className="size-4 text-brand-400" />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* Documentación legal + Mantenimiento */}
