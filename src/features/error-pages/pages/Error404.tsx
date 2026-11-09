@@ -9,9 +9,9 @@ export default function Error404() {
       </p>
       <Link
         to="/"
-        className="text-brand-500 hover:text-brand-600 text-sm font-medium"
+        className="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors"
       >
-        Volver al inicio
+        Ir al dashboard
       </Link>
     </div>
   );

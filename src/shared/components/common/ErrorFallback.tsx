@@ -36,7 +36,7 @@ export function ErrorFallback({
             </Button>
           )}
           <Button variant="operational" onClick={() => window.location.assign("/")}>
-            Ir al inicio
+            Ir al dashboard
           </Button>
         </div>
       </div>
