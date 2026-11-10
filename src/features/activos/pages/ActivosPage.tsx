@@ -21,6 +21,7 @@ import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { fechaCorta, hoyISO, soles } from "@/features/casos/utils/casos";
 import { CATEGORIA_LABEL, ESTADO_LABEL, type Activo, type ActivoCuerpo, type CategoriaActivo, type EstadoActivo } from "../types";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 
 const ESTADO_CLASE: Record<EstadoActivo, string> = {
   OPERATIVO: "bg-emerald-50 text-emerald-700",
@@ -235,26 +236,12 @@ function ActivoForm({ activo, onCerrar, onHecho }: { activo: Activo | null; onCe
         {texto("codigo", "Código")}
         {texto("nombre", "Nombre")}
         <div className="space-y-1.5">
-          <Label htmlFor="ac-categoria">Categoría</Label>
-          <Select value={f.categoria} onValueChange={(v) => setF((x) => ({ ...x, categoria: v as CategoriaActivo }))}>
-            <SelectTrigger id="ac-categoria" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(CATEGORIA_LABEL) as CategoriaActivo[]).map((c) => (
-                <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span className="text-sm font-medium leading-none">Categoría</span>
+          <BotonesOpcion ariaLabel="Categoría" value={f.categoria} onChange={(v) => setF((x) => ({ ...x, categoria: v }))} opciones={(Object.keys(CATEGORIA_LABEL) as CategoriaActivo[]).map((c) => ({ value: c, label: CATEGORIA_LABEL[c] }))} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="ac-estado">Estado</Label>
-          <Select value={f.estado} onValueChange={(v) => setF((x) => ({ ...x, estado: v as EstadoActivo }))}>
-            <SelectTrigger id="ac-estado" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(ESTADO_LABEL) as EstadoActivo[]).map((e) => (
-                <SelectItem key={e} value={e}>{ESTADO_LABEL[e]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span className="text-sm font-medium leading-none">Estado</span>
+          <BotonesOpcion ariaLabel="Estado" value={f.estado} onChange={(v) => setF((x) => ({ ...x, estado: v }))} opciones={(Object.keys(ESTADO_LABEL) as EstadoActivo[]).map((e) => ({ value: e, label: ESTADO_LABEL[e] }))} />
         </div>
         {texto("cantidad", "Cantidad", "number")}
         {texto("costo", "Costo total (S/)", "number")}

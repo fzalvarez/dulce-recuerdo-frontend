@@ -1,16 +1,9 @@
 import { Fragment, useState } from "react";
-import { ArrowDownToLineIcon, PaletteIcon, PlusCircleIcon } from "lucide-react";
+import { ArrowDownToLineIcon, LayoutGridIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useRecurso } from "@/shared/hooks/useRecurso";
@@ -29,7 +22,7 @@ const CELDA: Record<Nivel, string> = {
   CRITICO: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300",
 };
 
-type Dialogo = "generar" | "color" | "carga";
+type Dialogo = "catalogo" | "carga";
 
 /** Urnas como la planilla del negocio: filas tamaño y forma, columnas color (spec urnas-variantes). */
 export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
@@ -46,13 +39,9 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <Button variant="operational" className="gap-1.5" onClick={() => setDialogo("generar")}>
-          <PlusCircleIcon className="size-4" />
-          Generar modelos
-        </Button>
-        <Button variant="outline" className="gap-1.5" onClick={() => setDialogo("color")} disabled={!datos?.filas.length}>
-          <PaletteIcon className="size-4" />
-          Agregar color
+        <Button variant="operational" className="gap-1.5" onClick={() => setDialogo("catalogo")} disabled={!datos}>
+          <LayoutGridIcon className="size-4" />
+          Catálogo de urnas
         </Button>
         <Button variant="outline" className="gap-1.5" onClick={() => setDialogo("carga")} disabled={!datos?.filas.length}>
           <ArrowDownToLineIcon className="size-4" />
@@ -64,7 +53,7 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
       {matriz.cargando && <p className="text-sm text-slate-400">Cargando urnas…</p>}
       {datos && datos.filas.length === 0 && (
         <p className="text-sm text-slate-500">
-          Todavía no hay modelos de urna. Usa “Generar modelos” con cada línea y tamaño: se crean todas las formas y colores de una vez.
+          Todavía no hay urnas. Abre “Catálogo de urnas”, escribe las formas de cada tamaño y los colores: se crean todas de una vez.
         </p>
       )}
 
@@ -75,9 +64,8 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
           return <TablaLinea key={linea} linea={linea} filas={filas} colores={datos.colores} />;
         })}
 
-      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho={dialogo === "carga" ? "sm:max-w-4xl" : "sm:max-w-2xl"}>
-        {dialogo === "generar" && <GenerarForm colores={datos?.colores ?? []} onCerrar={cerrar} onHecho={hecho} />}
-        {dialogo === "color" && <ColorForm onCerrar={cerrar} onHecho={hecho} />}
+      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-4xl">
+        {dialogo === "catalogo" && datos && <CatalogoForm matriz={datos} onCerrar={cerrar} onHecho={hecho} />}
         {dialogo === "carga" && datos && <CargaForm matriz={datos} onCerrar={cerrar} onHecho={hecho} />}
       </Modal>
     </>
@@ -157,115 +145,92 @@ function lista(texto: string): string[] {
   return texto.split(",").map((t) => t.trim()).filter(Boolean);
 }
 
-function GenerarForm({ colores, onCerrar, onHecho }: { colores: string[]; onCerrar: () => void; onHecho: () => void }) {
-  const [linea, setLinea] = useState<LineaUrna>("SIN_VIDRIO");
-  const [tamano, setTamano] = useState<TamanoUrna>("PEQUENA");
-  const [formas, setFormas] = useState("");
-  const [coloresTxt, setColoresTxt] = useState("");
+const claveModelo = (linea: LineaUrna, tamano: TamanoUrna) => `${linea}|${tamano}`;
+
+/**
+ * Todo el catálogo en un formulario: las formas de cada línea y tamaño, y los colores.
+ * Al guardar se crean solo las urnas que faltan (formas × colores); las existentes no se tocan.
+ */
+function CatalogoForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerrar: () => void; onHecho: () => void }) {
+  const [formas, setFormas] = useState<Record<string, string>>(() => {
+    const inicial: Record<string, string> = {};
+    for (const f of matriz.filas) {
+      const k = claveModelo(f.linea, f.tamano);
+      inicial[k] = inicial[k] ? `${inicial[k]}, ${f.forma}` : f.forma;
+    }
+    return inicial;
+  });
+  const [colores, setColores] = useState(matriz.colores.join(", "));
   const [minimo, setMinimo] = useState("0");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const guardar = async () => {
-    const f = lista(formas);
-    const c = lista(coloresTxt);
+    const c = lista(colores);
     const m = Number(minimo);
-    if (f.length === 0) return setError("Escribe al menos una forma.");
-    if (c.length === 0 && colores.length === 0) return setError("Todavía no hay colores: escríbelos.");
+    if (c.length === 0) return setError("Escribe al menos un color.");
     if (!Number.isInteger(m) || m < 0) return setError("El mínimo debe ser un entero.");
+    const pedidos = LINEAS.flatMap((linea) =>
+      TAMANOS.map((tamano) => ({ linea, tamano, formas: lista(formas[claveModelo(linea, tamano)] ?? "") })).filter((p) => p.formas.length > 0)
+    );
+    if (pedidos.length === 0) return setError("Escribe las formas de al menos un tamaño.");
     setGuardando(true);
+    let creadas = 0;
     const ok = await ejecutar(
-      () => I.generarModelos({ linea, tamano, formas: f, colores: c.length ? c : null, stock_minimo: m }),
-      "Modelos generados. Los que ya existían no se tocaron.",
-      "No se pudieron generar los modelos."
+      async () => {
+        // Cada llamada solo crea lo que falta: si una falla, se puede volver a guardar sin duplicar.
+        for (const p of pedidos) {
+          creadas += (await I.generarModelos({ ...p, colores: c, stock_minimo: m })).creadas.length;
+        }
+      },
+      "Catálogo de urnas guardado.",
+      "No se pudo guardar el catálogo."
     );
     setGuardando(false);
-    if (ok) onHecho();
+    if (ok || creadas > 0) onHecho();
   };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Generar modelos de urna</DialogTitle>
+        <DialogTitle>Catálogo de urnas</DialogTitle>
         <DialogDescription>
-          Crea todas las combinaciones de forma y color de una línea y un tamaño, con stock 0. Las que ya existen no se tocan.
+          Escribe las formas de cada tamaño separadas por coma y los colores una sola vez. Se crea cada combinación con stock 0;
+          las que ya existen no se tocan. Quitar una forma o un color de aquí no borra urnas: para dejar de usarlas, desactívalas.
         </DialogDescription>
       </DialogHeader>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="gm-linea">Línea</Label>
-          <Select value={linea} onValueChange={(v) => setLinea(v as LineaUrna)}>
-            <SelectTrigger id="gm-linea" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {LINEAS.map((l) => <SelectItem key={l} value={l}>{LINEA_LABEL[l]}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="cat-colores">Colores (para todas las formas)</Label>
+          <Input id="cat-colores" placeholder="Gris, Crema" value={colores} onChange={(e) => setColores(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="gm-tamano">Tamaño</Label>
-          <Select value={tamano} onValueChange={(v) => setTamano(v as TamanoUrna)}>
-            <SelectTrigger id="gm-tamano" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TAMANOS.map((t) => <SelectItem key={t} value={t}>{TAMANO_LABEL[t]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="gm-formas">Formas (separadas por coma)</Label>
-          <Input id="gm-formas" placeholder="Casa, Rectangular, Cónica" value={formas} onChange={(e) => setFormas(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="gm-colores">Colores (separados por coma)</Label>
-          <Input
-            id="gm-colores"
-            placeholder={colores.length ? `Vacío: ${colores.join(", ")}` : "Gris, Crema"}
-            value={coloresTxt}
-            onChange={(e) => setColoresTxt(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="gm-minimo">Stock mínimo de cada urna</Label>
-          <Input id="gm-minimo" type="number" min={0} value={minimo} onChange={(e) => setMinimo(e.target.value)} />
+          <Label htmlFor="cat-minimo">Stock mínimo de cada urna nueva</Label>
+          <Input id="cat-minimo" type="number" min={0} value={minimo} onChange={(e) => setMinimo(e.target.value)} />
         </div>
       </div>
-      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Generar" />
-    </>
-  );
-}
-
-function ColorForm({ onCerrar, onHecho }: { onCerrar: () => void; onHecho: () => void }) {
-  const [color, setColor] = useState("");
-  const [minimo, setMinimo] = useState("0");
-  const [error, setError] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  const guardar = async () => {
-    const m = Number(minimo);
-    if (!color.trim()) return setError("Escribe el color.");
-    if (!Number.isInteger(m) || m < 0) return setError("El mínimo debe ser un entero.");
-    setGuardando(true);
-    const ok = await ejecutar(() => I.agregarColor({ color: color.trim(), stock_minimo: m }), "Color agregado a todos los modelos.", "No se pudo agregar el color.");
-    setGuardando(false);
-    if (ok) onHecho();
-  };
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Agregar color</DialogTitle>
-        <DialogDescription>Se crea en todos los modelos de urna que ya existen, con stock 0: es una columna más de la tabla.</DialogDescription>
-      </DialogHeader>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="co-color">Color</Label>
-          <Input id="co-color" value={color} onChange={(e) => setColor(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="co-minimo">Stock mínimo de cada urna</Label>
-          <Input id="co-minimo" type="number" min={0} value={minimo} onChange={(e) => setMinimo(e.target.value)} />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {LINEAS.map((linea) => (
+          <div key={linea} className="rounded-lg border border-slate-200 dark:border-white/10 p-3 flex flex-col gap-2">
+            <h3 className="text-label font-semibold uppercase tracking-wider text-slate-500">{LINEA_LABEL[linea]}</h3>
+            {TAMANOS.map((tamano) => {
+              const k = claveModelo(linea, tamano);
+              return (
+                <div key={k} className="grid grid-cols-[7.5rem_1fr] items-center gap-2">
+                  <Label htmlFor={`cat-${k}`} className="text-sm">{TAMANO_LABEL[tamano]}</Label>
+                  <Input
+                    id={`cat-${k}`}
+                    placeholder="Casa, Rectangular"
+                    value={formas[k] ?? ""}
+                    onChange={(e) => setFormas((x) => ({ ...x, [k]: e.target.value }))}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
-      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Agregar color" />
+      <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Guardar catálogo" />
     </>
   );
 }

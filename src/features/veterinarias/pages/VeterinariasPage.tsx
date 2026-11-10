@@ -21,6 +21,7 @@ import { Modal } from "@/features/casos/components/Dialogos";
 import type { MetodoPago } from "@/features/casos/types";
 import { fechaCorta, hoyISO, METODO_LABEL, soles } from "@/features/casos/utils/casos";
 import * as V from "../api";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 
 type Dialogo =
   | { tipo: "editar"; vet: V.Veterinaria | null }
@@ -407,19 +408,8 @@ function Facturacion({ vet, onCambio }: { vet: V.Veterinaria; onCambio: () => vo
       {cobro && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end rounded-lg border border-slate-200 dark:border-white/10 p-3">
           <div className="space-y-1.5">
-            <Label htmlFor="fa-metodo">Forma de pago</Label>
-            <Select value={cobro.metodo} onValueChange={(v) => setCobro((c) => c && { ...c, metodo: v as MetodoPago })}>
-              <SelectTrigger id="fa-metodo" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {METODO_LABEL[m]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <span className="text-sm font-medium leading-none">Forma de pago</span>
+            <BotonesOpcion ariaLabel="Forma de pago" columnas="grid-cols-2" value={cobro.metodo} onChange={(v) => setCobro((c) => c && { ...c, metodo: v })} opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="fa-fcobro">Fecha del cobro</Label>

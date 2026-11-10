@@ -45,9 +45,6 @@ export const generarModelos = (c: {
   stock_minimo: number;
 }) => api.post<{ creadas: Articulo[]; existentes: Articulo[] }>("/inventario/urnas/modelos", c).then((r) => r.data);
 
-export const agregarColor = (c: { color: string; stock_minimo: number }) =>
-  api.post<Articulo[]>("/inventario/urnas/colores", c).then((r) => r.data);
-
 export const entradaUrnas = (c: {
   fecha: string;
   proveedor: string | null;

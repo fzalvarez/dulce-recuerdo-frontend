@@ -31,6 +31,7 @@ import {
   type GrupoGastoFijo,
 } from "../types";
 import { desplazarMes, etiquetaMes, formatFechaCorta, hoyISO, mesKey } from "../utils/periodo";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 
 const ORIGEN_LABEL = { MANUAL: "", VEHICULO: "Vehículo", INVENTARIO: "Inventario" } as const;
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -406,33 +407,16 @@ function FijoForm({ fijo, onCerrar, onHecho }: { fijo: GastoFijo | null; onCerra
           <Input id="gf-nombre" value={f.nombre} onChange={(e) => setF((x) => ({ ...x, nombre: e.target.value }))} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="gf-grupo">Grupo</Label>
-          <Select value={f.grupo} onValueChange={(v) => setF((x) => ({ ...x, grupo: v as GrupoGastoFijo }))}>
-            <SelectTrigger id="gf-grupo" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(GRUPO_LABEL) as GrupoGastoFijo[]).map((g) => (
-                <SelectItem key={g} value={g}>{GRUPO_LABEL[g]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span className="text-sm font-medium leading-none">Grupo</span>
+          <BotonesOpcion ariaLabel="Grupo" value={f.grupo} onChange={(v) => setF((x) => ({ ...x, grupo: v }))} opciones={(Object.keys(GRUPO_LABEL) as GrupoGastoFijo[]).map((g) => ({ value: g, label: GRUPO_LABEL[g] }))} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="gf-monto">{esPrestamo ? "Cuota (S/)" : "Monto base (S/)"}</Label>
           <Input id="gf-monto" type="number" min={0} step="0.01" value={f.monto} onChange={(e) => setF((x) => ({ ...x, monto: e.target.value }))} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="gf-frecuencia">Frecuencia</Label>
-          <Select value={f.frecuencia} onValueChange={(v) => setF((x) => ({ ...x, frecuencia: v as Frecuencia }))}>
-            <SelectTrigger id="gf-frecuencia" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="MENSUAL">Mensual</SelectItem>
-              <SelectItem value="ANUAL">Anual</SelectItem>
-            </SelectContent>
-          </Select>
+          <span className="text-sm font-medium leading-none">Frecuencia</span>
+          <BotonesOpcion ariaLabel="Frecuencia" columnas="grid-cols-2" value={f.frecuencia} onChange={(v) => setF((x) => ({ ...x, frecuencia: v }))} opciones={[{ value: "MENSUAL" as Frecuencia, label: "Mensual" }, { value: "ANUAL" as Frecuencia, label: "Anual" }]} />
         </div>
         {f.frecuencia === "ANUAL" && (
           <div className="space-y-1.5">

@@ -1,5 +1,18 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { FileCheckIcon, FuelIcon, PencilIcon, PlusCircleIcon, ShieldCheckIcon, Trash2Icon, TruckIcon, WrenchIcon } from "lucide-react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import {
+  CalendarCheckIcon,
+  DropletsIcon,
+  FileCheckIcon,
+  FuelIcon,
+  PencilIcon,
+  PlusCircleIcon,
+  ShieldCheckIcon,
+  TicketIcon,
+  Trash2Icon,
+  TruckIcon,
+  WrenchIcon,
+} from "lucide-react";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
@@ -247,7 +260,7 @@ function Panel({
         </div>
       </section>
 
-      <Modal open={dialogoEvento} onOpenChange={(o) => !o && cerrarEvento()}>
+      <Modal open={dialogoEvento} onOpenChange={(o) => !o && cerrarEvento()} ancho="sm:max-w-2xl">
         {dialogoEvento && (
           <EventoForm
             vehiculo={v}
@@ -262,6 +275,14 @@ function Panel({
     </>
   );
 }
+
+const ICONO_EVENTO: Record<V.TipoEvento, ComponentType<{ className?: string }>> = {
+  COMBUSTIBLE: FuelIcon,
+  MANTENIMIENTO_PROGRAMADO: CalendarCheckIcon,
+  MANTENIMIENTO_CORRECTIVO: WrenchIcon,
+  LAVADO: DropletsIcon,
+  PEAJES: TicketIcon,
+};
 
 function EventoForm({ vehiculo, onCerrar, onHecho }: { vehiculo: V.Vehiculo; onCerrar: () => void; onHecho: () => void }) {
   const [f, setF] = useState({
@@ -317,20 +338,18 @@ function EventoForm({ vehiculo, onCerrar, onHecho }: { vehiculo: V.Vehiculo; onC
         <DialogTitle>Registrar · {vehiculo.codigo_movil ?? vehiculo.placa}</DialogTitle>
         <DialogDescription>Se guarda en la bitácora y en Gastos.</DialogDescription>
       </DialogHeader>
+      <BotonesOpcion
+        ariaLabel="Tipo de registro"
+        columnas="grid-cols-3 sm:grid-cols-5"
+        value={f.tipo}
+        onChange={(t) => setF((x) => ({ ...x, tipo: t }))}
+        opciones={(Object.keys(V.TIPO_EVENTO_LABEL) as V.TipoEvento[]).map((t) => ({
+          value: t,
+          label: V.TIPO_EVENTO_LABEL[t],
+          icon: ICONO_EVENTO[t],
+        }))}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="ev-tipo">Tipo</Label>
-          <Select value={f.tipo} onValueChange={(t) => setF((x) => ({ ...x, tipo: t as V.TipoEvento }))}>
-            <SelectTrigger id="ev-tipo" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(V.TIPO_EVENTO_LABEL) as V.TipoEvento[]).map((t) => (
-                <SelectItem key={t} value={t}>{V.TIPO_EVENTO_LABEL[t]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <div className="space-y-1.5">
           <Label htmlFor="ev-fecha">Fecha</Label>
           <DatePicker id="ev-fecha" value={f.fecha} onChange={(d) => setF((x) => ({ ...x, fecha: d }))} />

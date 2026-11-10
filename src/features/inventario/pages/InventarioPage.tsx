@@ -20,7 +20,8 @@ import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { fechaCorta, hoyISO, soles } from "@/features/casos/utils/casos";
 import * as I from "../api";
-import { TIPO_LABEL, type Articulo, type Nivel, type TipoArticulo } from "../types";
+import { LINEA_LABEL, TAMANO_LABEL, TIPO_LABEL, type Articulo, type Nivel, type TamanoUrna, type TipoArticulo } from "../types";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { ProveedoresContenido } from "../components/ProveedoresDialog";
 import { UrnasPanel } from "../components/UrnasPanel";
 
@@ -249,7 +250,7 @@ function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | nu
     sku: articulo?.sku ?? "",
     nombre: articulo?.nombre ?? "",
     detalle: articulo?.detalle ?? "",
-    tipo: (articulo?.tipo ?? "URNA") as TipoArticulo,
+    tipo: (articulo?.tipo ?? "MARCO") as TipoArticulo,
     tamano: articulo?.tamano ?? "",
     modelo: articulo?.modelo ?? "",
     stock_minimo: String(articulo?.stock_minimo ?? 0),
@@ -257,6 +258,9 @@ function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | nu
   });
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  // Las urnas se crean en su pestaña; aquí solo se editan sus datos generales.
+  const esUrna = articulo?.linea != null;
+  const tiposNuevos = (Object.keys(TIPO_LABEL) as TipoArticulo[]).filter((t) => t !== "URNA" || articulo?.tipo === "URNA");
 
   type Texto = "sku" | "nombre" | "detalle" | "tamano" | "modelo" | "stock_minimo";
   const campo = (k: Texto, label: string, tipo = "text") => (
@@ -296,23 +300,28 @@ function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | nu
           {!articulo && " Las urnas se crean en la pestaña “Urnas por modelo y color”."}
         </DialogDescription>
       </DialogHeader>
+      {esUrna && articulo ? (
+        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm">
+          {LINEA_LABEL[articulo.linea!]} · {TAMANO_LABEL[articulo.tamano as TamanoUrna]} · {articulo.forma} · {articulo.color}
+          <span className="block text-xs text-slate-500">La línea, el tamaño, la forma y el color de una urna no se cambian: desactívala y genera la correcta.</span>
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium leading-none">Tipo</span>
+          <BotonesOpcion
+            ariaLabel="Tipo de artículo"
+            value={f.tipo}
+            onChange={(v) => setF((x) => ({ ...x, tipo: v }))}
+            opciones={tiposNuevos.map((t) => ({ value: t, label: TIPO_LABEL[t] }))}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {campo("sku", "SKU")}
         {campo("nombre", "Nombre")}
-        <div className="space-y-1.5">
-          <Label htmlFor="ar-tipo">Tipo</Label>
-          <Select value={f.tipo} onValueChange={(v) => setF((x) => ({ ...x, tipo: v as TipoArticulo }))}>
-            <SelectTrigger id="ar-tipo" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(TIPO_LABEL) as TipoArticulo[]).map((t) => (
-                <SelectItem key={t} value={t}>{TIPO_LABEL[t]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         {campo("stock_minimo", "Stock mínimo", "number")}
-        {campo("tamano", "Tamaño")}
-        {campo("modelo", "Modelo")}
+        {!esUrna && campo("tamano", "Tamaño")}
+        <div className={esUrna ? "" : "sm:col-span-2"}>{campo("modelo", "Modelo")}</div>
         <div className="sm:col-span-2">{campo("detalle", "Detalle")}</div>
       </div>
       <label className="inline-flex items-center gap-2 text-sm">

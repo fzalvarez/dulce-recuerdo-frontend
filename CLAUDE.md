@@ -52,6 +52,10 @@ src/features/<modulo>/
   `<DialogContent>`. Radix desmonta el contenido al cerrar, así que el estado se
   reinicia solo. No sincronizar estado con `useEffect` (el linter lo marca).
 - Validar en el submit y mostrar el error bajo el formulario.
+- Listas cortas y fijas (hasta unas 5 opciones: especie, modalidad, forma de pago, tipo de
+  registro) con `BotonesOpcion` (`src/shared/components/common`), un clic y con ícono si
+  ayuda. `Select` solo para listas largas o que vienen de la API (distritos, planes,
+  veterinarias) y para filtros de tablas.
 - Notificaciones con `notifySuccess` / `notifyError` (`src/shared/utils`).
 - **No usar `crypto.randomUUID`.** Solo existe en contextos seguros (HTTPS o
   localhost), y el panel se abre por IP en la red. Usar `Date.now()` + random.

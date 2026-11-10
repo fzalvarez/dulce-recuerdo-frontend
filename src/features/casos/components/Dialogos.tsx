@@ -25,6 +25,7 @@ import * as casosApi from "../api";
 import type { CasoFila, MetodoPago } from "../types";
 import { combinarFechaHora, faltaUrna, hoyISO, METODO_LABEL, montoValido, soles } from "../utils/casos";
 import { SelectorUrna } from "./SelectorUrna";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 
 function horaActual(): string {
   const d = new Date();
@@ -122,19 +123,8 @@ function PagoForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () =>
           <Input id="pago-monto" type="number" min={0} step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="pago-metodo">Forma de pago</Label>
-          <Select value={metodo} onValueChange={(v) => setMetodo(v as MetodoPago)}>
-            <SelectTrigger id="pago-metodo" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => (
-                <SelectItem key={m} value={m}>
-                  {METODO_LABEL[m]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span className="text-sm font-medium leading-none">Forma de pago</span>
+          <BotonesOpcion ariaLabel="Forma de pago" columnas="grid-cols-2" value={metodo} onChange={setMetodo} opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pago-fecha">Fecha del cobro</Label>
@@ -233,7 +223,6 @@ function RealizadoForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: 
           {opciones.error && <p className="text-xs text-red-600">{opciones.error}</p>}
           {opciones.data && (
             <SelectorUrna
-              id="re-urna"
               urnas={opciones.data.urnas}
               value={urnaId}
               onChange={setUrnaId}
@@ -466,7 +455,7 @@ function EntregaForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: ()
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Urna</span>
           <p className="text-xs text-slate-500">Todavía no se eligió. Sale del inventario al confirmar la entrega.</p>
           {opciones.error && <p className="text-xs text-red-600">{opciones.error}</p>}
-          {opciones.data && <SelectorUrna id="en-urna" urnas={opciones.data.urnas} value={urnaId} onChange={setUrnaId} />}
+          {opciones.data && <SelectorUrna urnas={opciones.data.urnas} value={urnaId} onChange={setUrnaId} />}
         </div>
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
@@ -516,7 +505,6 @@ function UrnaForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: () =>
       {opciones.error && <p className="text-xs text-red-600">{opciones.error}</p>}
       {opciones.data && (
         <SelectorUrna
-          id="ur-urna"
           urnas={opciones.data.urnas}
           value={urnaId}
           onChange={setUrnaId}

@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { SearchIcon } from "lucide-react";
+import {
+  BuildingIcon,
+  CatIcon,
+  DogIcon,
+  HouseIcon,
+  MessageCircleIcon,
+  PawPrintIcon,
+  SearchIcon,
+  StethoscopeIcon,
+  VideoIcon,
+} from "lucide-react";
+import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +73,24 @@ function Campo({ id, label, children, className }: { id: string; label: string; 
     </div>
   );
 }
+
+/** Etiqueta para un grupo de botones (no es un input, así que no usa `htmlFor`). */
+function Grupo({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <span className="text-sm font-medium leading-none">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+const ESPECIES = [
+  { value: "Canino", label: "Perro", icon: DogIcon },
+  { value: "Felino", label: "Gato", icon: CatIcon },
+  { value: "Otro", label: "Otro", icon: PawPrintIcon },
+];
+
+const MODALIDAD_ICONO = { PRESENCIAL: BuildingIcon, NO_PRESENCIAL: VideoIcon, DOMICILIO: HouseIcon } as const;
 
 function Opcion<T extends string>({
   id,
@@ -425,18 +454,19 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
               )}
 
               {(crearTutor || (cliente && crearMascota)) && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-3">
                   <Campo id="nm-nombre" label="Nombre">
                     <Input id="nm-nombre" value={nuevaMascota.nombre} onChange={(e) => setNuevaMascota((m) => ({ ...m, nombre: e.target.value }))} />
                   </Campo>
-                  <Campo id="nm-especie" label="Especie">
-                    <Opcion
-                      id="nm-especie"
+                  <Grupo label="Especie">
+                    <BotonesOpcion
+                      ariaLabel="Especie"
+                      columnas="grid-cols-3"
                       value={nuevaMascota.especie}
                       onChange={(v) => setNuevaMascota((m) => ({ ...m, especie: v }))}
-                      items={["Canino", "Felino", "Otro"].map((e) => ({ value: e, label: e }))}
+                      opciones={ESPECIES}
                     />
-                  </Campo>
+                  </Grupo>
                 </div>
               )}
             </div>
@@ -444,28 +474,31 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
         </Seccion>
 
         <Seccion titulo="Servicio">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Campo id="nc-servicio" label="Servicio">
-              <Opcion
-                id="nc-servicio"
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3">
+            <Grupo label="Servicio">
+              <BotonesOpcion
+                ariaLabel="Servicio"
                 value={servicio}
                 onChange={(v) => { setServicio(v); setCalculo(null); }}
-                items={(Object.keys(SERVICIO_LABEL) as Servicio[]).map((s) => ({ value: s, label: SERVICIO_LABEL[s] }))}
+                opciones={(Object.keys(SERVICIO_LABEL) as Servicio[]).map((s) => ({ value: s, label: SERVICIO_LABEL[s] }))}
               />
-            </Campo>
-            <Campo id="nc-modalidad" label="Modalidad">
-              <Opcion
-                id="nc-modalidad"
+            </Grupo>
+            <Grupo label="Modalidad">
+              <BotonesOpcion
+                ariaLabel="Modalidad"
+                columnas="grid-cols-3"
                 value={modalidad}
                 onChange={(v) => { setModalidad(v); setCalculo(null); }}
-                items={(Object.keys(MODALIDAD_LABEL) as Modalidad[]).map((m) => ({ value: m, label: MODALIDAD_LABEL[m] }))}
+                opciones={(Object.keys(MODALIDAD_LABEL) as Modalidad[]).map((m) => ({ value: m, label: MODALIDAD_LABEL[m], icon: MODALIDAD_ICONO[m] }))}
               />
-            </Campo>
+            </Grupo>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Campo id="nc-peso" label="Peso (kg)">
               <Input id="nc-peso" type="number" min={0} step="0.1" value={peso} onChange={(e) => { setPeso(e.target.value); setCalculo(null); }} />
             </Campo>
             {esCremacion && (
-              <Campo id="nc-plan" label="Plan">
+              <Campo id="nc-plan" label="Plan" className="sm:col-span-3">
                 <Opcion
                   id="nc-plan"
                   value={planId}
@@ -520,17 +553,18 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
               )}
             </div>
             <div className="flex flex-col gap-3">
-              <Campo id="nc-canal" label="Cómo llegó">
-                <Opcion
-                  id="nc-canal"
+              <Grupo label="Cómo llegó">
+                <BotonesOpcion
+                  ariaLabel="Cómo llegó"
+                  columnas="grid-cols-2"
                   value={canal}
                   onChange={(v) => { setCanal(v); setCalculo(null); }}
-                  items={[
-                    { value: "directo", label: "Directo (WhatsApp)" },
-                    { value: "veterinaria", label: "Refiere veterinaria" },
+                  opciones={[
+                    { value: "directo", label: "Directo (WhatsApp)", icon: MessageCircleIcon },
+                    { value: "veterinaria", label: "Refiere veterinaria", icon: StethoscopeIcon },
                   ]}
                 />
-              </Campo>
+              </Grupo>
               {esVet && (
                 <Campo id="nc-vet" label="Veterinaria">
                   <Opcion
@@ -554,7 +588,6 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
               Opcional ahora: se puede elegir después, hasta la entrega. El tamaño se sugiere según el peso.
             </p>
             <SelectorUrna
-              id="nc-urna"
               urnas={opciones.urnas}
               value={urnaId}
               onChange={setUrnaId}
@@ -609,18 +642,18 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3">
             <Campo id="nc-pago" label={esVet ? "Pago inicial (opcional: paga la veterinaria)" : "Pago inicial (S/)"}>
               <Input id="nc-pago" type="number" min={0} step="0.01" value={pago.monto} onChange={(e) => setPago((p) => ({ ...p, monto: e.target.value }))} />
             </Campo>
-            <Campo id="nc-metodo" label="Forma de pago">
-              <Opcion
-                id="nc-metodo"
+            <Grupo label="Forma de pago">
+              <BotonesOpcion
+                ariaLabel="Forma de pago"
                 value={pago.metodo}
                 onChange={(v) => setPago((p) => ({ ...p, metodo: v }))}
-                items={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))}
+                opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))}
               />
-            </Campo>
+            </Grupo>
           </div>
         </Seccion>
 
