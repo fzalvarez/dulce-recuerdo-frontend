@@ -39,7 +39,7 @@ export function NuevoCasoDialog({
   onCreado: () => void;
 }) {
   return (
-    <Modal open={open} onOpenChange={onOpenChange} ancho="sm:max-w-2xl">
+    <Modal open={open} onOpenChange={onOpenChange} ancho="sm:max-w-4xl">
       {open && <NuevoCasoCarga onCerrar={() => onOpenChange(false)} onCreado={onCreado} />}
     </Modal>
   );
@@ -282,104 +282,115 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
 
       <div className="flex flex-col gap-4">
         <Seccion titulo="Tutor y mascota">
-          {!cliente && (
-            <div className="flex gap-2">
-              <Input
-                aria-label="Buscar tutor"
-                placeholder="Buscar por DNI, nombre del tutor o de la mascota"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    buscar();
-                  }
-                }}
-              />
-              <Button variant="outline" onClick={buscar}>
-                <SearchIcon className="size-4" />
-                Buscar
-              </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
+              <span className="text-sm font-medium">Tutor</span>
+              {!cliente && (
+                <div className="flex gap-2">
+                  <Input
+                    aria-label="Buscar tutor"
+                    placeholder="DNI, nombre del tutor o de la mascota"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        buscar();
+                      }
+                    }}
+                  />
+                  <Button variant="outline" onClick={buscar}>
+                    <SearchIcon className="size-4" />
+                    Buscar
+                  </Button>
+                </div>
+              )}
+
+              {!cliente && resultados && resultados.length > 0 && (
+                <ul className="divide-y divide-slate-100 rounded-md border border-slate-200 dark:border-white/10 max-h-40 overflow-y-auto">
+                  {resultados.map((c) => (
+                    <li key={c.id}>
+                      <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5" onClick={() => elegirCliente(c)}>
+                        <span className="font-medium">{c.nombre_completo}</span>
+                        <span className="text-xs text-slate-500"> · {c.telefono}{c.dni ? ` · DNI ${c.dni}` : ""}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {cliente && (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-white/10 px-3 py-2 text-sm">
+                  <span>
+                    <strong>{cliente.nombre_completo}</strong> · {cliente.telefono}
+                    {cliente.dni ? ` · DNI ${cliente.dni}` : ""}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => { setCliente(null); setMascotas([]); setMascotaId(""); }}>
+                    Cambiar
+                  </Button>
+                </div>
+              )}
+
+              {crearTutor && (
+                <>
+                  <p className="text-xs text-slate-500">
+                    {resultados?.length ? "¿No está en la lista? Regístralo:" : "Sin resultados. Registra al tutor:"}
+                  </p>
+                  <Campo id="nt-nombre" label="Nombre completo">
+                    <Input id="nt-nombre" value={nuevoTutor.nombre} onChange={(e) => setNuevoTutor((t) => ({ ...t, nombre: e.target.value }))} />
+                  </Campo>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Campo id="nt-tel" label="Teléfono">
+                      <Input id="nt-tel" value={nuevoTutor.telefono} onChange={(e) => setNuevoTutor((t) => ({ ...t, telefono: e.target.value }))} />
+                    </Campo>
+                    <Campo id="nt-dni" label="DNI (opcional)">
+                      <Input id="nt-dni" value={nuevoTutor.dni} onChange={(e) => setNuevoTutor((t) => ({ ...t, dni: e.target.value }))} />
+                    </Campo>
+                  </div>
+                </>
+              )}
             </div>
-          )}
 
-          {!cliente && resultados && resultados.length > 0 && (
-            <ul className="divide-y divide-slate-100 rounded-md border border-slate-200 dark:border-white/10 max-h-40 overflow-y-auto">
-              {resultados.map((c) => (
-                <li key={c.id}>
-                  <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5" onClick={() => elegirCliente(c)}>
-                    <span className="font-medium">{c.nombre_completo}</span>
-                    <span className="text-xs text-slate-500"> · {c.telefono}{c.dni ? ` · DNI ${c.dni}` : ""}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+            <div className="flex flex-col gap-3">
+              <span className="text-sm font-medium">Mascota</span>
+              {!cliente && !crearTutor && (
+                <p className="text-xs text-slate-500">Primero busca al tutor: la mascota se elige de su ficha o se registra.</p>
+              )}
 
-          {cliente && (
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span>
-                <strong>{cliente.nombre_completo}</strong> · {cliente.telefono}
-                {cliente.dni ? ` · DNI ${cliente.dni}` : ""}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => { setCliente(null); setMascotas([]); setMascotaId(""); }}>
-                Cambiar
-              </Button>
-            </div>
-          )}
-
-          {crearTutor && (
-            <>
-              <p className="text-xs text-slate-500">
-                {resultados?.length ? "¿No está en la lista? Regístralo:" : "Sin resultados. Registra al tutor:"}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Campo id="nt-nombre" label="Nombre completo">
-                  <Input id="nt-nombre" value={nuevoTutor.nombre} onChange={(e) => setNuevoTutor((t) => ({ ...t, nombre: e.target.value }))} />
-                </Campo>
-                <Campo id="nt-tel" label="Teléfono">
-                  <Input id="nt-tel" value={nuevoTutor.telefono} onChange={(e) => setNuevoTutor((t) => ({ ...t, telefono: e.target.value }))} />
-                </Campo>
-                <Campo id="nt-dni" label="DNI (opcional)">
-                  <Input id="nt-dni" value={nuevoTutor.dni} onChange={(e) => setNuevoTutor((t) => ({ ...t, dni: e.target.value }))} />
-                </Campo>
-              </div>
-            </>
-          )}
-
-          {cliente && mascotas.length > 0 && (
-            <Campo id="nc-mascota" label="Mascota">
-              <Opcion
-                id="nc-mascota"
-                value={mascotaId}
-                onChange={setMascotaId}
-                items={[
-                  ...mascotas.map((m) => ({ value: m.id, label: `${m.nombre} · ${m.especie}` })),
-                  { value: "nueva", label: "Otra mascota (registrar)" },
-                ]}
-              />
-            </Campo>
-          )}
-
-          {(crearTutor || (cliente && crearMascota)) && (
-            <div className="grid grid-cols-2 gap-3">
-              <Campo id="nm-nombre" label="Nombre de la mascota">
-                <Input id="nm-nombre" value={nuevaMascota.nombre} onChange={(e) => setNuevaMascota((m) => ({ ...m, nombre: e.target.value }))} />
-              </Campo>
-              <Campo id="nm-especie" label="Especie">
+              {cliente && mascotas.length > 0 && (
                 <Opcion
-                  id="nm-especie"
-                  value={nuevaMascota.especie}
-                  onChange={(v) => setNuevaMascota((m) => ({ ...m, especie: v }))}
-                  items={["Canino", "Felino", "Otro"].map((e) => ({ value: e, label: e }))}
+                  id="nc-mascota"
+                  value={mascotaId}
+                  onChange={setMascotaId}
+                  placeholder="Elegir mascota"
+                  items={[
+                    ...mascotas.map((m) => ({ value: m.id, label: `${m.nombre} · ${m.especie}` })),
+                    { value: "nueva", label: "Otra mascota (registrar)" },
+                  ]}
                 />
-              </Campo>
+              )}
+
+              {(crearTutor || (cliente && crearMascota)) && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo id="nm-nombre" label="Nombre">
+                    <Input id="nm-nombre" value={nuevaMascota.nombre} onChange={(e) => setNuevaMascota((m) => ({ ...m, nombre: e.target.value }))} />
+                  </Campo>
+                  <Campo id="nm-especie" label="Especie">
+                    <Opcion
+                      id="nm-especie"
+                      value={nuevaMascota.especie}
+                      onChange={(v) => setNuevaMascota((m) => ({ ...m, especie: v }))}
+                      items={["Canino", "Felino", "Otro"].map((e) => ({ value: e, label: e }))}
+                    />
+                  </Campo>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </Seccion>
 
         <Seccion titulo="Servicio">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Campo id="nc-servicio" label="Servicio">
               <Opcion
                 id="nc-servicio"
@@ -399,10 +410,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
             <Campo id="nc-peso" label="Peso (kg)">
               <Input id="nc-peso" type="number" min={0} step="0.1" value={peso} onChange={(e) => { setPeso(e.target.value); setCalculo(null); }} />
             </Campo>
-          </div>
-
-          {esCremacion && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {esCremacion && (
               <Campo id="nc-plan" label="Plan">
                 <Opcion
                   id="nc-plan"
@@ -412,15 +420,17 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
                   placeholder={opciones.planes.length ? "Elegir" : "No hay planes activos"}
                 />
               </Campo>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 sm:mt-7">
-                <input type="checkbox" className="size-4 accent-brand-500" checked={eutanasia} onChange={(e) => { setEutanasia(e.target.checked); setCalculo(null); }} />
-                Incluye eutanasia
-              </label>
-            </div>
-          )}
+            )}
+          </div>
 
-          {opciones.complementos.length > 0 && (
+          {(esCremacion || opciones.complementos.length > 0) && (
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-700 dark:text-slate-300">
+              {esCremacion && (
+                <label className="inline-flex items-center gap-2">
+                  <input type="checkbox" className="size-4 accent-brand-500" checked={eutanasia} onChange={(e) => { setEutanasia(e.target.checked); setCalculo(null); }} />
+                  Incluye eutanasia
+                </label>
+              )}
               {opciones.complementos.map((c) => (
                 <label key={c.id} className="inline-flex items-center gap-2">
                   <input
@@ -439,48 +449,49 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Campo id="nc-distrito" label={esDomicilio ? "Distrito" : "Distrito (opcional)"}>
-              <Opcion
-                id="nc-distrito"
-                value={distrito}
-                onChange={(v) => { setDistrito(v); setCalculo(null); }}
-                items={opciones.distritos.map((d) => ({ value: d, label: d }))}
-                placeholder={opciones.distritos.length ? "Elegir" : "Sin zonas configuradas"}
-              />
-            </Campo>
-            {esDomicilio && (
-              <Campo id="nc-direccion" label="Dirección">
-                <Input id="nc-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-              </Campo>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Campo id="nc-canal" label="Cómo llegó">
-              <Opcion
-                id="nc-canal"
-                value={canal}
-                onChange={(v) => { setCanal(v); setCalculo(null); }}
-                items={[
-                  { value: "directo", label: "Directo (WhatsApp)" },
-                  { value: "veterinaria", label: "Refiere veterinaria" },
-                ]}
-              />
-            </Campo>
-            {esVet && (
-              <Campo id="nc-vet" label="Veterinaria">
+            <div className="flex flex-col gap-3">
+              <Campo id="nc-distrito" label={esDomicilio ? "Distrito" : "Distrito (opcional)"}>
                 <Opcion
-                  id="nc-vet"
-                  value={vetId}
-                  onChange={(v) => { setVetId(v); setCalculo(null); }}
-                  items={opciones.veterinarias.map((v) => ({ value: v.id, label: v.nombre }))}
+                  id="nc-distrito"
+                  value={distrito}
+                  onChange={(v) => { setDistrito(v); setCalculo(null); }}
+                  items={opciones.distritos.map((d) => ({ value: d, label: d }))}
+                  placeholder={opciones.distritos.length ? "Elegir" : "Sin zonas configuradas"}
                 />
               </Campo>
-            )}
+              {esDomicilio && (
+                <Campo id="nc-direccion" label="Dirección">
+                  <Input id="nc-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                </Campo>
+              )}
+            </div>
+            <div className="flex flex-col gap-3">
+              <Campo id="nc-canal" label="Cómo llegó">
+                <Opcion
+                  id="nc-canal"
+                  value={canal}
+                  onChange={(v) => { setCanal(v); setCalculo(null); }}
+                  items={[
+                    { value: "directo", label: "Directo (WhatsApp)" },
+                    { value: "veterinaria", label: "Refiere veterinaria" },
+                  ]}
+                />
+              </Campo>
+              {esVet && (
+                <Campo id="nc-vet" label="Veterinaria">
+                  <Opcion
+                    id="nc-vet"
+                    value={vetId}
+                    onChange={(v) => { setVetId(v); setCalculo(null); }}
+                    items={opciones.veterinarias.map((v) => ({ value: v.id, label: v.nombre }))}
+                  />
+                </Campo>
+              )}
+              {vetSeleccionada && !vetSeleccionada.tiene_convenio && (
+                <p className="text-xs text-amber-700">Esta veterinaria no tiene tipo de convenio: el precio no se podrá calcular.</p>
+              )}
+            </div>
           </div>
-          {vetSeleccionada && !vetSeleccionada.tiene_convenio && (
-            <p className="text-xs text-amber-700">Esta veterinaria no tiene tipo de convenio: el precio no se podrá calcular.</p>
-          )}
         </Seccion>
 
         <Seccion titulo="Fecha y hora">
@@ -498,9 +509,23 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
         </Seccion>
 
         <Seccion titulo="Precio y pago">
-          <Button variant="outline" size="sm" className="self-start" onClick={calcularPrecio}>
-            Calcular precio
-          </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_1fr] items-end gap-3">
+            <Button variant="outline" onClick={calcularPrecio}>
+              Calcular precio
+            </Button>
+            <Campo id="nc-ajuste" label="Precio a mano (opcional)">
+              <Input id="nc-ajuste" type="number" min={0} step="0.01" value={ajuste.precio} onChange={(e) => setAjuste((a) => ({ ...a, precio: e.target.value }))} />
+            </Campo>
+            <Campo id="nc-motivo" label="Motivo del ajuste">
+              <Input
+                id="nc-motivo"
+                value={ajuste.motivo}
+                disabled={ajuste.precio.trim() === ""}
+                placeholder={ajuste.precio.trim() === "" ? "Solo si pones precio a mano" : ""}
+                onChange={(e) => setAjuste((a) => ({ ...a, motivo: e.target.value }))}
+              />
+            </Campo>
+          </div>
           {calculo && (
             <div className="text-sm">
               {calculo.lineas.map((l) => (
@@ -515,16 +540,6 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Campo id="nc-ajuste" label="Precio a mano (opcional)">
-              <Input id="nc-ajuste" type="number" min={0} step="0.01" value={ajuste.precio} onChange={(e) => setAjuste((a) => ({ ...a, precio: e.target.value }))} />
-            </Campo>
-            {ajuste.precio.trim() !== "" && (
-              <Campo id="nc-motivo" label="Motivo del ajuste">
-                <Input id="nc-motivo" value={ajuste.motivo} onChange={(e) => setAjuste((a) => ({ ...a, motivo: e.target.value }))} />
-              </Campo>
-            )}
-          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo id="nc-pago" label={esVet ? "Pago inicial (opcional: paga la veterinaria)" : "Pago inicial (S/)"}>
               <Input id="nc-pago" type="number" min={0} step="0.01" value={pago.monto} onChange={(e) => setPago((p) => ({ ...p, monto: e.target.value }))} />
