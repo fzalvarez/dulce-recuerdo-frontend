@@ -108,7 +108,10 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
   const [mascotaId, setMascotaId] = useState<string>("");
   const [nuevoTutor, setNuevoTutor] = useState({ nombre: "", telefono: "", dni: "" });
   const [nuevaMascota, setNuevaMascota] = useState({ nombre: "", especie: "Canino" });
-  const crearTutor = cliente === null && resultados !== null;
+  // Lo normal es un tutor nuevo: el formulario sale abierto y "buscar" queda como opción.
+  const [modoBuscar, setModoBuscar] = useState(false);
+  const [coincidencia, setCoincidencia] = useState<Cliente | null>(null);
+  const crearTutor = cliente === null && !modoBuscar;
   const crearMascota = crearTutor || mascotaId === "nueva";
 
   // Servicio
@@ -148,8 +151,21 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
     }
   };
 
+  // Al salir del DNI o del teléfono, avisa si ese tutor ya está registrado.
+  const revisarExistente = async (campo: "dni" | "telefono", valor: string) => {
+    const v = valor.trim();
+    if (v.length < 6) return setCoincidencia(null);
+    try {
+      const lista = await casosApi.buscarClientes(v);
+      setCoincidencia(lista.find((c) => (c[campo] ?? "").trim() === v) ?? null);
+    } catch {
+      setCoincidencia(null);
+    }
+  };
+
   const elegirCliente = async (c: Cliente) => {
     setCliente(c);
+    setCoincidencia(null);
     setMascotaId("");
     try {
       const lista = await casosApi.mascotasDe(c.id);
@@ -195,7 +211,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
     if (crearTutor && (!nuevoTutor.nombre.trim() || !nuevoTutor.telefono.trim())) {
       return setError("Escribe el nombre y el teléfono del tutor.");
     }
-    if (!crearTutor && !cliente) return setError("Busca y elige al tutor, o regístralo.");
+    if (!crearTutor && !cliente) return setError("Elige al tutor de la búsqueda, o registra uno nuevo.");
     if (crearMascota && !nuevaMascota.nombre.trim()) return setError("Escribe el nombre de la mascota.");
     if (!crearMascota && !mascotaId) return setError("Elige la mascota.");
     const d = datosServicio();
@@ -276,7 +292,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
       <DialogHeader>
         <DialogTitle>Nuevo caso</DialogTitle>
         <DialogDescription>
-          Registra un servicio contratado: ficha, servicio, fecha y pago inicial. El precio lo calcula el sistema.
+          Registra un servicio contratado: tutor, mascota, servicio, fecha y pago inicial. El precio lo calcula el sistema.
         </DialogDescription>
       </DialogHeader>
 
@@ -284,12 +300,25 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
         <Seccion titulo="Tutor y mascota">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-medium">Tutor</span>
-              {!cliente && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Tutor</span>
+                {!cliente && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    onClick={() => { setModoBuscar((b) => !b); setResultados(null); setCoincidencia(null); }}
+                  >
+                    {modoBuscar ? "Registrar tutor nuevo" : "¿Ya es cliente? Buscar"}
+                  </Button>
+                )}
+              </div>
+
+              {!cliente && modoBuscar && (
                 <div className="flex gap-2">
                   <Input
                     aria-label="Buscar tutor"
-                    placeholder="DNI, nombre del tutor o de la mascota"
+                    placeholder="DNI, teléfono, nombre del tutor o de la mascota"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     onKeyDown={(e) => {
@@ -306,17 +335,21 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
                 </div>
               )}
 
-              {!cliente && resultados && resultados.length > 0 && (
-                <ul className="divide-y divide-slate-100 rounded-md border border-slate-200 dark:border-white/10 max-h-40 overflow-y-auto">
-                  {resultados.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5" onClick={() => elegirCliente(c)}>
-                        <span className="font-medium">{c.nombre_completo}</span>
-                        <span className="text-xs text-slate-500"> · {c.telefono}{c.dni ? ` · DNI ${c.dni}` : ""}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {!cliente && modoBuscar && resultados && (
+                resultados.length > 0 ? (
+                  <ul className="divide-y divide-slate-100 rounded-md border border-slate-200 dark:border-white/10 max-h-40 overflow-y-auto">
+                    {resultados.map((c) => (
+                      <li key={c.id}>
+                        <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5" onClick={() => elegirCliente(c)}>
+                          <span className="font-medium">{c.nombre_completo}</span>
+                          <span className="text-xs text-slate-500"> · {c.telefono}{c.dni ? ` · DNI ${c.dni}` : ""}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-500">Sin resultados. Usa “Registrar tutor nuevo”.</p>
+                )
               )}
 
               {cliente && (
@@ -333,20 +366,37 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
 
               {crearTutor && (
                 <>
-                  <p className="text-xs text-slate-500">
-                    {resultados?.length ? "¿No está en la lista? Regístralo:" : "Sin resultados. Registra al tutor:"}
-                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Campo id="nt-dni" label="DNI (opcional)">
+                      <Input
+                        id="nt-dni"
+                        value={nuevoTutor.dni}
+                        onChange={(e) => setNuevoTutor((t) => ({ ...t, dni: e.target.value }))}
+                        onBlur={(e) => revisarExistente("dni", e.target.value)}
+                      />
+                    </Campo>
+                    <Campo id="nt-tel" label="Teléfono">
+                      <Input
+                        id="nt-tel"
+                        value={nuevoTutor.telefono}
+                        onChange={(e) => setNuevoTutor((t) => ({ ...t, telefono: e.target.value }))}
+                        onBlur={(e) => revisarExistente("telefono", e.target.value)}
+                      />
+                    </Campo>
+                  </div>
                   <Campo id="nt-nombre" label="Nombre completo">
                     <Input id="nt-nombre" value={nuevoTutor.nombre} onChange={(e) => setNuevoTutor((t) => ({ ...t, nombre: e.target.value }))} />
                   </Campo>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Campo id="nt-tel" label="Teléfono">
-                      <Input id="nt-tel" value={nuevoTutor.telefono} onChange={(e) => setNuevoTutor((t) => ({ ...t, telefono: e.target.value }))} />
-                    </Campo>
-                    <Campo id="nt-dni" label="DNI (opcional)">
-                      <Input id="nt-dni" value={nuevoTutor.dni} onChange={(e) => setNuevoTutor((t) => ({ ...t, dni: e.target.value }))} />
-                    </Campo>
-                  </div>
+                  {coincidencia && (
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                      <span>
+                        Ya está registrado: <strong>{coincidencia.nombre_completo}</strong> · {coincidencia.telefono}
+                      </span>
+                      <Button variant="outline" size="sm" onClick={() => elegirCliente(coincidencia)}>
+                        Usar su ficha
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -354,7 +404,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
             <div className="flex flex-col gap-3">
               <span className="text-sm font-medium">Mascota</span>
               {!cliente && !crearTutor && (
-                <p className="text-xs text-slate-500">Primero busca al tutor: la mascota se elige de su ficha o se registra.</p>
+                <p className="text-xs text-slate-500">Elige al tutor: la mascota sale de su ficha o se registra.</p>
               )}
 
               {cliente && mascotas.length > 0 && (
