@@ -24,6 +24,8 @@ const CELDA: Record<Nivel, string> = {
 
 type Dialogo = "catalogo" | "carga";
 
+const SIN_URNAS: MatrizUrnas = { colores: [], filas: [] };
+
 /** Urnas como la planilla del negocio: filas tamaño y forma, columnas color (spec urnas-variantes). */
 export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
   const matriz = useRecurso(I.matrizUrnas);
@@ -39,7 +41,7 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <Button variant="operational" className="gap-1.5" onClick={() => setDialogo("catalogo")} disabled={!datos}>
+        <Button variant="operational" className="gap-1.5" onClick={() => setDialogo("catalogo")} disabled={matriz.cargando}>
           <LayoutGridIcon className="size-4" />
           Catálogo de urnas
         </Button>
@@ -49,7 +51,7 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
         </Button>
       </div>
 
-      {matriz.error && <p className="text-sm text-red-600">{matriz.error}</p>}
+      {matriz.error && <p className="text-sm text-red-600">No se pudo leer el stock de urnas: {matriz.error}</p>}
       {matriz.cargando && <p className="text-sm text-slate-400">Cargando urnas…</p>}
       {datos && datos.filas.length === 0 && (
         <p className="text-sm text-slate-500">
@@ -65,7 +67,7 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
         })}
 
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-4xl">
-        {dialogo === "catalogo" && datos && <CatalogoForm matriz={datos} onCerrar={cerrar} onHecho={hecho} />}
+        {dialogo === "catalogo" && <CatalogoForm matriz={datos ?? SIN_URNAS} onCerrar={cerrar} onHecho={hecho} />}
         {dialogo === "carga" && datos && <CargaForm matriz={datos} onCerrar={cerrar} onHecho={hecho} />}
       </Modal>
     </>
