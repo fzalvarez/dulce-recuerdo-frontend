@@ -1,4 +1,5 @@
-import type { Canal, EstadoCaso, MetodoPago, Modalidad, Monto, Servicio } from "../types";
+import type { TamanoUrna } from "@/features/inventario/types";
+import type { Canal, CasoFila, EstadoCaso, MetodoPago, Modalidad, Monto, Servicio } from "../types";
 
 const formatoSoles = new Intl.NumberFormat("es-PE", {
   style: "currency",
@@ -77,4 +78,25 @@ export function accionPrincipal(estado: EstadoCaso): { tipo: "realizado" | "entr
   if (estado === "AGENDADO") return { tipo: "realizado", texto: "Marcar realizado" };
   if (estado === "REALIZADO") return { tipo: "entregado", texto: "Marcar entregado" };
   return null;
+}
+
+// ---------- Urna (spec urnas-variantes) ----------
+
+/** Una cremación sin urna no se puede entregar sin elegirla. */
+export function faltaUrna(caso: CasoFila): boolean {
+  return caso.servicio === "CREMACION" && !caso.urna_id;
+}
+
+/** Se puede elegir o cambiar mientras la urna no haya salido del inventario. */
+export function urnaEditable(caso: CasoFila): boolean {
+  return caso.servicio === "CREMACION" && (caso.estado === "AGENDADO" || (caso.estado === "REALIZADO" && !caso.urna_id));
+}
+
+/** Tamaño de urna sugerido para un peso, según los rangos que manda el backend. */
+export function tamanoSugerido(
+  pesoKg: number,
+  rangos: { peso_max_kg: number | null; tamano: TamanoUrna }[]
+): TamanoUrna | null {
+  if (!Number.isFinite(pesoKg) || pesoKg <= 0) return null;
+  return rangos.find((r) => r.peso_max_kg === null || pesoKg <= r.peso_max_kg)?.tamano ?? null;
 }

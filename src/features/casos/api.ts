@@ -92,6 +92,7 @@ export interface Registro extends DatosServicio {
   precio_ajustado?: string;
   motivo_ajuste?: string;
   observaciones?: string;
+  urna_id: string | null;
 }
 
 export async function registrar(cuerpo: Registro): Promise<Caso> {
@@ -113,14 +114,21 @@ export async function pagosDe(casoId: string): Promise<Pago[]> {
 
 export async function marcarRealizado(
   id: string,
-  cuerpo: { fecha?: string; materiales: { articulo_id: string; cantidad: number }[] }
+  cuerpo: { fecha?: string; materiales: { articulo_id: string; cantidad: number }[]; urna_id: string | null }
 ): Promise<Caso> {
   const { data } = await api.post<Caso>(`/casos/${id}/realizado`, cuerpo);
   return data;
 }
 
-export async function marcarEntregado(id: string, fecha?: string): Promise<Caso> {
-  const { data } = await api.post<Caso>(`/entregas/${id}`, { fecha });
+/** Una cremación sin urna la elige al entregar (`urnaId`). */
+export async function marcarEntregado(id: string, fecha?: string, urnaId: string | null = null): Promise<Caso> {
+  const { data } = await api.post<Caso>(`/entregas/${id}`, { fecha, urna_id: urnaId });
+  return data;
+}
+
+/** Elige o cambia la urna. Si el caso ya está realizado, la urna sale del inventario. */
+export async function elegirUrna(id: string, urnaId: string): Promise<Caso> {
+  const { data } = await api.put<Caso>(`/casos/${id}/urna`, { urna_id: urnaId });
   return data;
 }
 

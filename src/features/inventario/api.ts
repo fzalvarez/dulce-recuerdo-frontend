@@ -1,5 +1,5 @@
 import api from "@/shared/lib/axios";
-import type { Articulo, Movimiento, Proveedor, TipoArticulo } from "./types";
+import type { Articulo, LineaUrna, MatrizUrnas, Movimiento, Proveedor, TamanoUrna, TipoArticulo } from "./types";
 
 const BASE = "/inventario/articulos";
 
@@ -32,3 +32,26 @@ export const proveedores = (id: string) => api.get<Proveedor[]>(`${BASE}/${id}/p
 export const crearProveedor = (id: string, c: ProveedorCuerpo) => api.post(`${BASE}/${id}/proveedores`, c);
 export const editarProveedor = (id: string, provId: string, c: ProveedorCuerpo) => api.patch(`${BASE}/${id}/proveedores/${provId}`, c);
 export const eliminarProveedor = (id: string, provId: string) => api.delete(`${BASE}/${id}/proveedores/${provId}`);
+
+// ---------- Urnas (spec urnas-variantes) ----------
+
+export const matrizUrnas = () => api.get<MatrizUrnas>("/inventario/urnas/matriz").then((r) => r.data);
+
+export const generarModelos = (c: {
+  linea: LineaUrna;
+  tamano: TamanoUrna;
+  formas: string[];
+  colores: string[] | null;
+  stock_minimo: number;
+}) => api.post<{ creadas: Articulo[]; existentes: Articulo[] }>("/inventario/urnas/modelos", c).then((r) => r.data);
+
+export const agregarColor = (c: { color: string; stock_minimo: number }) =>
+  api.post<Articulo[]>("/inventario/urnas/colores", c).then((r) => r.data);
+
+export const entradaUrnas = (c: {
+  fecha: string;
+  proveedor: string | null;
+  registrar_gasto: boolean;
+  motivo: string | null;
+  filas: { linea: LineaUrna; tamano: TamanoUrna; forma: string; costo_unitario: string; cantidades: Record<string, number> }[];
+}) => api.post<{ unidades: number; costo_total: string }>("/inventario/urnas/entradas", c).then((r) => r.data);

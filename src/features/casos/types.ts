@@ -1,5 +1,7 @@
 /** Tipos del módulo Casos, tal como los devuelve el backend (spec caso-flujo). */
 
+import type { LineaUrna, TamanoUrna } from "@/features/inventario/types";
+
 export type EstadoCaso = "AGENDADO" | "REALIZADO" | "ENTREGADO" | "CANCELADO";
 export type Servicio = "CREMACION" | "EUTANASIA";
 export type Modalidad = "PRESENCIAL" | "NO_PRESENCIAL" | "DOMICILIO";
@@ -32,6 +34,9 @@ export interface CasoFila {
   inicio: string | null;
   fecha_realizado: string | null;
   fecha_entrega: string | null;
+  urna_id: string | null;
+  /** Nombre de la urna elegida, si hay. */
+  urna: string | null;
   created_at: string;
 }
 
@@ -66,6 +71,7 @@ export interface Caso {
   monto_retenido: Monto | null;
   monto_devuelto: Monto | null;
   costo_materiales: Monto | null;
+  urna_id: string | null;
   created_at: string;
 }
 
@@ -117,6 +123,7 @@ export interface CasoDetalle {
   proxima_agenda: AgendaEntrada | null;
   materiales: Material[];
   margen: Monto | null;
+  urna: OpcionUrna | null;
 }
 
 export interface Pago {
@@ -134,6 +141,20 @@ export interface Opciones {
   veterinarias: { id: string; nombre: string; tiene_convenio: boolean }[];
   complementos: { id: string; nombre: string; precio: Monto }[];
   distritos: string[];
+  urnas: OpcionUrna[];
+  tamano_urna_por_rango: { rango_id: string; etiqueta: string; peso_max_kg: number | null; tamano: TamanoUrna }[];
+}
+
+/** Urna activa para elegir en un caso (spec urnas-variantes). */
+export interface OpcionUrna {
+  id: string;
+  nombre: string;
+  linea: LineaUrna;
+  tamano: TamanoUrna;
+  forma: string;
+  color: string;
+  /** Stock menos las urnas ya elegidas en casos agendados. */
+  disponible: number;
 }
 
 export interface ArticuloDisponible {

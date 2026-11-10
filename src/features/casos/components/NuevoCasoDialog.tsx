@@ -25,9 +25,11 @@ import {
   montoValido,
   SERVICIO_LABEL,
   soles,
+  tamanoSugerido,
 } from "../utils/casos";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "./Dialogos";
+import { SelectorUrna } from "./SelectorUrna";
 
 export function NuevoCasoDialog({
   open,
@@ -125,6 +127,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
   const [direccion, setDireccion] = useState("");
   const [canal, setCanal] = useState<"directo" | "veterinaria">("directo");
   const [vetId, setVetId] = useState("");
+  const [urnaId, setUrnaId] = useState("");
 
   // Agenda, precio y pago
   const [fecha, setFecha] = useState(hoyISO());
@@ -271,6 +274,7 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
           inicio: combinarFechaHora(fecha, hora),
           duracion_minutos: dur,
           pago_inicial: pagoInicial,
+          urna_id: esCremacion && urnaId ? urnaId : null,
           precio_ajustado: precioAjustado,
           motivo_ajuste: precioAjustado ? ajuste.motivo.trim() : undefined,
         });
@@ -543,6 +547,21 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
             </div>
           </div>
         </Seccion>
+
+        {esCremacion && (
+          <Seccion titulo="Urna">
+            <p className="text-xs text-slate-500 -mt-1">
+              Opcional ahora: se puede elegir después, hasta la entrega. El tamaño se sugiere según el peso.
+            </p>
+            <SelectorUrna
+              id="nc-urna"
+              urnas={opciones.urnas}
+              value={urnaId}
+              onChange={setUrnaId}
+              tamanoSugerido={tamanoSugerido(Number(peso), opciones.tamano_urna_por_rango)}
+            />
+          </Seccion>
+        )}
 
         <Seccion titulo="Fecha y hora">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

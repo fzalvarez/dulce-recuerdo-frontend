@@ -22,6 +22,7 @@ import { fechaCorta, hoyISO, soles } from "@/features/casos/utils/casos";
 import * as I from "../api";
 import { TIPO_LABEL, type Articulo, type Nivel, type TipoArticulo } from "../types";
 import { ProveedoresContenido } from "../components/ProveedoresDialog";
+import { UrnasPanel } from "../components/UrnasPanel";
 
 const NIVEL: Record<Nivel, { label: string; clase: string; barra: string }> = {
   OPTIMO: { label: "Óptimo", clase: "bg-emerald-50 text-emerald-700", barra: "bg-emerald-500" },
@@ -43,6 +44,7 @@ export default function InventarioPage() {
   const [tipo, setTipo] = useState<TipoArticulo | "todos">("todos");
   const [nivel, setNivel] = useState<Nivel | "todos">("todos");
   const [dialogo, setDialogo] = useState<Dialogo | null>(null);
+  const [vista, setVista] = useState<"articulos" | "urnas">("articulos");
   const cerrar = () => setDialogo(null);
   const hecho = () => {
     recurso.recargar();
@@ -68,7 +70,7 @@ export default function InventarioPage() {
       <Breadcrumbs items={[{ label: "Catálogos & Administración" }, { label: "Inventario" }]} />
       <ModuleHeader
         title="Inventario"
-        description="Urnas, marcos, placas, recuerdos, suministros y medicamentos. Cada modelo y tamaño es un artículo con su costo promedio."
+        description="Urnas, marcos, placas, recuerdos, suministros y medicamentos. Cada urna (línea, tamaño, forma y color) es un artículo con su costo promedio."
         actions={
           <Button variant="operational" className="gap-1.5 h-10" onClick={() => setDialogo({ tipo: "articulo", articulo: null })}>
             <PlusCircleIcon className="size-4" />
@@ -83,106 +85,133 @@ export default function InventarioPage() {
         <Kpi titulo="Bajo el mínimo" valor={String(enAlerta)} alerta={enAlerta > 0} />
       </section>
 
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1 max-w-md">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input className="pl-9" placeholder="Nombre, SKU, modelo o tamaño" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-        </div>
-        <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-          <SelectTrigger className="w-48" aria-label="Tipo"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los tipos</SelectItem>
-            {(Object.keys(TIPO_LABEL) as TipoArticulo[]).map((t) => (
-              <SelectItem key={t} value={t}>{TIPO_LABEL[t]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={nivel} onValueChange={(v) => setNivel(v as typeof nivel)}>
-          <SelectTrigger className="w-44" aria-label="Nivel"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los niveles</SelectItem>
-            {(Object.keys(NIVEL) as Nivel[]).map((n) => (
-              <SelectItem key={n} value={n}>{NIVEL[n].label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {recurso.error && <p className="text-sm text-red-600">{recurso.error}</p>}
-
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[920px]">
-          <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Artículo</th>
-              <th className="px-4 py-3 font-semibold">Tipo</th>
-              <th className="px-4 py-3 font-semibold">Stock</th>
-              <th className="px-4 py-3 font-semibold">Costo promedio</th>
-              <th className="px-4 py-3 font-semibold">Valor</th>
-              <th className="px-4 py-3 font-semibold text-right">Movimientos</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {visibles.map((a) => {
-              const pct = a.stock_minimo > 0 ? Math.min(100, (a.stock / (a.stock_minimo * 2)) * 100) : a.stock > 0 ? 100 : 0;
-              return (
-                <tr key={a.id} className={cn(!a.activo && "opacity-60")}>
-                  <td className="px-4 py-2.5">
-                    <button type="button" className="text-left" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
-                      <span className="block font-medium hover:text-brand-500">{a.nombre}</span>
-                      <span className="text-xs text-slate-500">
-                        {a.sku}
-                        {a.tamano ? ` · ${a.tamano}` : ""}
-                        {a.modelo ? ` · ${a.modelo}` : ""}
-                        {!a.activo ? " · inactivo" : ""}
-                      </span>
-                    </button>
-                  </td>
-                  <td className="px-4 py-2.5">{TIPO_LABEL[a.tipo]}</td>
-                  <td className="px-4 py-2.5 min-w-[160px]">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-semibold text-slate-900 dark:text-white">{a.stock} <span className="font-normal text-slate-500">/ mín. {a.stock_minimo}</span></span>
-                      <span className={cn("px-1.5 py-0.5 rounded-full text-[11px] font-semibold", NIVEL[a.nivel].clase)}>{NIVEL[a.nivel].label}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-                      <div className={cn("h-full", NIVEL[a.nivel].barra)} style={{ width: `${pct}%` }} />
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5">{soles(a.costo_promedio)}</td>
-                  <td className="px-4 py-2.5">{soles(a.valor_stock)}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button variant="ghost" size="icon-sm" title="Entrada (compra)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "entrada" })}>
-                        <ArrowDownToLineIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" title="Salida (consumo)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "salida" })}>
-                        <ArrowUpFromLineIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" title="Ajuste por conteo" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "ajuste" })}>
-                        <ScaleIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" title="Historial" onClick={() => setDialogo({ tipo: "historial", articulo: a })}>
-                        <HistoryIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" title="Proveedores" onClick={() => setDialogo({ tipo: "proveedores", articulo: a })}>
-                        <TruckIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
-                        <PencilIcon className="size-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {!recurso.cargando && visibles.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400">Sin artículos.</td>
-              </tr>
+      <div className="flex gap-1 border-b border-slate-200 dark:border-white/10">
+        {(
+          [
+            ["articulos", "Artículos"],
+            ["urnas", "Urnas por modelo y color"],
+          ] as const
+        ).map(([clave, texto]) => (
+          <button
+            key={clave}
+            type="button"
+            onClick={() => setVista(clave)}
+            className={cn(
+              "px-4 py-2 text-sm font-medium border-b-2 -mb-px",
+              vista === clave ? "border-brand-500 text-brand-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
-          </tbody>
-        </table>
+          >
+            {texto}
+          </button>
+        ))}
       </div>
+
+      {vista === "urnas" && <UrnasPanel onCambio={recurso.recargar} />}
+
+      {vista === "articulos" && (
+        <>
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1 max-w-md">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+              <Input className="pl-9" placeholder="Nombre, SKU, modelo o tamaño" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            </div>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
+              <SelectTrigger className="w-48" aria-label="Tipo"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los tipos</SelectItem>
+                {(Object.keys(TIPO_LABEL) as TipoArticulo[]).map((t) => (
+                  <SelectItem key={t} value={t}>{TIPO_LABEL[t]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={nivel} onValueChange={(v) => setNivel(v as typeof nivel)}>
+              <SelectTrigger className="w-44" aria-label="Nivel"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los niveles</SelectItem>
+                {(Object.keys(NIVEL) as Nivel[]).map((n) => (
+                  <SelectItem key={n} value={n}>{NIVEL[n].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {recurso.error && <p className="text-sm text-red-600">{recurso.error}</p>}
+
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[920px]">
+              <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Artículo</th>
+                  <th className="px-4 py-3 font-semibold">Tipo</th>
+                  <th className="px-4 py-3 font-semibold">Stock</th>
+                  <th className="px-4 py-3 font-semibold">Costo promedio</th>
+                  <th className="px-4 py-3 font-semibold">Valor</th>
+                  <th className="px-4 py-3 font-semibold text-right">Movimientos</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {visibles.map((a) => {
+                  const pct = a.stock_minimo > 0 ? Math.min(100, (a.stock / (a.stock_minimo * 2)) * 100) : a.stock > 0 ? 100 : 0;
+                  return (
+                    <tr key={a.id} className={cn(!a.activo && "opacity-60")}>
+                      <td className="px-4 py-2.5">
+                        <button type="button" className="text-left" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
+                          <span className="block font-medium hover:text-brand-500">{a.nombre}</span>
+                          <span className="text-xs text-slate-500">
+                            {a.sku}
+                            {!a.linea && a.tamano ? ` · ${a.tamano}` : ""}
+                            {a.modelo ? ` · ${a.modelo}` : ""}
+                            {!a.activo ? " · inactivo" : ""}
+                          </span>
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5">{TIPO_LABEL[a.tipo]}</td>
+                      <td className="px-4 py-2.5 min-w-[160px]">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-semibold text-slate-900 dark:text-white">{a.stock} <span className="font-normal text-slate-500">/ mín. {a.stock_minimo}</span></span>
+                          <span className={cn("px-1.5 py-0.5 rounded-full text-[11px] font-semibold", NIVEL[a.nivel].clase)}>{NIVEL[a.nivel].label}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                          <div className={cn("h-full", NIVEL[a.nivel].barra)} style={{ width: `${pct}%` }} />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">{soles(a.costo_promedio)}</td>
+                      <td className="px-4 py-2.5">{soles(a.valor_stock)}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="inline-flex gap-1">
+                          <Button variant="ghost" size="icon-sm" title="Entrada (compra)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "entrada" })}>
+                            <ArrowDownToLineIcon className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" title="Salida (consumo)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "salida" })}>
+                            <ArrowUpFromLineIcon className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" title="Ajuste por conteo" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "ajuste" })}>
+                            <ScaleIcon className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" title="Historial" onClick={() => setDialogo({ tipo: "historial", articulo: a })}>
+                            <HistoryIcon className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" title="Proveedores" onClick={() => setDialogo({ tipo: "proveedores", articulo: a })}>
+                            <TruckIcon className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setDialogo({ tipo: "articulo", articulo: a })}>
+                            <PencilIcon className="size-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!recurso.cargando && visibles.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">Sin artículos.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
         {dialogo?.tipo === "articulo" && <ArticuloForm articulo={dialogo.articulo} onCerrar={cerrar} onHecho={hecho} />}
@@ -264,6 +293,7 @@ function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | nu
         <DialogTitle>{articulo ? "Editar artículo" : "Nuevo artículo"}</DialogTitle>
         <DialogDescription>
           {articulo ? "El stock y el costo cambian solo con entradas, salidas y ajustes." : "Nace con stock 0. Carga el stock inicial con una entrada sin gasto."}
+          {!articulo && " Las urnas se crean en la pestaña “Urnas por modelo y color”."}
         </DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

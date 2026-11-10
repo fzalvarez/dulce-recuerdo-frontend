@@ -20,6 +20,10 @@ export interface Articulo {
   tipo: TipoArticulo;
   tamano: string | null;
   modelo: string | null;
+  /** Solo en urnas: línea + tamaño + forma + color identifican la urna. */
+  linea: LineaUrna | null;
+  forma: string | null;
+  color: string | null;
   stock: number;
   stock_minimo: number;
   nivel: Nivel;
@@ -58,4 +62,43 @@ export interface Movimiento {
   gasto_id: string | null;
   proveedor: string | null;
   motivo: string | null;
+}
+
+// ---------- Urnas (spec urnas-variantes) ----------
+
+export type LineaUrna = "SIN_VIDRIO" | "CON_VIDRIO";
+export type TamanoUrna = "PEQUENA" | "MEDIANA" | "GRANDE" | "GRANDE_ESPECIAL";
+
+export const LINEA_LABEL: Record<LineaUrna, string> = {
+  SIN_VIDRIO: "Sin vidrio (corte 45)",
+  CON_VIDRIO: "Con vidrio",
+};
+
+/** En este orden se muestran. */
+export const TAMANO_LABEL: Record<TamanoUrna, string> = {
+  PEQUENA: "Pequeña",
+  MEDIANA: "Mediana",
+  GRANDE: "Grande",
+  GRANDE_ESPECIAL: "Grande especial",
+};
+
+export interface CeldaUrna {
+  articulo_id: string;
+  stock: number;
+  /** Stock menos las urnas ya elegidas en casos agendados. */
+  disponible: number;
+  nivel: Nivel;
+  activo: boolean;
+}
+
+export interface FilaUrna {
+  linea: LineaUrna;
+  tamano: TamanoUrna;
+  forma: string;
+  celdas: Record<string, CeldaUrna>;
+}
+
+export interface MatrizUrnas {
+  colores: string[];
+  filas: FilaUrna[];
 }

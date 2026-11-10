@@ -1,6 +1,6 @@
 # Estado de las pantallas — dulce-recuerdo-frontend
 
-Actualizado el 2026-11-09 (Fase 9: conexión con el backend).
+Actualizado el 2026-11-10 (urnas por modelo y color; Fase 9: conexión con el backend).
 
 **Todas las pantallas leen y guardan en la API del backend.** No quedan datos de ejemplo
 en el código. Las reglas de negocio (precios, estados, reportes, alertas) las calcula el
@@ -15,16 +15,16 @@ PostgreSQL. Ver "Pendiente".
 |---|---|---|---|---|
 | `/auth/signin` | Inicio de sesión | Conectada | `POST /auth/login`, `GET /auth/me` | `auth-roles` |
 | `/` | Dashboard | Conectada | `GET /dashboard` | `reportes` §4.4 |
-| `/casos` | Casos | Conectada | `/casos/bandeja`, `/casos/opciones`, `POST /casos`, `/casos/{id}/detalle`, `/realizado`, `/cancelar`, `/precio`, `/casos/materiales`, `/pagos`, `/tarifas/calcular`, `/clientes`, `/mascotas` | `caso-flujo`, `tarifas`, `inventario` |
+| `/casos` | Casos | Conectada | `/casos/bandeja`, `/casos/opciones`, `POST /casos`, `/casos/{id}/detalle`, `/realizado`, `/cancelar`, `/precio`, `PUT /casos/{id}/urna`, `/casos/materiales`, `/pagos`, `/tarifas/calcular`, `/clientes`, `/mascotas` | `caso-flujo`, `tarifas`, `inventario`, `urnas-variantes` |
 | `/agenda` | Agenda | Conectada (día y semana, reprogramar) | `/agenda/calendario`, `PATCH /agenda/{id}` | `caso-flujo` §9 |
 | `/veterinarias` | Veterinarias | Conectada (convenio, precio propio, facturación) | `/veterinarias`, `/veterinarias/catalogo`, `/veterinarias/{id}/precios`, `/facturas-veterinaria` | `tarifas`, `facturacion` |
-| `/entregas` | Entregas | Conectada | `/entregas/pendientes`, `POST /entregas/{id}` | `caso-flujo` |
+| `/entregas` | Entregas | Conectada (elige la urna si falta) | `/entregas/pendientes`, `POST /entregas/{id}`, `/casos/opciones` | `caso-flujo`, `urnas-variantes` |
 | `/clientes` | Clientes | Conectada | `/clientes` | `ficha-cliente-mascota` |
 | `/mascotas` | Mascotas | Conectada | `/mascotas`, `/clientes` | `ficha-cliente-mascota` |
 | `/planes` | Planes y tarifas | Conectada | `/planes`, `/tarifas` | `tarifas` |
 | `/finanzas` | Ingresos y Gastos | Conectada | `/finanzas/*`, `/gastos` | `finanzas` |
 | `/vehiculos` | Vehículo | Conectada (ficha, SOAT, CITV, bitácora) | `/vehiculos`, `/vehiculos/{id}/eventos` | `finanzas` §2.4 |
-| `/inventario` | Inventario | Conectada (movimientos, proveedores) | `/inventario/*` | `inventario` |
+| `/inventario` | Inventario | Conectada (movimientos, proveedores; pestaña de urnas por modelo y color) | `/inventario/*`, `/inventario/urnas/*` | `inventario`, `urnas-variantes` |
 | `/activos` | Activos | Conectada | `/activos` | `inventario` §3 |
 | `/reportes/*` | Reportes | Conectada (9 reportes y 3 paneles) | `/reportes/*` | `reportes` |
 | `/usuarios` | Usuarios | Conectada | `/usuarios` | `auth-roles` |
@@ -51,6 +51,10 @@ PostgreSQL. Ver "Pendiente".
 - Finanzas: gastos fijos con monto real por mes; la categoría "Adicionales del personal" es nueva.
 - Abastecimiento: usa el consumo real de inventario, no recetas supuestas.
 - El menú agrupa Clientes y Mascotas bajo "Fichas".
+- Urnas: cada urna es línea + tamaño + forma + color. Se generan en bloque y se ven como la
+  planilla (Inventario → "Urnas por modelo y color"). En el caso se elige con un selector en
+  cascada; el tamaño se sugiere por el peso. Es opcional al registrar, pero una cremación no
+  se entrega sin urna.
 
 ## Pendiente
 

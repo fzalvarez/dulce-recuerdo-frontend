@@ -11,12 +11,20 @@ import type { CasoFila, EstadoCaso } from "../types";
 import {
   accionPrincipal,
   ESTADO_LABEL,
+  faltaUrna,
   fechaHora,
   MODALIDAD_LABEL,
   SERVICIO_LABEL,
   soles,
 } from "../utils/casos";
-import { CancelarDialog, PagoDialog, PrecioDialog, RealizadoDialog } from "../components/Dialogos";
+import {
+  CancelarDialog,
+  EntregaDialog,
+  PagoDialog,
+  PrecioDialog,
+  RealizadoDialog,
+  UrnaDialog,
+} from "../components/Dialogos";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { NuevoCasoDialog } from "../components/NuevoCasoDialog";
 import { DetalleCasoDialog, type AccionCaso } from "../components/DetalleCasoDialog";
@@ -57,7 +65,7 @@ export default function CasosPage() {
   const visibles = useMemo(() => casos.filter((c) => enFiltro(c.estado, filtro)), [casos, filtro]);
 
   const ejecutarAccion = async (caso: CasoFila, tipo: AccionCaso) => {
-    if (tipo === "entregado") {
+    if (tipo === "entregado" && !faltaUrna(caso)) {
       const ok = await ejecutar(() => casosApi.marcarEntregado(caso.id), "Entrega registrada. Caso cerrado.", "No se pudo registrar la entrega.");
       if (ok) recurso.recargar();
       return;
@@ -237,6 +245,8 @@ export default function CasosPage() {
       <RealizadoDialog caso={casoDe("realizado")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
       <CancelarDialog caso={casoDe("cancelar")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
       <PrecioDialog caso={casoDe("precio")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
+      <EntregaDialog caso={casoDe("entregado")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
+      <UrnaDialog caso={casoDe("urna")} onOpenChange={cerrarAccion} onHecho={recurso.recargar} />
     </>
   );
 }

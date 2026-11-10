@@ -15,10 +15,11 @@ import {
   MODALIDAD_LABEL,
   SERVICIO_LABEL,
   soles,
+  urnaEditable,
 } from "../utils/casos";
 import { Modal } from "./Dialogos";
 
-export type AccionCaso = "pago" | "realizado" | "entregado" | "cancelar" | "precio";
+export type AccionCaso = "pago" | "realizado" | "entregado" | "cancelar" | "precio" | "urna";
 
 export function DetalleCasoDialog({
   fila,
@@ -96,6 +97,12 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
           {fila.eutanasia_incluida && <Fila etiqueta="Eutanasia" valor="Incluida" />}
           {fila.distrito_origen && <Fila etiqueta="Distrito" valor={fila.distrito_origen} />}
           {d?.caso.direccion_origen && <Fila etiqueta="Dirección" valor={d.caso.direccion_origen} />}
+          {fila.servicio === "CREMACION" && (
+            <Fila
+              etiqueta="Urna"
+              valor={fila.urna ?? <span className="text-amber-700">Por elegir (hasta la entrega)</span>}
+            />
+          )}
           <Fila etiqueta="Agenda" valor={fechaHora(fila.inicio)} />
           {fila.fecha_realizado && <Fila etiqueta="Realizado" valor={fechaHora(fila.fecha_realizado)} />}
           {fila.fecha_entrega && <Fila etiqueta="Entregado" valor={fechaHora(fila.fecha_entrega)} />}
@@ -147,6 +154,11 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
         {abierto && (
           <Button variant="outline" onClick={() => onAccion("precio")}>
             Ajustar precio
+          </Button>
+        )}
+        {urnaEditable(fila) && (
+          <Button variant="outline" onClick={() => onAccion("urna")}>
+            {fila.urna_id ? "Cambiar urna" : "Elegir urna"}
           </Button>
         )}
         {fila.estado !== "CANCELADO" && Number(fila.saldo) > 0 && (
