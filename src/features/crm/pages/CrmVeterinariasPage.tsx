@@ -13,6 +13,7 @@ import { Modal } from "@/features/casos/components/Dialogos";
 import { eliminar, listar, type CrmVeterinaria, type Prioridad } from "../api";
 import { CrmVeterinariaForm } from "../components/CrmVeterinariaForm";
 import { MapaChico } from "../components/MapaChico";
+import { formatoTelefono, nombreTipo, resumenHorario } from "../utils/formato";
 
 const TODAS = "TODAS";
 const SIN_RUTA = "SIN_RUTA";
@@ -52,7 +53,7 @@ export default function CrmVeterinariasPage() {
       <Breadcrumbs items={[{ label: "CRM" }, { label: "Veterinarias" }]} />
       <ModuleHeader
         title="Veterinarias a visitar"
-        description="Ordenadas por ruta y distrito. Solo el nombre es obligatorio."
+        description="Ordenadas por ruta y distrito."
         actions={
           <Button variant="operational" className="gap-1.5 h-10" onClick={() => setEditando("nuevo")}>
             <PlusCircleIcon className="size-4" />
@@ -70,7 +71,7 @@ export default function CrmVeterinariasPage() {
           }}
         >
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input className="pl-9" placeholder="Nombre, teléfono, dirección o distrito (Enter)" value={texto} onChange={(e) => setTexto(e.target.value)} />
+          <Input className="pl-9" placeholder="Código, nombre, RUC, teléfono, dirección o distrito (Enter)" value={texto} onChange={(e) => setTexto(e.target.value)} />
         </form>
         {rutas.length > 0 && (
           <BotonesOpcion<string>
@@ -87,10 +88,10 @@ export default function CrmVeterinariasPage() {
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[900px]">
+        <table className="w-full text-left text-sm min-w-225">
           <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-semibold">Ruta</th>
+              <th className="px-4 py-3 font-semibold">Código / Ruta</th>
               <th className="px-4 py-3 font-semibold">Veterinaria</th>
               <th className="px-4 py-3 font-semibold">Distrito / Dirección</th>
               <th className="px-4 py-3 font-semibold">Teléfono</th>
@@ -104,8 +105,12 @@ export default function CrmVeterinariasPage() {
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
             {filas.map((v) => (
               <tr key={v.id} className="align-top">
-                <td className="px-4 py-3 font-semibold text-brand-600">{v.ruta ?? "—"}</td>
                 <td className="px-4 py-3">
+                  <div className="font-mono text-xs text-slate-500">{v.codigo}</div>
+                  <div className="font-semibold text-brand-600">{v.ruta ?? "—"}</div>
+                </td>
+                <td className="px-4 py-3">
+                  {v.tipo && <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{nombreTipo(v.tipo)}</div>}
                   <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
                     {v.nombre}
                     {v.web && (
@@ -114,13 +119,16 @@ export default function CrmVeterinariasPage() {
                       </a>
                     )}
                   </div>
-                  {(v.contacto || v.ruc) && (
-                    <div className="text-xs text-slate-600">
-                      {[v.contacto, v.ruc && `RUC ${v.ruc}`].filter(Boolean).join(" · ")}
+                  {(v.razon_social || v.ruc) && (
+                    <div className="text-xs text-slate-600">{[v.razon_social, v.ruc && `RUC ${v.ruc}`].filter(Boolean).join(" · ")}</div>
+                  )}
+                  {v.contacto && <div className="text-xs text-slate-600">Contacto: {v.contacto}</div>}
+                  {v.perfil && <div className="text-xs text-slate-500 line-clamp-2">{v.perfil}</div>}
+                  {v.fuente && (
+                    <div className="max-w-65 truncate text-[11px] text-slate-400" title={v.fuente}>
+                      Fuente: {v.fuente}
                     </div>
                   )}
-                  {v.perfil && <div className="text-xs text-slate-500 line-clamp-2">{v.perfil}</div>}
-                  {v.fuente && <div className="text-[11px] text-slate-400">Fuente: {v.fuente}</div>}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-1.5">
@@ -139,12 +147,12 @@ export default function CrmVeterinariasPage() {
                   {v.telefono || v.telefono2
                     ? [v.telefono, v.telefono2].filter(Boolean).map((t) => (
                         <a key={t} href={`tel:${t}`} className="block hover:text-brand-500">
-                          {t}
+                          {formatoTelefono(t)}
                         </a>
                       ))
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-xs">{v.horario ?? "—"}</td>
+                <td className="px-4 py-3 text-xs max-w-50">{resumenHorario(v.horario) ?? <span className="text-slate-400">Sin publicar</span>}</td>
                 <td className="px-4 py-3 text-xs">{v.urgencias_24h == null ? "—" : v.urgencias_24h ? "Sí" : "No"}</td>
                 <td className="px-4 py-3">
                   {v.prioridad ? (
@@ -155,7 +163,7 @@ export default function CrmVeterinariasPage() {
                     "—"
                   )}
                 </td>
-                <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 max-w-[220px]">
+                <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 max-w-55">
                   <span className="line-clamp-3">{v.estado_dato ?? "—"}</span>
                 </td>
                 <td className="px-4 py-3 text-right">

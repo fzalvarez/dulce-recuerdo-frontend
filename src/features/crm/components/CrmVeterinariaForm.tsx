@@ -1,33 +1,41 @@
 import { useState } from "react";
-import { CheckIcon, LoaderIcon, MapPinIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckIcon, LoaderIcon, MapPinIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { ComboFiltro } from "@/shared/components/common/ComboFiltro";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { cn } from "@/lib/utils";
 import {
+  coincidencias,
   crear,
   DISTRITOS_CRM,
   editar,
   geocodificar,
+  TIPOS,
+  type Coincidencia,
   type CrmVeterinaria,
   type CrmVeterinariaCuerpo,
+  type HorarioDia,
   type Prioridad,
+  type TipoVeterinaria,
   type Ubicacion,
 } from "../api";
+import { formatoTelefono } from "../utils/formato";
+import { HorarioEditor } from "./HorarioEditor";
 import { MapaChico } from "./MapaChico";
 
-const HORARIOS = ["24 horas", "Por confirmar", "Lun-Vie", "Lun-Sáb"];
-const FUENTES = ["Web", "Google Maps", "ChatGPT", "Referido"];
+const FUENTES = ["Web", "Google Maps", "ChatGPT", "VeterinariasPerú", "VetsPeruanas", "Referido"];
+const SIN_TIPO = "ninguno";
 
 type PrioridadOpcion = Prioridad | "SIN";
 type UrgenciasOpcion = "SI" | "NO" | "SIN";
 
-const TEXTOS = ["nombre", "ruc", "contacto", "telefono", "telefono2", "ruta", "direccion", "horario", "fuente", "web", "perfil", "estado_dato"] as const;
+const TEXTOS = ["nombre", "razon_social", "ruc", "contacto", "telefono", "telefono2", "ruta", "direccion", "fuente", "web", "perfil", "estado_dato"] as const;
 type CampoTexto = (typeof TEXTOS)[number];
 
 const soloDigitos = (max: number) => (v: string) => v.replace(/\D/g, "").slice(0, max);
@@ -35,7 +43,7 @@ const soloDigitos = (max: number) => (v: string) => v.replace(/\D/g, "").slice(0
 const LIMA: Ubicacion = { latitud: -12.0464, longitud: -77.0428 };
 const esDistrito = (v: string | null | undefined): v is string => !!v && (DISTRITOS_CRM as readonly string[]).includes(v);
 
-/** Alta y edición de una veterinaria del CRM. Solo el nombre es obligatorio. */
+/** Alta y edición de una veterinaria del CRM. Obligatorios: nombre y distrito (da el código). */
 export function CrmVeterinariaForm({
   veterinaria,
   onCerrar,
@@ -49,6 +57,8 @@ export function CrmVeterinariaForm({
     () => Object.fromEntries(TEXTOS.map((k) => [k, veterinaria?.[k] ?? ""])) as Record<CampoTexto, string>
   );
   const [distrito, setDistrito] = useState<string | null>(esDistrito(veterinaria?.distrito) ? veterinaria!.distrito! : null);
+  const [tipo, setTipo] = useState<TipoVeterinaria | null>(veterinaria?.tipo ?? null);
+  const [horario, setHorario] = useState<HorarioDia[] | null>(veterinaria?.horario ?? null);
   const [prioridad, setPrioridad] = useState<PrioridadOpcion>(veterinaria?.prioridad ?? "SIN");
   const [urgencias, setUrgencias] = useState<UrgenciasOpcion>(
     veterinaria?.urgencias_24h == null ? "SIN" : veterinaria.urgencias_24h ? "SI" : "NO"
@@ -62,18 +72,21 @@ export function CrmVeterinariaForm({
   const [propuesta, setPropuesta] = useState<Ubicacion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
+  // Duplicados encontrados al guardar; con la lista a la vista, el segundo clic guarda igual.
+  const [duplicados, setDuplicados] = useState<Coincidencia[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const set = (k: CampoTexto, filtro?: (v: string) => string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const valor = filtro ? filtro(e.target.value) : e.target.value;
     setForm((f) => ({ ...f, [k]: valor }));
+    if (k === "telefono" || k === "telefono2" || k === "ruc") setDuplicados(null);
   };
 
   const campo = (
     k: CampoTexto,
     label: string,
-    extra?: { lista?: string; placeholder?: string; digitos?: number; className?: string }
+    extra?: { lista?: string; placeholder?: string; digitos?: number; telefono?: boolean; className?: string }
   ) => (
     <div className={cn("space-y-1", extra?.className)}>
       <Label htmlFor={`crm-${k}`} className="text-xs">
@@ -81,7 +94,7 @@ export function CrmVeterinariaForm({
       </Label>
       <Input
         id={`crm-${k}`}
-        value={form[k]}
+        value={extra?.telefono ? formatoTelefono(form[k]) : form[k]}
         onChange={set(k, extra?.digitos ? soloDigitos(extra.digitos) : undefined)}
         list={extra?.lista}
         placeholder={extra?.placeholder}
@@ -115,25 +128,45 @@ export function CrmVeterinariaForm({
     setAviso(null);
   };
 
+  const todo24h = !!horario?.every((d) => d.estado === "24H");
+
   const guardar = async () => {
     if (!form.nombre.trim()) return setError("El nombre es obligatorio.");
+    if (!distrito) return setError("El distrito es obligatorio.");
     if (propuesta) return setError("Confirma o cancela la ubicación del mapa antes de guardar.");
     if (form.ruc && form.ruc.length !== 11) return setError("El RUC debe tener 11 números.");
+    if (horario?.some((d) => d.estado === "ABIERTO" && (!d.abre || !d.cierra)))
+      return setError("Completa la hora de apertura y cierre de los días abiertos.");
     setError(null);
     setGuardando(true);
+
     const texto = (k: CampoTexto) => form[k].trim() || null;
+    const telefonos = [texto("telefono"), texto("telefono2")].filter((t): t is string => !!t);
+
+    // Aviso de duplicados (R14): la primera vez muestra la lista; el segundo clic guarda igual.
+    if (duplicados === null && (telefonos.length || texto("ruc"))) {
+      const encontrados = await coincidencias(telefonos, texto("ruc"), veterinaria?.id).catch(() => []);
+      if (encontrados.length) {
+        setDuplicados(encontrados);
+        setGuardando(false);
+        return;
+      }
+    }
+
     const cuerpo: CrmVeterinariaCuerpo = {
       nombre: form.nombre.trim(),
+      distrito,
+      tipo,
+      razon_social: texto("razon_social"),
       ruc: texto("ruc"),
       contacto: texto("contacto"),
       telefono: texto("telefono"),
       telefono2: texto("telefono2"),
       ruta: texto("ruta"),
-      distrito,
       direccion: texto("direccion"),
       latitud: ubicacion?.latitud ?? null,
       longitud: ubicacion?.longitud ?? null,
-      horario: texto("horario"),
+      horario,
       fuente: texto("fuente"),
       web: texto("web"),
       perfil: texto("perfil"),
@@ -156,34 +189,49 @@ export function CrmVeterinariaForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{veterinaria ? "Editar veterinaria" : "Nueva veterinaria"}</DialogTitle>
-        <DialogDescription>Solo el nombre es obligatorio.</DialogDescription>
+        <DialogTitle>
+          {veterinaria ? "Editar veterinaria" : "Nueva veterinaria"}
+          {veterinaria && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">{veterinaria.codigo}</span>}
+        </DialogTitle>
+        <DialogDescription>
+          Obligatorios: nombre y distrito.{!veterinaria && " El código (p. ej. ATE-001) se asigna al guardar."}
+        </DialogDescription>
       </DialogHeader>
 
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-3 gap-y-2.5 max-h-[72vh] overflow-y-auto px-0.5 pb-1">
         {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-4" })}
         {campo("ruta", "Ruta", { placeholder: "R1, R2…", className: "col-span-2 sm:col-span-2" })}
 
+        <div className="col-span-2 sm:col-span-2 space-y-1">
+          <Label htmlFor="crm-tipo" className="text-xs">
+            Tipo
+          </Label>
+          <Select value={tipo ?? SIN_TIPO} onValueChange={(v) => setTipo(v === SIN_TIPO ? null : (v as TipoVeterinaria))}>
+            <SelectTrigger id="crm-tipo" className="w-full h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={SIN_TIPO}>Sin definir</SelectItem>
+              {TIPOS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {campo("razon_social", "Razón social", { placeholder: "EMPRESA S.A.C.", className: "col-span-2 sm:col-span-2" })}
         {campo("ruc", "RUC", { digitos: 11, placeholder: "11 números", className: "col-span-2 sm:col-span-2" })}
-        {campo("contacto", "Persona de contacto", { placeholder: "Nombre y cargo", className: "col-span-2 sm:col-span-4" })}
 
-        {campo("telefono", "Teléfono 1", { digitos: 15, className: "col-span-1 sm:col-span-2" })}
-        {campo("telefono2", "Teléfono 2", { digitos: 15, className: "col-span-1 sm:col-span-2" })}
-        {campo("horario", "Horario", { lista: "crm-horarios", placeholder: "24 horas, Lun-Vie…", className: "col-span-2 sm:col-span-2" })}
+        {campo("contacto", "Persona de contacto", { placeholder: "Nombre y cargo", className: "col-span-2 sm:col-span-2" })}
+        {campo("telefono", "Teléfono 1", { digitos: 15, telefono: true, placeholder: "982 874 438", className: "col-span-1 sm:col-span-2" })}
+        {campo("telefono2", "Teléfono 2", { digitos: 15, telefono: true, placeholder: "01 354 5655", className: "col-span-1 sm:col-span-2" })}
 
         <div className="col-span-2 sm:col-span-2 space-y-1">
           <Label htmlFor="crm-distrito" className="text-xs">
-            Distrito
+            Distrito *
           </Label>
-          <ComboFiltro
-            id="crm-distrito"
-            value={distrito}
-            opciones={DISTRITOS_CRM}
-            placeholder="Escribe: S, San…"
-            onChange={(v) => {
-              setDistrito(v);
-            }}
-          />
+          <ComboFiltro id="crm-distrito" value={distrito} opciones={DISTRITOS_CRM} placeholder="Escribe: S, San…" onChange={setDistrito} />
         </div>
         <div className="col-span-2 sm:col-span-4 space-y-1">
           <Label htmlFor="crm-direccion" className="text-xs">
@@ -252,6 +300,11 @@ export function CrmVeterinariaForm({
           )
         )}
 
+        <div className="col-span-2 sm:col-span-6 space-y-1 rounded-lg border border-slate-200 p-2.5">
+          <Label className="text-xs">Horario</Label>
+          <HorarioEditor value={horario} onChange={setHorario} />
+        </div>
+
         <div className="col-span-2 sm:col-span-3 space-y-1">
           <Label className="text-xs">Prioridad</Label>
           <BotonesOpcion<PrioridadOpcion>
@@ -280,10 +333,15 @@ export function CrmVeterinariaForm({
               { value: "SIN", label: "Sin dato" },
             ]}
           />
+          {todo24h && urgencias !== "SI" && (
+            <button type="button" className="text-[11px] text-brand-600 hover:underline" onClick={() => setUrgencias("SI")}>
+              El horario es 24 h todos los días: ¿marcar «Sí»?
+            </button>
+          )}
         </div>
 
-        {campo("fuente", "Fuente", { lista: "crm-fuentes", placeholder: "Web, Google Maps…", className: "col-span-2 sm:col-span-2" })}
-        {campo("web", "Web", { placeholder: "www.veterinaria.pe", className: "col-span-2 sm:col-span-4" })}
+        {campo("fuente", "Fuente", { lista: "crm-fuentes", placeholder: "Nombre o URL de donde salió el dato", className: "col-span-2 sm:col-span-3" })}
+        {campo("web", "Web", { placeholder: "www.veterinaria.pe", className: "col-span-2 sm:col-span-3" })}
 
         <div className="col-span-2 sm:col-span-3 space-y-1">
           <Label htmlFor="crm-perfil" className="text-xs">
@@ -305,11 +363,6 @@ export function CrmVeterinariaForm({
           />
         </div>
 
-        <datalist id="crm-horarios">
-          {HORARIOS.map((h) => (
-            <option key={h} value={h} />
-          ))}
-        </datalist>
         <datalist id="crm-fuentes">
           {FUENTES.map((f) => (
             <option key={f} value={f} />
@@ -317,13 +370,29 @@ export function CrmVeterinariaForm({
         </datalist>
       </div>
 
+      {duplicados && duplicados.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <p className="flex items-center gap-1.5 font-semibold">
+            <AlertTriangleIcon className="size-3.5" />
+            Posible duplicado
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {duplicados.map((d) => (
+              <li key={`${d.id}-${d.campo}`}>
+                <span className="font-mono">{d.codigo}</span> {d.nombre} — mismo {d.campo === "ruc" ? "RUC" : "teléfono"} (
+                {d.campo === "ruc" ? d.valor : formatoTelefono(d.valor)})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
         <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
           Cancelar
         </Button>
         <Button variant="operational" onClick={guardar} disabled={guardando}>
-          {guardando ? "Guardando…" : "Guardar"}
+          {guardando ? "Guardando…" : duplicados?.length ? "Guardar igual" : "Guardar"}
         </Button>
       </DialogFooter>
     </>

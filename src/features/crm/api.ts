@@ -1,8 +1,18 @@
 import api from "@/shared/lib/axios";
 
 export type Prioridad = "ALTA" | "MEDIA" | "BAJA";
+export type TipoVeterinaria = "VETERINARIA" | "CLINICA" | "PET_SHOP" | "MUNICIPAL" | "DISTRIBUIDORA" | "POR_CONFIRMAR";
 
-/** Distritos que cubre el comercial. Espejo de `DISTRITOS_CRM` del backend (spec crm-veterinarias, R9). */
+export const TIPOS: { value: TipoVeterinaria; label: string }[] = [
+  { value: "VETERINARIA", label: "Veterinaria" },
+  { value: "CLINICA", label: "Clínica" },
+  { value: "PET_SHOP", label: "Pet shop / Spa" },
+  { value: "MUNICIPAL", label: "Municipal" },
+  { value: "DISTRIBUIDORA", label: "Distribuidora / Farmacia" },
+  { value: "POR_CONFIRMAR", label: "Por confirmar" },
+];
+
+/** Distritos que cubre el comercial. Espejo de `PREFIJOS_DISTRITO` del backend (spec crm-veterinarias, R9). */
 export const DISTRITOS_CRM = [
   "Santiago de Surco",
   "San Borja",
@@ -20,10 +30,24 @@ export const DISTRITOS_CRM = [
   "Santa Anita",
 ] as const;
 
-/** Veterinaria a visitar por el comercial (backend: spec crm-veterinarias). Solo `nombre` es obligatorio. */
+export const DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"] as const;
+export type Dia = (typeof DIAS)[number];
+
+/** Un día del horario (R13). `abre`/`cierra` en HH:MM solo si está ABIERTO. */
+export interface HorarioDia {
+  dia: Dia;
+  estado: "ABIERTO" | "24H" | "CERRADO";
+  abre: string | null;
+  cierra: string | null;
+}
+
+/** Veterinaria a visitar por el comercial (backend: spec crm-veterinarias). Obligatorios: nombre y distrito. */
 export interface CrmVeterinaria {
   id: string;
+  codigo: string;
   nombre: string;
+  tipo: TipoVeterinaria | null;
+  razon_social: string | null;
   ruc: string | null;
   contacto: string | null;
   telefono: string | null;
@@ -32,7 +56,7 @@ export interface CrmVeterinaria {
   distrito: string | null;
   latitud: number | null;
   longitud: number | null;
-  horario: string | null;
+  horario: HorarioDia[] | null;
   prioridad: Prioridad | null;
   urgencias_24h: boolean | null;
   perfil: string | null;
@@ -42,7 +66,15 @@ export interface CrmVeterinaria {
   ruta: string | null;
 }
 
-export type CrmVeterinariaCuerpo = Omit<CrmVeterinaria, "id">;
+export type CrmVeterinariaCuerpo = Omit<CrmVeterinaria, "id" | "codigo" | "distrito"> & { distrito: string };
+
+export interface Coincidencia {
+  id: string;
+  codigo: string;
+  nombre: string;
+  campo: "telefono" | "ruc";
+  valor: string;
+}
 
 const URL = "/crm/veterinarias";
 
@@ -52,6 +84,15 @@ export const crear = (c: CrmVeterinariaCuerpo) => api.post<CrmVeterinaria>(URL, 
 export const editar = (id: string, c: CrmVeterinariaCuerpo) => api.patch<CrmVeterinaria>(`${URL}/${id}`, c);
 export const eliminar = (id: string) => api.delete(`${URL}/${id}`);
 
+/** Otras veterinarias con el mismo teléfono o RUC (R14). Solo avisa. */
+export const coincidencias = (telefonos: string[], ruc: string | null, excluirId?: string) =>
+  api
+    .get<Coincidencia[]>(`${URL}/coincidencias`, {
+      params: { telefono: telefonos, ruc: ruc ?? undefined, excluir_id: excluirId },
+      paramsSerializer: { indexes: null }, // telefono=1&telefono=2
+    })
+    .then((r) => r.data);
+
 export interface Ubicacion {
   latitud: number;
   longitud: number;
@@ -59,7 +100,7 @@ export interface Ubicacion {
 
 /**
  * Busca la dirección en OpenStreetMap (Nominatim). Devuelve null si no la encuentra.
- * Uso liviano: una búsqueda por clic o al guardar, nunca en cada tecla.
+ * Uso liviano: una búsqueda por clic, nunca en cada tecla.
  */
 export async function geocodificar(direccion: string, distrito: string | null): Promise<Ubicacion | null> {
   const consulta = [direccion, distrito, "Lima", "Perú"].filter(Boolean).join(", ");
