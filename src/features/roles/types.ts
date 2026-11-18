@@ -1,5 +1,5 @@
-/** Los cuatro roles son fijos: no se crean ni se borran (spec roles.md, R1). */
-export type RolId = "root" | "admin" | "operador1" | "operador2";
+/** Los roles son fijos: no se crean ni se borran (spec roles.md, R1). */
+export type RolId = "root" | "admin" | "operador1" | "operador2" | "comercial";
 
 /** Identificador de módulo = primer segmento de su ruta (`/casos` → `casos`). */
 export type ModuloId =
@@ -18,7 +18,8 @@ export type ModuloId =
   | "activos"
   | "vehiculos"
   | "usuarios"
-  | "configuracion";
+  | "configuracion"
+  | "crm";
 
 export interface RolDef {
   id: RolId;

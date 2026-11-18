@@ -1,6 +1,6 @@
 # Estado de las pantallas — dulce-recuerdo-frontend
 
-Actualizado el 2026-11-10 (urnas por modelo y color; Fase 9: conexión con el backend).
+Actualizado el 2026-11-18 (CRM de veterinarias y rol comercial; antes: urnas por modelo y color y Fase 9).
 
 **Todas las pantallas leen y guardan en la API del backend.** No quedan datos de ejemplo
 en el código. Las reglas de negocio (precios, estados, reportes, alertas) las calcula el
@@ -31,6 +31,7 @@ PostgreSQL. Ver "Pendiente".
 | `/usuarios/roles` | Roles y permisos | Conectada | `/roles` | `auth-roles` |
 | `/servicios` | Servicios | Placeholder | (`/servicios` existe, pero el caso no lo usa) | — |
 | `/configuracion` | Configuración | Placeholder | — | — |
+| `/crm/veterinarias` | CRM › Veterinarias a visitar | Conectada (filtro por ruta; el rol `comercial` solo ve el CRM) | `/crm/veterinarias` | `crm-veterinarias` |
 
 ## Cómo está hecho
 

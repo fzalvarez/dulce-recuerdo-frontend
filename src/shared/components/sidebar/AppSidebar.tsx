@@ -16,6 +16,7 @@ import {
   WalletIcon,
   WrenchIcon,
   ChartColumnIcon,
+  MapPinnedIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -36,6 +37,11 @@ const DESPEDIDAS_ITEMS = [
 const ATENCION_VETERINARIA_ITEMS = [
   { label: "Clientes", icon: Building2Icon, to: "/clientes" },
   { label: "Mascotas", icon: PawPrintIcon, to: "/mascotas" },
+];
+
+// CRM: veterinarias que visita el comercial (el rol comercial solo ve esta sección).
+const CRM_ITEMS = [
+  { label: "Veterinarias", icon: MapPinnedIcon, to: "/crm/veterinarias" },
 ];
 
 // Reportes de revisión de la empresa (cada 3 o 6 meses).
@@ -116,6 +122,7 @@ export function AppSidebar() {
     { titulo: "Fichas", items: ATENCION_VETERINARIA_ITEMS },
     { titulo: "Finanzas", items: FINANZAS_ITEMS },
     { titulo: "Reportes", items: REPORTES_ITEMS },
+    { titulo: "CRM", items: CRM_ITEMS },
     { titulo: "Catálogos & Administración", items: CATALOGO_ITEMS },
   ];
 

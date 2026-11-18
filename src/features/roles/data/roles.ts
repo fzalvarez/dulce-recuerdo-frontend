@@ -18,14 +18,16 @@ export const MODULOS: ModuloDef[] = [
   { id: "vehiculos", nombre: "Vehículo", ruta: "/vehiculos", grupo: "Catálogos & Administración" },
   { id: "usuarios", nombre: "Usuarios", ruta: "/usuarios", grupo: "Catálogos & Administración" },
   { id: "configuracion", nombre: "Configuración", ruta: "/configuracion", grupo: "General" },
+  { id: "crm", nombre: "CRM", ruta: "/crm/veterinarias", grupo: "CRM" },
 ];
 
-/** Los cuatro roles fijos (spec roles.md, R1). */
+/** Los roles fijos (spec roles.md, R1). */
 export const ROLES: RolDef[] = [
   { id: "root", nombre: "Root" },
   { id: "admin", nombre: "Admin" },
   { id: "operador1", nombre: "Operador 1" },
   { id: "operador2", nombre: "Operador 2" },
+  { id: "comercial", nombre: "Comercial" },
 ];
 
 /** Módulos que el rol no puede perder (spec roles.md, R3). */

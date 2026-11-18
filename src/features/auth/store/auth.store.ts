@@ -8,7 +8,7 @@ interface JwtPayload {
   sub?: string;
   name?: string;
   uid?: string;
-  /** Rol del usuario: root | admin | operador1 | operador2. */
+  /** Rol del usuario: root | admin | operador1 | operador2 | comercial. */
   rol?: string;
 }
 

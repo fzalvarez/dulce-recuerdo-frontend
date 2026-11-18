@@ -48,12 +48,13 @@ import type { RolId } from "@/features/roles/types";
 
 type Rol = RolId;
 
-// Colores de los cuatro roles fijos (spec roles.md, R1). Nombres en ../../roles/data/roles.ts
+// Colores de los roles fijos (spec roles.md, R1). Nombres en ../../roles/data/roles.ts
 const BADGE_ROL: Record<RolId, string> = {
   root: "bg-violet-100 text-violet-700",
   admin: "bg-brand-100 text-brand-700",
   operador1: "bg-emerald-100 text-emerald-700",
   operador2: "bg-amber-100 text-amber-700",
+  comercial: "bg-sky-100 text-sky-700",
 };
 
 function rolMeta(rol: Rol) {
