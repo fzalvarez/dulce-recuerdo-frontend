@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LoaderIcon, MapPinIcon } from "lucide-react";
+import { CheckIcon, LoaderIcon, MapPinIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +26,13 @@ const FUENTES = ["Web", "Google Maps", "ChatGPT", "Referido"];
 
 type PrioridadOpcion = Prioridad | "SIN";
 type UrgenciasOpcion = "SI" | "NO" | "SIN";
-type Busqueda = "inactiva" | "buscando" | "no-encontrada";
 
-const TEXTOS = ["nombre", "telefono", "telefono2", "ruta", "direccion", "horario", "fuente", "web", "perfil", "estado_dato"] as const;
+const TEXTOS = ["nombre", "ruc", "contacto", "telefono", "telefono2", "ruta", "direccion", "horario", "fuente", "web", "perfil", "estado_dato"] as const;
 type CampoTexto = (typeof TEXTOS)[number];
 
-const soloDigitos = (v: string) => v.replace(/\D/g, "").slice(0, 15);
+const soloDigitos = (max: number) => (v: string) => v.replace(/\D/g, "").slice(0, max);
+// Centro de Lima, si no se encuentra ni la dirección ni el distrito.
+const LIMA: Ubicacion = { latitud: -12.0464, longitud: -77.0428 };
 const esDistrito = (v: string | null | undefined): v is string => !!v && (DISTRITOS_CRM as readonly string[]).includes(v);
 
 /** Alta y edición de una veterinaria del CRM. Solo el nombre es obligatorio. */
@@ -57,24 +58,22 @@ export function CrmVeterinariaForm({
       ? { latitud: veterinaria.latitud, longitud: veterinaria.longitud }
       : null
   );
-  const [busqueda, setBusqueda] = useState<Busqueda>("inactiva");
+  // Punto en edición: sale de "Ubicar" o de "Ajustar"; se guarda solo al confirmarlo.
+  const [propuesta, setPropuesta] = useState<Ubicacion | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const set = (k: CampoTexto, filtro?: (v: string) => string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const valor = filtro ? filtro(e.target.value) : e.target.value;
     setForm((f) => ({ ...f, [k]: valor }));
-    // Si cambia la dirección, la ubicación anterior ya no vale.
-    if (k === "direccion") {
-      setUbicacion(null);
-      setBusqueda("inactiva");
-    }
   };
 
   const campo = (
     k: CampoTexto,
     label: string,
-    extra?: { lista?: string; placeholder?: string; telefono?: boolean; className?: string }
+    extra?: { lista?: string; placeholder?: string; digitos?: number; className?: string }
   ) => (
     <div className={cn("space-y-1", extra?.className)}>
       <Label htmlFor={`crm-${k}`} className="text-xs">
@@ -83,40 +82,57 @@ export function CrmVeterinariaForm({
       <Input
         id={`crm-${k}`}
         value={form[k]}
-        onChange={set(k, extra?.telefono ? soloDigitos : undefined)}
+        onChange={set(k, extra?.digitos ? soloDigitos(extra.digitos) : undefined)}
         list={extra?.lista}
         placeholder={extra?.placeholder}
-        inputMode={extra?.telefono ? "numeric" : undefined}
+        inputMode={extra?.digitos ? "numeric" : undefined}
         className="h-9"
       />
     </div>
   );
 
-  const ubicar = async (): Promise<Ubicacion | null> => {
+  // Busca la dirección y deja el punto listo para mover. Si no la encuentra, parte del distrito.
+  const ubicar = async () => {
     const direccion = form.direccion.trim();
-    if (!direccion) return null;
-    setBusqueda("buscando");
-    const encontrada = await geocodificar(direccion, distrito).catch(() => null);
-    setUbicacion(encontrada);
-    setBusqueda(encontrada ? "inactiva" : "no-encontrada");
-    return encontrada;
+    if (!direccion) return;
+    setBuscando(true);
+    const exacta = await geocodificar(direccion, distrito).catch(() => null);
+    const aprox = exacta ? null : distrito ? await geocodificar(distrito, null).catch(() => null) : null;
+    setBuscando(false);
+    setPropuesta(exacta ?? aprox ?? LIMA);
+    setAviso(
+      exacta
+        ? null
+        : aprox
+          ? `No se encontró la dirección exacta: el punto está en ${distrito}. Muévelo al lugar correcto.`
+          : "No se encontró la dirección. Mueve el punto al lugar correcto."
+    );
+  };
+
+  const confirmarUbicacion = () => {
+    setUbicacion(propuesta);
+    setPropuesta(null);
+    setAviso(null);
   };
 
   const guardar = async () => {
     if (!form.nombre.trim()) return setError("El nombre es obligatorio.");
+    if (propuesta) return setError("Confirma o cancela la ubicación del mapa antes de guardar.");
+    if (form.ruc && form.ruc.length !== 11) return setError("El RUC debe tener 11 números.");
+    setError(null);
     setGuardando(true);
-    // Al guardar una dirección nueva, se busca en el mapa (si no se encuentra, se guarda igual).
-    const punto = ubicacion ?? (form.direccion.trim() ? await ubicar() : null);
     const texto = (k: CampoTexto) => form[k].trim() || null;
     const cuerpo: CrmVeterinariaCuerpo = {
       nombre: form.nombre.trim(),
+      ruc: texto("ruc"),
+      contacto: texto("contacto"),
       telefono: texto("telefono"),
       telefono2: texto("telefono2"),
       ruta: texto("ruta"),
       distrito,
       direccion: texto("direccion"),
-      latitud: punto?.latitud ?? null,
-      longitud: punto?.longitud ?? null,
+      latitud: ubicacion?.latitud ?? null,
+      longitud: ubicacion?.longitud ?? null,
       horario: texto("horario"),
       fuente: texto("fuente"),
       web: texto("web"),
@@ -148,8 +164,11 @@ export function CrmVeterinariaForm({
         {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-4" })}
         {campo("ruta", "Ruta", { placeholder: "R1, R2…", className: "col-span-2 sm:col-span-2" })}
 
-        {campo("telefono", "Teléfono 1", { telefono: true, className: "col-span-1 sm:col-span-2" })}
-        {campo("telefono2", "Teléfono 2", { telefono: true, className: "col-span-1 sm:col-span-2" })}
+        {campo("ruc", "RUC", { digitos: 11, placeholder: "11 números", className: "col-span-2 sm:col-span-2" })}
+        {campo("contacto", "Persona de contacto", { placeholder: "Nombre y cargo", className: "col-span-2 sm:col-span-4" })}
+
+        {campo("telefono", "Teléfono 1", { digitos: 15, className: "col-span-1 sm:col-span-2" })}
+        {campo("telefono2", "Teléfono 2", { digitos: 15, className: "col-span-1 sm:col-span-2" })}
         {campo("horario", "Horario", { lista: "crm-horarios", placeholder: "24 horas, Lun-Vie…", className: "col-span-2 sm:col-span-2" })}
 
         <div className="col-span-2 sm:col-span-2 space-y-1">
@@ -162,10 +181,7 @@ export function CrmVeterinariaForm({
             opciones={DISTRITOS_CRM}
             placeholder="Escribe: S, San…"
             onChange={(v) => {
-              if (v === distrito) return;
               setDistrito(v);
-              setUbicacion(null);
-              setBusqueda("inactiva");
             }}
           />
         </div>
@@ -180,25 +196,60 @@ export function CrmVeterinariaForm({
               variant="outline"
               className="h-9 shrink-0 gap-1.5"
               onClick={ubicar}
-              disabled={!form.direccion.trim() || busqueda === "buscando"}
+              disabled={!form.direccion.trim() || buscando}
               title="Buscar la dirección en el mapa"
             >
-              {busqueda === "buscando" ? <LoaderIcon className="size-4 animate-spin" /> : <MapPinIcon className="size-4" />}
+              {buscando ? <LoaderIcon className="size-4 animate-spin" /> : <MapPinIcon className="size-4" />}
               <span className="hidden sm:inline">Ubicar</span>
             </Button>
           </div>
         </div>
 
-        {(ubicacion || busqueda === "no-encontrada") && (
-          <div className="col-span-2 sm:col-span-6">
-            {ubicacion ? (
-              <MapaChico {...ubicacion} className="h-40" />
-            ) : (
-              <p className="rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                No se encontró la dirección en el mapa. Revisa la dirección o el distrito; se puede guardar igual.
-              </p>
-            )}
+        {propuesta ? (
+          <div className="col-span-2 sm:col-span-6 space-y-2">
+            <MapaChico {...propuesta} onMover={setPropuesta} className="h-52" />
+            {aviso && <p className="text-xs text-amber-700">{aviso}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-500">Arrastra el punto o haz clic en el mapa para corregirlo.</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPropuesta(null);
+                    setAviso(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="button" variant="operational" size="sm" className="gap-1.5" onClick={confirmarUbicacion}>
+                  <CheckIcon className="size-4" />
+                  Confirmar ubicación
+                </Button>
+              </div>
+            </div>
           </div>
+        ) : (
+          ubicacion && (
+            <div className="col-span-2 sm:col-span-6 space-y-2">
+              <MapaChico {...ubicacion} className="h-36" />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-1 text-xs text-emerald-700">
+                  <CheckIcon className="size-3.5" />
+                  Ubicación confirmada
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setUbicacion(null)}>
+                    Quitar
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setPropuesta(ubicacion)}>
+                    Ajustar punto
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )
         )}
 
         <div className="col-span-2 sm:col-span-3 space-y-1">

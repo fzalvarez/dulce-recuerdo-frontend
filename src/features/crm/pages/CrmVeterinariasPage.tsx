@@ -114,6 +114,11 @@ export default function CrmVeterinariasPage() {
                       </a>
                     )}
                   </div>
+                  {(v.contacto || v.ruc) && (
+                    <div className="text-xs text-slate-600">
+                      {[v.contacto, v.ruc && `RUC ${v.ruc}`].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                   {v.perfil && <div className="text-xs text-slate-500 line-clamp-2">{v.perfil}</div>}
                   {v.fuente && <div className="text-[11px] text-slate-400">Fuente: {v.fuente}</div>}
                 </td>

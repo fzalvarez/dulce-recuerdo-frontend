@@ -24,6 +24,8 @@ export const DISTRITOS_CRM = [
 export interface CrmVeterinaria {
   id: string;
   nombre: string;
+  ruc: string | null;
+  contacto: string | null;
   telefono: string | null;
   telefono2: string | null;
   direccion: string | null;
