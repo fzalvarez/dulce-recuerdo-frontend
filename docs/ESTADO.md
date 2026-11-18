@@ -31,7 +31,7 @@ PostgreSQL. Ver "Pendiente".
 | `/usuarios/roles` | Roles y permisos | Conectada | `/roles` | `auth-roles` |
 | `/servicios` | Servicios | Placeholder | (`/servicios` existe, pero el caso no lo usa) | — |
 | `/configuracion` | Configuración | Placeholder | — | — |
-| `/crm/veterinarias` | CRM › Veterinarias a visitar | Conectada (código por distrito, tipo, razón social/RUC, horario por día, teléfonos agrupados de a 3, aviso de duplicados, ubicación confirmada en mapa Leaflet; filtro por ruta; el rol `comercial` solo ve el CRM) | `/crm/veterinarias` | `crm-veterinarias` (R1-R15) |
+| `/crm/veterinarias` | CRM › Veterinarias a visitar | Conectada (código por distrito, tipo, razón social/RUC, horario por día, teléfonos agrupados de a 3, aviso de duplicados, ubicación confirmada en mapa Leaflet; filtros por distrito, ruta, tipo, prioridad, 24H y ubicación; orden por columna; 50/100/200 filas por página; el rol `comercial` solo ve el CRM) | `/crm/veterinarias` | `crm-veterinarias` (R1-R15) |
 
 ## Cómo está hecho
 

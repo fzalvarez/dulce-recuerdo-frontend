@@ -57,6 +57,9 @@ src/features/<modulo>/
   ayuda. `Select` solo para listas largas o que vienen de la API (distritos, planes,
   veterinarias) y para filtros de tablas. Para una lista fija larga donde conviene escribir
   (distritos del CRM), `ComboFiltro` (`src/shared/components/common`): filtra por inicio.
+- Tablas largas: orden por columna y paginación de 50/100/200 con `useTabla`
+  (`src/shared/hooks`) y `ColumnaOrdenable` / `Paginacion` (`src/shared/components/common/Tabla.tsx`).
+  Filtros encima de la tabla con `Select`.
 - Notificaciones con `notifySuccess` / `notifyError` (`src/shared/utils`).
 - **No usar `crypto.randomUUID`.** Solo existe en contextos seguros (HTTPS o
   localhost), y el panel se abre por IP en la red. Usar `Date.now()` + random.

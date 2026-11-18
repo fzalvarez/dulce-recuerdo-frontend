@@ -198,7 +198,7 @@ export function CrmVeterinariaForm({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-3 gap-y-2.5 max-h-[72vh] overflow-y-auto px-0.5 pb-1">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-3.5 max-h-[75vh] overflow-y-auto px-1 pb-1">
         {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-4" })}
         {campo("ruta", "Ruta", { placeholder: "R1, R2…", className: "col-span-2 sm:col-span-2" })}
 
@@ -224,8 +224,8 @@ export function CrmVeterinariaForm({
         {campo("ruc", "RUC", { digitos: 11, placeholder: "11 números", className: "col-span-2 sm:col-span-2" })}
 
         {campo("contacto", "Persona de contacto", { placeholder: "Nombre y cargo", className: "col-span-2 sm:col-span-2" })}
-        {campo("telefono", "Teléfono 1", { digitos: 15, telefono: true, placeholder: "982 874 438", className: "col-span-1 sm:col-span-2" })}
-        {campo("telefono2", "Teléfono 2", { digitos: 15, telefono: true, placeholder: "01 354 5655", className: "col-span-1 sm:col-span-2" })}
+        {campo("telefono", "Teléfono 1", { digitos: 15, telefono: true, placeholder: "999 999 999", className: "col-span-1 sm:col-span-2" })}
+        {campo("telefono2", "Teléfono 2", { digitos: 15, telefono: true, placeholder: "01 234 5678", className: "col-span-1 sm:col-span-2" })}
 
         <div className="col-span-2 sm:col-span-2 space-y-1">
           <Label htmlFor="crm-distrito" className="text-xs">
