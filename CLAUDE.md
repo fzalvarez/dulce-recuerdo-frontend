@@ -55,7 +55,8 @@ src/features/<modulo>/
 - Listas cortas y fijas (hasta unas 5 opciones: especie, modalidad, forma de pago, tipo de
   registro) con `BotonesOpcion` (`src/shared/components/common`), un clic y con ícono si
   ayuda. `Select` solo para listas largas o que vienen de la API (distritos, planes,
-  veterinarias) y para filtros de tablas.
+  veterinarias) y para filtros de tablas. Para una lista fija larga donde conviene escribir
+  (distritos del CRM), `ComboFiltro` (`src/shared/components/common`): filtra por inicio.
 - Notificaciones con `notifySuccess` / `notifyError` (`src/shared/utils`).
 - **No usar `crypto.randomUUID`.** Solo existe en contextos seguros (HTTPS o
   localhost), y el panel se abre por IP en la red. Usar `Date.now()` + random.

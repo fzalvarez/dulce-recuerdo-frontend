@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
+import { ComboFiltro } from "@/shared/components/common/ComboFiltro";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { cn } from "@/lib/utils";
 import {
@@ -23,7 +23,6 @@ import { MapaChico } from "./MapaChico";
 
 const HORARIOS = ["24 horas", "Por confirmar", "Lun-Vie", "Lun-Sáb"];
 const FUENTES = ["Web", "Google Maps", "ChatGPT", "Referido"];
-const SIN_DISTRITO = "ninguno";
 
 type PrioridadOpcion = Prioridad | "SIN";
 type UrgenciasOpcion = "SI" | "NO" | "SIN";
@@ -48,7 +47,7 @@ export function CrmVeterinariaForm({
   const [form, setForm] = useState<Record<CampoTexto, string>>(
     () => Object.fromEntries(TEXTOS.map((k) => [k, veterinaria?.[k] ?? ""])) as Record<CampoTexto, string>
   );
-  const [distrito, setDistrito] = useState<string>(esDistrito(veterinaria?.distrito) ? veterinaria!.distrito! : SIN_DISTRITO);
+  const [distrito, setDistrito] = useState<string | null>(esDistrito(veterinaria?.distrito) ? veterinaria!.distrito! : null);
   const [prioridad, setPrioridad] = useState<PrioridadOpcion>(veterinaria?.prioridad ?? "SIN");
   const [urgencias, setUrgencias] = useState<UrgenciasOpcion>(
     veterinaria?.urgencias_24h == null ? "SIN" : veterinaria.urgencias_24h ? "SI" : "NO"
@@ -61,8 +60,6 @@ export function CrmVeterinariaForm({
   const [busqueda, setBusqueda] = useState<Busqueda>("inactiva");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-
-  const distritoValor = distrito === SIN_DISTRITO ? null : distrito;
 
   const set = (k: CampoTexto, filtro?: (v: string) => string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const valor = filtro ? filtro(e.target.value) : e.target.value;
@@ -99,7 +96,7 @@ export function CrmVeterinariaForm({
     const direccion = form.direccion.trim();
     if (!direccion) return null;
     setBusqueda("buscando");
-    const encontrada = await geocodificar(direccion, distritoValor).catch(() => null);
+    const encontrada = await geocodificar(direccion, distrito).catch(() => null);
     setUbicacion(encontrada);
     setBusqueda(encontrada ? "inactiva" : "no-encontrada");
     return encontrada;
@@ -116,7 +113,7 @@ export function CrmVeterinariaForm({
       telefono: texto("telefono"),
       telefono2: texto("telefono2"),
       ruta: texto("ruta"),
-      distrito: distritoValor,
+      distrito,
       direccion: texto("direccion"),
       latitud: punto?.latitud ?? null,
       longitud: punto?.longitud ?? null,
@@ -159,26 +156,18 @@ export function CrmVeterinariaForm({
           <Label htmlFor="crm-distrito" className="text-xs">
             Distrito
           </Label>
-          <Select
+          <ComboFiltro
+            id="crm-distrito"
             value={distrito}
-            onValueChange={(v) => {
+            opciones={DISTRITOS_CRM}
+            placeholder="Escribe: S, San…"
+            onChange={(v) => {
+              if (v === distrito) return;
               setDistrito(v);
               setUbicacion(null);
               setBusqueda("inactiva");
             }}
-          >
-            <SelectTrigger id="crm-distrito" className="w-full h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SIN_DISTRITO}>Sin distrito</SelectItem>
-              {DISTRITOS_CRM.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
         <div className="col-span-2 sm:col-span-4 space-y-1">
           <Label htmlFor="crm-direccion" className="text-xs">
