@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLinkIcon, PencilIcon, PlusCircleIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { ExternalLinkIcon, MapPinIcon, PencilIcon, PlusCircleIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { eliminar, listar, type CrmVeterinaria, type Prioridad } from "../api";
 import { CrmVeterinariaForm } from "../components/CrmVeterinariaForm";
+import { MapaChico } from "../components/MapaChico";
 
 const TODAS = "TODAS";
 const SIN_RUTA = "SIN_RUTA";
@@ -32,6 +33,7 @@ export default function CrmVeterinariasPage() {
   const recurso = useRecurso(() => listar(q), [q]);
   const [editando, setEditando] = useState<CrmVeterinaria | "nuevo" | null>(null);
   const [borrando, setBorrando] = useState<CrmVeterinaria | null>(null);
+  const [enMapa, setEnMapa] = useState<CrmVeterinaria | null>(null);
 
   const todas = recurso.data ?? [];
   const rutas = [...new Set(todas.map((v) => v.ruta).filter((r): r is string => !!r))];
@@ -116,17 +118,26 @@ export default function CrmVeterinariasPage() {
                   {v.fuente && <div className="text-[11px] text-slate-400">Fuente: {v.fuente}</div>}
                 </td>
                 <td className="px-4 py-3">
-                  <div>{v.distrito ?? "—"}</div>
-                  {v.direccion && <div className="text-xs text-slate-500">{v.direccion}</div>}
+                  <div className="flex items-start gap-1.5">
+                    <div className="min-w-0">
+                      <div>{v.distrito ?? "—"}</div>
+                      {v.direccion && <div className="text-xs text-slate-500">{v.direccion}</div>}
+                    </div>
+                    {v.latitud != null && v.longitud != null && (
+                      <button type="button" title="Ver en el mapa" className="mt-0.5 text-brand-500 hover:text-brand-700" onClick={() => setEnMapa(v)}>
+                        <MapPinIcon className="size-4" />
+                      </button>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {v.telefono ? (
-                    <a href={`tel:${v.telefono}`} className="hover:text-brand-500">
-                      {v.telefono}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
+                  {v.telefono || v.telefono2
+                    ? [v.telefono, v.telefono2].filter(Boolean).map((t) => (
+                        <a key={t} href={`tel:${t}`} className="block hover:text-brand-500">
+                          {t}
+                        </a>
+                      ))
+                    : "—"}
                 </td>
                 <td className="px-4 py-3 text-xs">{v.horario ?? "—"}</td>
                 <td className="px-4 py-3 text-xs">{v.urgencias_24h == null ? "—" : v.urgencias_24h ? "Sí" : "No"}</td>
@@ -169,13 +180,25 @@ export default function CrmVeterinariasPage() {
         </table>
       </div>
 
-      <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)} ancho="sm:max-w-2xl">
+      <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)} ancho="sm:max-w-3xl">
         {editando && (
           <CrmVeterinariaForm
             veterinaria={editando === "nuevo" ? null : editando}
             onCerrar={() => setEditando(null)}
             onHecho={recurso.recargar}
           />
+        )}
+      </Modal>
+
+      <Modal open={enMapa !== null} onOpenChange={(o) => !o && setEnMapa(null)}>
+        {enMapa && enMapa.latitud != null && enMapa.longitud != null && (
+          <>
+            <DialogHeader>
+              <DialogTitle>{enMapa.nombre}</DialogTitle>
+              <DialogDescription>{[enMapa.direccion, enMapa.distrito].filter(Boolean).join(", ")}</DialogDescription>
+            </DialogHeader>
+            <MapaChico latitud={enMapa.latitud} longitud={enMapa.longitud} className="h-64" />
+          </>
         )}
       </Modal>
 
