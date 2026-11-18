@@ -31,7 +31,8 @@ PostgreSQL. Ver "Pendiente".
 | `/usuarios/roles` | Roles y permisos | Conectada | `/roles` | `auth-roles` |
 | `/servicios` | Servicios | Placeholder | (`/servicios` existe, pero el caso no lo usa) | — |
 | `/configuracion` | Configuración | Placeholder | — | — |
-| `/crm/veterinarias` | CRM › Veterinarias a visitar | Conectada (código por distrito, tipo, razón social/RUC, horario por día, teléfonos agrupados de a 3, aviso de duplicados, ubicación confirmada en mapa Leaflet; filtros por distrito, ruta, tipo, prioridad, 24H y ubicación; orden por columna; 50/100/200 filas por página; el rol `comercial` solo ve el CRM) | `/crm/veterinarias` | `crm-veterinarias` (R1-R15) |
+| `/crm/veterinarias` | CRM › Veterinarias a visitar | Conectada (código por distrito, tipo, razón social/RUC, horario por día, teléfonos agrupados de a 3, aviso de duplicados, ubicación confirmada en mapa Leaflet; ruta y parada asignadas desde Rutas; filtros por distrito, ruta, tipo, prioridad, 24H y ubicación; orden por columna; 50/100/200 filas por página; el rol `comercial` solo ve el CRM) | `/crm/veterinarias` | `crm-veterinarias` (R1-R15) |
+| `/crm/rutas` | CRM › Rutas | Conectada (primera versión: mapa de todos los puntos por color de ruta, aproximados huecos; paradas en orden con subir/bajar/quitar, agregar desde el mapa o buscando; recorrido dibujado; enlaces a Google Maps por tramos de 10) | `/crm/rutas`, `PUT /crm/rutas/{id}/paradas`, `/crm/veterinarias` | `crm-rutas` |
 
 ## Cómo está hecho
 

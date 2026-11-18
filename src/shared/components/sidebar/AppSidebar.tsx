@@ -17,6 +17,7 @@ import {
   WrenchIcon,
   ChartColumnIcon,
   MapPinnedIcon,
+  RouteIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -42,6 +43,7 @@ const ATENCION_VETERINARIA_ITEMS = [
 // CRM: veterinarias que visita el comercial (el rol comercial solo ve esta sección).
 const CRM_ITEMS = [
   { label: "Veterinarias", icon: MapPinnedIcon, to: "/crm/veterinarias" },
+  { label: "Rutas", icon: RouteIcon, to: "/crm/rutas" },
 ];
 
 // Reportes de revisión de la empresa (cada 3 o 6 meses).

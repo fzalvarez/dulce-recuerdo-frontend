@@ -35,7 +35,7 @@ const SIN_TIPO = "ninguno";
 type PrioridadOpcion = Prioridad | "SIN";
 type UrgenciasOpcion = "SI" | "NO" | "SIN";
 
-const TEXTOS = ["nombre", "razon_social", "ruc", "contacto", "telefono", "telefono2", "ruta", "direccion", "fuente", "web", "perfil", "estado_dato"] as const;
+const TEXTOS = ["nombre", "razon_social", "ruc", "contacto", "telefono", "telefono2", "direccion", "fuente", "web", "perfil", "estado_dato"] as const;
 type CampoTexto = (typeof TEXTOS)[number];
 
 const soloDigitos = (max: number) => (v: string) => v.replace(/\D/g, "").slice(0, max);
@@ -68,6 +68,8 @@ export function CrmVeterinariaForm({
       ? { latitud: veterinaria.latitud, longitud: veterinaria.longitud }
       : null
   );
+  // Punto buscado automáticamente (ubicar aproximado): se ve distinto hasta confirmarlo.
+  const [aprox, setAprox] = useState(veterinaria?.ubicacion_aprox ?? false);
   // Punto en edición: sale de "Ubicar" o de "Ajustar"; se guarda solo al confirmarlo.
   const [propuesta, setPropuesta] = useState<Ubicacion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -124,6 +126,7 @@ export function CrmVeterinariaForm({
 
   const confirmarUbicacion = () => {
     setUbicacion(propuesta);
+    setAprox(false);
     setPropuesta(null);
     setAviso(null);
   };
@@ -162,10 +165,10 @@ export function CrmVeterinariaForm({
       contacto: texto("contacto"),
       telefono: texto("telefono"),
       telefono2: texto("telefono2"),
-      ruta: texto("ruta"),
       direccion: texto("direccion"),
       latitud: ubicacion?.latitud ?? null,
       longitud: ubicacion?.longitud ?? null,
+      ubicacion_aprox: ubicacion ? aprox : false,
       horario,
       fuente: texto("fuente"),
       web: texto("web"),
@@ -199,8 +202,7 @@ export function CrmVeterinariaForm({
       </DialogHeader>
 
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-3.5 max-h-[75vh] overflow-y-auto px-1 pb-1">
-        {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-4" })}
-        {campo("ruta", "Ruta", { placeholder: "R1, R2…", className: "col-span-2 sm:col-span-2" })}
+        {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-6" })}
 
         <div className="col-span-2 sm:col-span-2 space-y-1">
           <Label htmlFor="crm-tipo" className="text-xs">
@@ -283,16 +285,28 @@ export function CrmVeterinariaForm({
             <div className="col-span-2 sm:col-span-6 space-y-2">
               <MapaChico {...ubicacion} className="h-36" />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="flex items-center gap-1 text-xs text-emerald-700">
-                  <CheckIcon className="size-3.5" />
-                  Ubicación confirmada
-                </p>
+                {aprox ? (
+                  <p className="text-xs text-amber-700">Ubicación aproximada (buscada por dirección): ajusta el punto y confírmalo.</p>
+                ) : (
+                  <p className="flex items-center gap-1 text-xs text-emerald-700">
+                    <CheckIcon className="size-3.5" />
+                    Ubicación confirmada
+                  </p>
+                )}
                 <div className="flex gap-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setUbicacion(null)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setUbicacion(null);
+                      setAprox(false);
+                    }}
+                  >
                     Quitar
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setPropuesta(ubicacion)}>
-                    Ajustar punto
+                  <Button type="button" variant={aprox ? "operational" : "outline"} size="sm" onClick={() => setPropuesta(ubicacion)}>
+                    {aprox ? "Revisar y confirmar" : "Ajustar punto"}
                   </Button>
                 </div>
               </div>

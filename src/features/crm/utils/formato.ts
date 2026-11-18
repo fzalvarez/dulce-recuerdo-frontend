@@ -37,3 +37,6 @@ export function resumenHorario(h: HorarioDia[] | null): string | null {
     .map((g) => `${DIA_CORTO[g.desde.dia]}${g.desde === g.hasta ? "" : `–${DIA_CORTO[g.hasta.dia]}`} ${g.texto}`)
     .join(" · ");
 }
+
+/** Colores para distinguir las rutas en el mapa. */
+export const COLORES_RUTA = ["#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#ca8a04", "#db2777"];

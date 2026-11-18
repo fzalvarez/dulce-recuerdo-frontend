@@ -28,6 +28,7 @@ export const DISTRITOS_CRM = [
   "Cercado de Lima",
   "Ate",
   "Santa Anita",
+  "Surquillo",
 ] as const;
 
 export const DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"] as const;
@@ -56,6 +57,8 @@ export interface CrmVeterinaria {
   distrito: string | null;
   latitud: number | null;
   longitud: number | null;
+  /** true: punto buscado automáticamente por dirección, falta confirmarlo (spec crm-rutas, R4). */
+  ubicacion_aprox: boolean;
   horario: HorarioDia[] | null;
   prioridad: Prioridad | null;
   urgencias_24h: boolean | null;
@@ -63,10 +66,15 @@ export interface CrmVeterinaria {
   estado_dato: string | null;
   web: string | null;
   fuente: string | null;
+  /** Ruta comercial (se asigna en Rutas): id, código y orden de visita. */
+  ruta_id: string | null;
   ruta: string | null;
+  ruta_orden: number | null;
 }
 
-export type CrmVeterinariaCuerpo = Omit<CrmVeterinaria, "id" | "codigo" | "distrito"> & { distrito: string };
+export type CrmVeterinariaCuerpo = Omit<CrmVeterinaria, "id" | "codigo" | "distrito" | "ruta_id" | "ruta" | "ruta_orden"> & {
+  distrito: string;
+};
 
 export interface Coincidencia {
   id: string;
@@ -111,3 +119,43 @@ export async function geocodificar(direccion: string, distrito: string | null): 
   if (!datos.length) return null;
   return { latitud: Number(datos[0].lat), longitud: Number(datos[0].lon) };
 }
+
+// ---------- Rutas (spec crm-rutas del backend) ----------
+
+export interface Parada {
+  id: string;
+  codigo: string;
+  nombre: string;
+  distrito: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  prioridad: Prioridad | null;
+  latitud: number | null;
+  longitud: number | null;
+  ubicacion_aprox: boolean;
+  orden: number;
+}
+
+export interface Ruta {
+  id: string;
+  codigo: string;
+  nombre: string;
+  prioridad: Prioridad | null;
+  color: string | null;
+  notas: string | null;
+  /** Calculados a partir de las paradas. */
+  distritos: string[];
+  paradas: Parada[];
+}
+
+export type RutaCuerpo = Pick<Ruta, "codigo" | "nombre" | "prioridad" | "color" | "notas">;
+
+const RUTAS = "/crm/rutas";
+
+export const listarRutas = () => api.get<Ruta[]>(RUTAS).then((r) => r.data);
+export const crearRuta = (c: RutaCuerpo) => api.post<Ruta>(RUTAS, c);
+export const editarRuta = (id: string, c: RutaCuerpo) => api.patch<Ruta>(`${RUTAS}/${id}`, c);
+export const eliminarRuta = (id: string) => api.delete(`${RUTAS}/${id}`);
+/** Deja en la ruta exactamente esas veterinarias, en ese orden. */
+export const fijarParadas = (id: string, veterinariaIds: string[]) =>
+  api.put<Ruta>(`${RUTAS}/${id}/paradas`, { veterinaria_ids: veterinariaIds });

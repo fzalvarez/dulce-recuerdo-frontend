@@ -89,7 +89,7 @@ export default function CrmVeterinariasPage() {
   const filtradas = todas.filter((v) => aplicar(v, filtros));
   const tabla = useTabla(filtradas, {
     codigo: (v) => v.codigo,
-    ruta: (v) => v.ruta,
+    ruta: (v) => (v.ruta ? `${v.ruta}-${String(v.ruta_orden ?? 0).padStart(3, "0")}` : null),
     nombre: (v) => v.nombre,
     distrito: (v) => v.distrito,
     urgencias: (v) => (v.urgencias_24h == null ? null : v.urgencias_24h ? 0 : 1),
@@ -225,7 +225,16 @@ export default function CrmVeterinariasPage() {
               {tabla.visibles.map((v) => (
                 <tr key={v.id} className="align-top">
                   <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{v.codigo}</td>
-                  <td className="px-4 py-3 font-semibold text-brand-600">{v.ruta ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {v.ruta ? (
+                      <span className="font-semibold text-brand-600">
+                        {v.ruta}
+                        <span className="ml-1 text-xs font-normal text-slate-500">· {v.ruta_orden}</span>
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {v.tipo && <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{nombreTipo(v.tipo)}</div>}
                     <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
