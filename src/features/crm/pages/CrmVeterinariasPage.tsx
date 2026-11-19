@@ -239,6 +239,9 @@ export default function CrmVeterinariasPage() {
                     {v.tipo && <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{nombreTipo(v.tipo)}</div>}
                     <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
                       {v.nombre}
+                      {v.ya_no_existe && (
+                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">Ya no existe</span>
+                      )}
                       {v.web && (
                         <a href={enlaceWeb(v.web)} target="_blank" rel="noreferrer" title={v.web} className="text-slate-400 hover:text-brand-500">
                           <ExternalLinkIcon className="size-3.5" />

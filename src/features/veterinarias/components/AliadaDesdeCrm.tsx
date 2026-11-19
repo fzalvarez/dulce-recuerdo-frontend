@@ -19,8 +19,8 @@ export function AliadaDesdeCrm({ onCerrar, onHecho }: { onCerrar: () => void; on
   const [elegida, setElegida] = useState<CrmVeterinaria | null>(null);
   const [creando, setCreando] = useState(false);
 
-  // Solo fichas que todavía no son aliadas.
-  const candidatas = (fichas.data ?? []).filter((f) => f.veterinaria_id === null);
+  // Solo fichas vigentes que todavía no son aliadas.
+  const candidatas = (fichas.data ?? []).filter((f) => f.veterinaria_id === null && !f.ya_no_existe);
   const q = texto.trim().toLowerCase();
   const resultados = q
     ? candidatas.filter((f) => [f.nombre, f.codigo, f.distrito ?? ""].some((x) => x.toLowerCase().includes(q))).slice(0, 8)

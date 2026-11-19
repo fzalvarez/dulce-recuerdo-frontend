@@ -81,6 +81,8 @@ export interface CrmVeterinaria {
   interesada_at: string | null;
   /** Aliada creada desde esta ficha; null = todavía no es aliada. */
   veterinaria_id: string | null;
+  /** Ya no existe: no se visita ni se convierte en aliada. */
+  ya_no_existe: boolean;
 }
 
 export type CrmVeterinariaCuerpo = Omit<

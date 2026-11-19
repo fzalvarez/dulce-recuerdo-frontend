@@ -81,6 +81,7 @@ export function CrmVeterinariaForm({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [confirmandoAliada, setConfirmandoAliada] = useState(false);
+  const [yaNoExiste, setYaNoExiste] = useState(veterinaria?.ya_no_existe ?? false);
   // Solo root y admin convierten en aliada (spec crm-control-comercial, R9).
   const esAdmin = useAuthStore((s) => ["root", "admin"].includes(s.getUserRol()));
   // Una aliada se abre en solo lectura; «Editar» habilita todos los campos (spec crm-control-comercial, R10).
@@ -201,6 +202,7 @@ export function CrmVeterinariaForm({
       estado_dato: texto("estado_dato"),
       prioridad: prioridad === "SIN" ? null : prioridad,
       urgencias_24h: urgencias === "SIN" ? null : urgencias === "SI",
+      ya_no_existe: yaNoExiste,
     };
     const ok = await ejecutar(
       () => (veterinaria ? editar(veterinaria.id, cuerpo) : crear(cuerpo)),
@@ -234,6 +236,15 @@ export function CrmVeterinariaForm({
       <fieldset disabled={!editable} className="contents">
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-3.5 max-h-[75vh] overflow-y-auto px-1 pb-1">
         {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-6" })}
+        <label className="col-span-2 sm:col-span-6 inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="size-4 accent-brand-500"
+            checked={yaNoExiste}
+            onChange={(e) => setYaNoExiste(e.target.checked)}
+          />
+          Ya no existe (no se visita ni se convierte en aliada)
+        </label>
 
         <div className="col-span-2 sm:col-span-2 space-y-1">
           <Label htmlFor="crm-tipo" className="text-xs">

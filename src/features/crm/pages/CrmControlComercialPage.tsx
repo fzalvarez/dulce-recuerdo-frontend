@@ -54,7 +54,7 @@ export default function CrmControlComercialPage() {
 
   const todas = visitas.data ?? [];
   const visibles = todas.filter((v) => coincideFiltro(v, filtro));
-  const candidatas = (fichas.data ?? []).filter((f) => f.visitada_at === null);
+  const candidatas = (fichas.data ?? []).filter((f) => f.visitada_at === null && !f.ya_no_existe);
 
   const recargar = () => {
     visitas.recargar();
@@ -125,6 +125,7 @@ export default function CrmControlComercialPage() {
                   <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">
                     <span className="font-mono text-xs text-slate-500 mr-1.5">{v.codigo}</span>
                     {v.nombre}
+                    {v.ya_no_existe && <span className="ml-2 rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">Ya no existe</span>}
                     <span className="block text-xs text-slate-500">
                       {[v.distrito, formatoTelefono(v.telefono)].filter(Boolean).join(" · ") || "—"}
                     </span>
