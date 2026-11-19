@@ -10,9 +10,15 @@ export interface Veterinaria {
   estado: "ACTIVA" | "INACTIVA";
   tipo_convenio_id: string | null;
   observaciones: string | null;
+  /** Ficha del CRM de la que viene (null si no viene de una). Nombre, teléfono y dirección se editan allí. */
+  crm_id: string | null;
+  crm_codigo: string | null;
 }
 
-export type VeterinariaCuerpo = Omit<Veterinaria, "id">;
+/** Campos que la aliada guarda por su cuenta. Nombre, teléfono y dirección vienen de la ficha del CRM. */
+export const CAMPOS_DE_FICHA = ["nombre", "telefono", "direccion"] as const;
+
+export type VeterinariaCuerpo = Omit<Veterinaria, "id" | "crm_id" | "crm_codigo">;
 
 export interface Catalogo {
   convenios: { id: string; nombre: string; activo: boolean }[];

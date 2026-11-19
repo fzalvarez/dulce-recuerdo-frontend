@@ -170,7 +170,13 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
   const texto = (k: "nombre" | "telefono" | "email" | "direccion" | "observaciones", label: string) => (
     <div className="space-y-1.5">
       <Label htmlFor={`vt-${k}`}>{label}</Label>
-      <Input id={`vt-${k}`} value={f[k]} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+      <Input
+        id={`vt-${k}`}
+        value={f[k]}
+        // Nombre, teléfono y dirección vienen de la ficha del CRM: se cambian allí (spec crm-control-comercial, R12).
+        disabled={vet.crm_codigo !== null && (V.CAMPOS_DE_FICHA as readonly string[]).includes(k)}
+        onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))}
+      />
     </div>
   );
 
@@ -197,6 +203,11 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
         <DialogTitle>Editar veterinaria</DialogTitle>
         <DialogDescription>Sin tipo de convenio no se puede calcular el precio de sus casos.</DialogDescription>
       </DialogHeader>
+      {vet.crm_codigo && (
+        <p className="rounded-md bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+          Nombre, teléfono y dirección vienen de la ficha CRM <span className="font-mono">{vet.crm_codigo}</span>. Se cambian en CRM › Veterinarias.
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {texto("nombre", "Nombre")}
         <div className="space-y-1.5">

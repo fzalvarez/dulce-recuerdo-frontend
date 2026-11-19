@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HandshakeIcon, PlusCircleIcon, Trash2Icon } from "lucide-react";
+import { EyeIcon, HandshakeIcon, PlusCircleIcon, Trash2Icon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
@@ -9,6 +9,7 @@ import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { fechaCorta } from "@/features/casos/utils/casos";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 import {
   actualizarPasos,
   convertirAliada,
@@ -18,6 +19,7 @@ import {
   type CrmVeterinaria,
 } from "../api";
 import { AgregarVisita } from "../components/AgregarVisita";
+import { CrmVeterinariaForm } from "../components/CrmVeterinariaForm";
 import { formatoTelefono } from "../utils/formato";
 
 type Filtro = "TODAS" | "SIN_INTERES" | "INTERESADAS" | "ALIADAS";
@@ -46,6 +48,9 @@ export default function CrmControlComercialPage() {
   const [convirtiendo, setConvirtiendo] = useState<CrmVeterinaria | null>(null);
   const [quitando, setQuitando] = useState<CrmVeterinaria | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  const [viendo, setViendo] = useState<CrmVeterinaria | null>(null);
+  // Solo root y admin convierten en aliada (spec crm-control-comercial, R9).
+  const esAdmin = useAuthStore((s) => ["root", "admin"].includes(s.getUserRol()));
 
   const todas = visitas.data ?? [];
   const visibles = todas.filter((v) => coincideFiltro(v, filtro));
@@ -147,26 +152,34 @@ export default function CrmControlComercialPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    {aliada ? (
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">Aliada</span>
-                    ) : (
-                      <div className="flex justify-end gap-1.5">
-                        <Button
-                          variant="operational"
-                          size="sm"
-                          className="gap-1.5"
-                          disabled={v.interesada_at === null}
-                          title={v.interesada_at === null ? "Convierte cuando confirme que quiere trabajar con nosotros" : undefined}
-                          onClick={() => setConvirtiendo(v)}
-                        >
-                          <HandshakeIcon className="size-4" />
-                          Convertir en aliada
-                        </Button>
-                        <Button variant="ghost" size="icon-sm" title="Quitar de visitas" onClick={() => setQuitando(v)}>
-                          <Trash2Icon className="size-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex justify-end items-center gap-1.5">
+                      {aliada ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-label font-semibold bg-emerald-50 text-emerald-700">Aliada</span>
+                      ) : (
+                        <>
+                          {esAdmin && (
+                            <Button
+                              variant="operational"
+                              size="sm"
+                              className="gap-1.5"
+                              disabled={v.interesada_at === null}
+                              title={v.interesada_at === null ? "Convierte cuando confirme que quiere trabajar con nosotros" : undefined}
+                              onClick={() => setConvirtiendo(v)}
+                            >
+                              <HandshakeIcon className="size-4" />
+                              Convertir en aliada
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon-sm" title="Quitar de visitas" onClick={() => setQuitando(v)}>
+                            <Trash2Icon className="size-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setViendo(v)}>
+                        <EyeIcon className="size-4" />
+                        Ver ficha
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -192,6 +205,11 @@ export default function CrmControlComercialPage() {
             }}
           />
         )}
+      </Modal>
+
+      {/* Ficha completa: de solo lectura si ya es aliada (se edita con «Editar»). */}
+      <Modal open={viendo !== null} onOpenChange={(o) => !o && setViendo(null)} ancho="sm:max-w-5xl">
+        {viendo && <CrmVeterinariaForm veterinaria={viendo} onCerrar={() => setViendo(null)} onHecho={recargar} />}
       </Modal>
 
       <Modal open={convirtiendo !== null} onOpenChange={(o) => !o && setConvirtiendo(null)}>

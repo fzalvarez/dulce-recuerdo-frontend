@@ -9,6 +9,7 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/co
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { ComboFiltro } from "@/shared/components/common/ComboFiltro";
 import { ejecutar } from "@/shared/utils/ejecutar";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 import { cn } from "@/lib/utils";
 import {
   convertirAliada,
@@ -80,6 +81,12 @@ export function CrmVeterinariaForm({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [confirmandoAliada, setConfirmandoAliada] = useState(false);
+  // Solo root y admin convierten en aliada (spec crm-control-comercial, R9).
+  const esAdmin = useAuthStore((s) => ["root", "admin"].includes(s.getUserRol()));
+  // Una aliada se abre en solo lectura; «Editar» habilita todos los campos (spec crm-control-comercial, R10).
+  const vinculada = veterinaria?.veterinaria_id != null;
+  const [editando, setEditando] = useState(false);
+  const editable = !vinculada || editando;
 
   // Crea la aliada desde la ficha guardada (no usa lo que haya escrito sin guardar).
   const convertir = async () => {
@@ -216,9 +223,15 @@ export function CrmVeterinariaForm({
         </DialogTitle>
         <DialogDescription>
           Obligatorios: nombre y distrito.{!veterinaria && " El código (p. ej. ATE-001) se asigna al guardar."}
+          {vinculada &&
+            (editando
+              ? " Al guardar, también se actualizan nombre, teléfono y dirección de la aliada."
+              : " Solo lectura: pulsa «Editar» para cambiar datos.")}
         </DialogDescription>
       </DialogHeader>
 
+      {/* En solo lectura, el fieldset deshabilita todos los campos y botones de adentro. */}
+      <fieldset disabled={!editable} className="contents">
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-3.5 max-h-[75vh] overflow-y-auto px-1 pb-1">
         {campo("nombre", "Nombre *", { className: "col-span-2 sm:col-span-6" })}
 
@@ -401,6 +414,7 @@ export function CrmVeterinariaForm({
           ))}
         </datalist>
       </div>
+      </fieldset>
 
       {duplicados && duplicados.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -420,13 +434,15 @@ export function CrmVeterinariaForm({
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
-        {veterinaria &&
-          (veterinaria.veterinaria_id ? (
-            <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-              <CheckIcon className="size-3.5" />
-              Ya es veterinaria aliada
-            </span>
-          ) : confirmandoAliada ? (
+        {vinculada ? (
+          <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+            <CheckIcon className="size-3.5" />
+            Veterinaria aliada
+          </span>
+        ) : (
+          veterinaria &&
+          esAdmin &&
+          (confirmandoAliada ? (
             <div className="mr-auto flex flex-wrap items-center gap-2 text-xs">
               <span className="text-slate-600">Crea la aliada con los datos guardados, sin convenio.</span>
               <Button variant="operational" size="sm" onClick={convertir} disabled={guardando}>
@@ -440,13 +456,27 @@ export function CrmVeterinariaForm({
             <Button variant="outline" className="mr-auto" onClick={() => setConfirmandoAliada(true)} disabled={guardando}>
               Convertir en aliada
             </Button>
-          ))}
-        <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
-          Cancelar
-        </Button>
-        <Button variant="operational" onClick={guardar} disabled={guardando}>
-          {guardando ? "Guardando…" : duplicados?.length ? "Guardar igual" : "Guardar"}
-        </Button>
+          ))
+        )}
+        {vinculada && !editando ? (
+          <>
+            <Button variant="ghost" onClick={onCerrar}>
+              Cerrar
+            </Button>
+            <Button variant="operational" onClick={() => setEditando(true)}>
+              Editar
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button variant="operational" onClick={guardar} disabled={guardando}>
+              {guardando ? "Guardando…" : duplicados?.length ? "Guardar igual" : "Guardar"}
+            </Button>
+          </>
+        )}
       </DialogFooter>
     </>
   );
