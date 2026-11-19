@@ -11,6 +11,7 @@ import { ComboFiltro } from "@/shared/components/common/ComboFiltro";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { cn } from "@/lib/utils";
 import {
+  convertirAliada,
   coincidencias,
   crear,
   DISTRITOS_CRM,
@@ -78,8 +79,25 @@ export function CrmVeterinariaForm({
   const [duplicados, setDuplicados] = useState<Coincidencia[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [confirmandoAliada, setConfirmandoAliada] = useState(false);
 
-  const set = (k: CampoTexto, filtro?: (v: string) => string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // Crea la aliada desde la ficha guardada (no usa lo que haya escrito sin guardar).
+  const convertir = async () => {
+    if (!veterinaria) return;
+    setGuardando(true);
+    const ok = await ejecutar(
+      () => convertirAliada(veterinaria.id),
+      "Veterinaria aliada creada. Asígnale su convenio en Convenios Veterinarios.",
+      "No se pudo convertir en aliada."
+    );
+    setGuardando(false);
+    if (ok) {
+      onHecho();
+      onCerrar();
+    }
+  };
+
+  const set =(k: CampoTexto, filtro?: (v: string) => string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const valor = filtro ? filtro(e.target.value) : e.target.value;
     setForm((f) => ({ ...f, [k]: valor }));
     if (k === "telefono" || k === "telefono2" || k === "ruc") setDuplicados(null);
@@ -402,6 +420,27 @@ export function CrmVeterinariaForm({
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
+        {veterinaria &&
+          (veterinaria.veterinaria_id ? (
+            <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+              <CheckIcon className="size-3.5" />
+              Ya es veterinaria aliada
+            </span>
+          ) : confirmandoAliada ? (
+            <div className="mr-auto flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-slate-600">Crea la aliada con los datos guardados, sin convenio.</span>
+              <Button variant="operational" size="sm" onClick={convertir} disabled={guardando}>
+                Sí, convertir
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmandoAliada(false)} disabled={guardando}>
+                No
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" className="mr-auto" onClick={() => setConfirmandoAliada(true)} disabled={guardando}>
+              Convertir en aliada
+            </Button>
+          ))}
         <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
           Cancelar
         </Button>

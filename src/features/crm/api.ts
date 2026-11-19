@@ -75,9 +75,18 @@ export interface CrmVeterinaria {
   ruta_id: string | null;
   ruta: string | null;
   ruta_orden: number | null;
+  /** Control comercial (spec crm-control-comercial): fecha de cada paso; null = pendiente. */
+  visitada_at: string | null;
+  info_entregada_at: string | null;
+  interesada_at: string | null;
+  /** Aliada creada desde esta ficha; null = todavía no es aliada. */
+  veterinaria_id: string | null;
 }
 
-export type CrmVeterinariaCuerpo = Omit<CrmVeterinaria, "id" | "codigo" | "distrito" | "ruta_id" | "ruta" | "ruta_orden"> & {
+export type CrmVeterinariaCuerpo = Omit<
+  CrmVeterinaria,
+  "id" | "codigo" | "distrito" | "ruta_id" | "ruta" | "ruta_orden" | "visitada_at" | "info_entregada_at" | "interesada_at" | "veterinaria_id"
+> & {
   distrito: string;
 };
 
@@ -164,3 +173,17 @@ export const eliminarRuta = (id: string) => api.delete(`${RUTAS}/${id}`);
 /** Deja en la ruta exactamente esas veterinarias, en ese orden. */
 export const fijarParadas = (id: string, veterinariaIds: string[]) =>
   api.put<Ruta>(`${RUTAS}/${id}/paradas`, { veterinaria_ids: veterinariaIds });
+
+// ---------- Control comercial (spec crm-control-comercial del backend) ----------
+
+const COMERCIAL = "/crm/comercial";
+
+/** Fichas visitadas, en orden de visita (incluye las ya aliadas). */
+export const listarVisitas = () => api.get<CrmVeterinaria[]>(COMERCIAL).then((r) => r.data);
+export const agregarVisita = (crmId: string) => api.post<CrmVeterinaria>(COMERCIAL, { crm_veterinaria_id: crmId });
+export const quitarVisita = (crmId: string) => api.delete(`${COMERCIAL}/${crmId}`);
+export const actualizarPasos = (crmId: string, pasos: { info_entregada?: boolean; interesada?: boolean }) =>
+  api.patch<CrmVeterinaria>(`${COMERCIAL}/${crmId}`, pasos);
+/** Crea la veterinaria aliada desde la ficha y cierra los pasos que falten. */
+export const convertirAliada = (crmId: string) =>
+  api.post<{ id: string; nombre: string }>(`${COMERCIAL}/${crmId}/convertir`);

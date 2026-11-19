@@ -22,9 +22,11 @@ import type { MetodoPago } from "@/features/casos/types";
 import { fechaCorta, hoyISO, METODO_LABEL, soles } from "@/features/casos/utils/casos";
 import * as V from "../api";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
+import { AliadaDesdeCrm } from "../components/AliadaDesdeCrm";
 
 type Dialogo =
-  | { tipo: "editar"; vet: V.Veterinaria | null }
+  | { tipo: "nueva" }
+  | { tipo: "editar"; vet: V.Veterinaria }
   | { tipo: "precios"; vet: V.Veterinaria }
   | { tipo: "facturacion"; vet: V.Veterinaria };
 
@@ -56,7 +58,7 @@ export default function VeterinariasPage() {
         title="Veterinarias aliadas"
         description="La veterinaria cobra al cliente; Dulce Recuerdo le factura a su precio de convenio cuando el admin decide."
         actions={
-          <Button variant="operational" className="gap-1.5 h-10" onClick={() => setDialogo({ tipo: "editar", vet: null })}>
+          <Button variant="operational" className="gap-1.5 h-10" onClick={() => setDialogo({ tipo: "nueva" })}>
             <PlusCircleIcon className="size-4" />
             Nueva veterinaria
           </Button>
@@ -131,6 +133,7 @@ export default function VeterinariasPage() {
       </div>
 
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
+        {dialogo?.tipo === "nueva" && <AliadaDesdeCrm onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />}
         {dialogo?.tipo === "editar" && datos && (
           <VetForm vet={dialogo.vet} catalogo={datos.catalogo} onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />
         )}
@@ -150,15 +153,16 @@ function Kpi({ titulo, valor }: { titulo: string; valor: string }) {
   );
 }
 
-function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria | null; catalogo: V.Catalogo; onCerrar: () => void; onHecho: () => void }) {
+/** Edición de una aliada. El alta no existe aquí: toda aliada sale de una ficha del CRM (AliadaDesdeCrm). */
+function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; catalogo: V.Catalogo; onCerrar: () => void; onHecho: () => void }) {
   const [f, setF] = useState({
-    nombre: vet?.nombre ?? "",
-    telefono: vet?.telefono ?? "",
-    email: vet?.email ?? "",
-    direccion: vet?.direccion ?? "",
-    observaciones: vet?.observaciones ?? "",
-    tipo_convenio_id: vet?.tipo_convenio_id ?? "",
-    activa: vet ? vet.estado === "ACTIVA" : true,
+    nombre: vet.nombre,
+    telefono: vet.telefono ?? "",
+    email: vet.email ?? "",
+    direccion: vet.direccion ?? "",
+    observaciones: vet.observaciones ?? "",
+    tipo_convenio_id: vet.tipo_convenio_id ?? "",
+    activa: vet.estado === "ACTIVA",
   });
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -182,7 +186,7 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria | nu
       estado: f.activa ? "ACTIVA" : "INACTIVA",
     };
     setGuardando(true);
-    const ok = await ejecutar(() => (vet ? V.editar(vet.id, cuerpo) : V.crear(cuerpo)), "Veterinaria guardada.", "No se pudo guardar.");
+    const ok = await ejecutar(() => V.editar(vet.id, cuerpo), "Veterinaria guardada.", "No se pudo guardar.");
     setGuardando(false);
     if (ok) onHecho();
   };
@@ -190,7 +194,7 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria | nu
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{vet ? "Editar veterinaria" : "Nueva veterinaria"}</DialogTitle>
+        <DialogTitle>Editar veterinaria</DialogTitle>
         <DialogDescription>Sin tipo de convenio no se puede calcular el precio de sus casos.</DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

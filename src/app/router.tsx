@@ -21,6 +21,7 @@ import ReportesPage from "@/features/reportes/pages/ReportesPage";
 import ConfiguracionPage from "@/features/configuracion/pages/ConfiguracionPage";
 import CrmVeterinariasPage from "@/features/crm/pages/CrmVeterinariasPage";
 import RutasPage from "@/features/crm/pages/RutasPage";
+import CrmControlComercialPage from "@/features/crm/pages/CrmControlComercialPage";
 import SignInPage from "@/features/auth/pages/SignInPage";
 import Error404 from "@/features/error-pages/pages/Error404";
 import ErrorRoute from "@/features/error-pages/pages/ErrorRoute";
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
           { path: "configuracion", element: <ConfiguracionPage /> },
           { path: "crm", element: <Navigate to="/crm/veterinarias" replace /> },
           { path: "crm/veterinarias", element: <CrmVeterinariasPage /> },
+          { path: "crm/control-comercial", element: <CrmControlComercialPage /> },
           { path: "crm/rutas", element: <RutasPage /> },
         ],
       },

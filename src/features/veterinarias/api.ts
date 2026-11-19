@@ -51,7 +51,7 @@ export async function cargar(): Promise<{ veterinarias: Veterinaria[]; catalogo:
   return { veterinarias: v.data, catalogo: c.data, porCobrar: f.data };
 }
 
-export const crear = (c: VeterinariaCuerpo) => api.post<Veterinaria>("/veterinarias", c);
+// Sin alta: las aliadas nacen de una ficha del CRM (POST /crm/comercial/{id}/convertir).
 export const editar = (id: string, c: VeterinariaCuerpo) => api.patch<Veterinaria>(`/veterinarias/${id}`, c);
 
 export const preciosPropios = (id: string) =>

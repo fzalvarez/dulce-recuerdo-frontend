@@ -18,6 +18,7 @@ import {
   ChartColumnIcon,
   MapPinnedIcon,
   RouteIcon,
+  ClipboardCheckIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -43,6 +44,7 @@ const ATENCION_VETERINARIA_ITEMS = [
 // CRM: veterinarias que visita el comercial (el rol comercial solo ve esta sección).
 const CRM_ITEMS = [
   { label: "Veterinarias", icon: MapPinnedIcon, to: "/crm/veterinarias" },
+  { label: "Control comercial", icon: ClipboardCheckIcon, to: "/crm/control-comercial" },
   { label: "Rutas", icon: RouteIcon, to: "/crm/rutas" },
 ];
 
