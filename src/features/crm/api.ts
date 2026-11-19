@@ -105,6 +105,7 @@ export const listar = (q: string) =>
 export const crear = (c: CrmVeterinariaCuerpo) => api.post<CrmVeterinaria>(URL, c);
 export const editar = (id: string, c: CrmVeterinariaCuerpo) => api.patch<CrmVeterinaria>(`${URL}/${id}`, c);
 export const eliminar = (id: string) => api.delete(`${URL}/${id}`);
+export const obtener = (id: string) => api.get<CrmVeterinaria>(`${URL}/${id}`).then((r) => r.data);
 
 /** Otras veterinarias con el mismo teléfono o RUC (R14). Solo avisa. */
 export const coincidencias = (telefonos: string[], ruc: string | null, excluirId?: string) =>

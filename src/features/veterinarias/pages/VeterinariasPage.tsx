@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { PencilIcon, PlusCircleIcon, ReceiptIcon, SearchIcon, TagIcon } from "lucide-react";
+import { EyeIcon, PencilIcon, PlusCircleIcon, ReceiptIcon, SearchIcon, TagIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { fechaCorta, hoyISO, METODO_LABEL, soles } from "@/features/casos/utils/
 import * as V from "../api";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { AliadaDesdeCrm } from "../components/AliadaDesdeCrm";
+import { FichaAliada } from "../components/FichaAliada";
 
 type Dialogo =
   | { tipo: "nueva" }
@@ -41,6 +42,7 @@ export default function VeterinariasPage() {
   const recurso = useRecurso(V.cargar);
   const [busqueda, setBusqueda] = useState("");
   const [dialogo, setDialogo] = useState<Dialogo | null>(null);
+  const [ficha, setFicha] = useState<V.Veterinaria | null>(null);
   const cerrar = () => setDialogo(null);
 
   const datos = recurso.data;
@@ -93,6 +95,7 @@ export default function VeterinariasPage() {
             {visibles.map((v) => (
               <tr key={v.id}>
                 <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">
+                  {v.crm_codigo && <span className="font-mono text-xs text-slate-400 mr-1.5">{v.crm_codigo}</span>}
                   {v.nombre}
                   {v.direccion && <span className="block text-xs text-slate-500">{v.direccion}</span>}
                 </td>
@@ -109,7 +112,13 @@ export default function VeterinariasPage() {
                 </td>
                 <td className="px-5 py-3 text-right">
                   <div className="inline-flex gap-1.5">
-                    <Button variant="ghost" size="icon-sm" title="Editar" onClick={() => setDialogo({ tipo: "editar", vet: v })}>
+                    {v.crm_id && (
+                      <Button variant="outline" size="sm" onClick={() => setFicha(v)}>
+                        <EyeIcon className="size-4" />
+                        Ficha
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon-sm" title="Editar convenio y estado" onClick={() => setDialogo({ tipo: "editar", vet: v })}>
                       <PencilIcon className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon-sm" title="Precio propio" onClick={() => setDialogo({ tipo: "precios", vet: v })}>
@@ -131,6 +140,11 @@ export default function VeterinariasPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Datos completos del CRM: solo lectura hasta pulsar «Editar» (spec crm-control-comercial, R10). */}
+      <Modal open={ficha !== null} onOpenChange={(o) => !o && setFicha(null)} ancho="sm:max-w-5xl">
+        {ficha?.crm_id && <FichaAliada crmId={ficha.crm_id} onCerrar={() => setFicha(null)} onHecho={recurso.recargar} />}
+      </Modal>
 
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
         {dialogo?.tipo === "nueva" && <AliadaDesdeCrm onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />}
