@@ -29,6 +29,11 @@ export const DISTRITOS_CRM = [
   "Ate",
   "Santa Anita",
   "Surquillo",
+  "Miraflores",
+  "La Molina",
+  "Breña",
+  "Jesús María",
+  "El Agustino",
 ] as const;
 
 export const DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"] as const;
