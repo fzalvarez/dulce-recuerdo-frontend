@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
@@ -103,8 +104,9 @@ export default function PlanesPage() {
   const data = recurso.data;
   if (recurso.error) return <p className="text-sm text-red-600">{recurso.error}</p>;
   if (!data) return <p className="text-sm text-slate-500">Cargando tarifas…</p>;
-  const { planes, tarifas } = data;
+  const { planes, tarifas, marcas } = data;
   const rangos = tarifas.rangos;
+  const nombreMarca = (id: string | null) => (id ? marcas.find((m) => m.id === id)?.nombre ?? "—" : "Principal");
 
   const borrar = async (accion: () => Promise<unknown>, texto: string) => {
     if (await ejecutar(accion, texto, "No se pudo eliminar.")) recurso.recargar();
@@ -128,13 +130,14 @@ export default function PlanesPage() {
           </Button>
         }
       >
-        <Tabla cabecera={["Plan", ...rangos.map((r) => r.etiqueta), "Estado", ""]}>
+        <Tabla cabecera={["Plan", "Marca", ...rangos.map((r) => r.etiqueta), "Estado", ""]}>
           {planes.map((p) => (
             <tr key={p.id}>
               <td className="px-3 py-2 font-medium">
                 {p.nombre}
                 {p.descripcion && <span className="block text-xs text-slate-500">{p.descripcion}</span>}
               </td>
+              <td className="px-3 py-2 text-xs text-slate-600">{nombreMarca(p.marca_id)}</td>
               {rangos.map((r) => (
                 <td key={r.id} className="px-3 py-2 whitespace-nowrap">{verMonto(tarifas.planes[p.id]?.[r.id])}</td>
               ))}
@@ -150,7 +153,7 @@ export default function PlanesPage() {
           ))}
           {planes.length === 0 && (
             <tr>
-              <td colSpan={rangos.length + 3} className="px-3 py-6 text-center text-slate-400">Aún no hay planes.</td>
+              <td colSpan={rangos.length + 4} className="px-3 py-6 text-center text-slate-400">Aún no hay planes.</td>
             </tr>
           )}
         </Tabla>
@@ -265,7 +268,8 @@ export default function PlanesPage() {
               </div>
             </div>
             <Tabla cabecera={["Plan", ...rangos.map((r) => r.etiqueta)]}>
-              {planes.map((p) => (
+              {/* Los convenios cotizan solo planes principales: los de sub-marca tienen sus precios designados (spec tarifas, R14-R16). */}
+              {planes.filter((p) => p.marca_id === null).map((p) => (
                 <tr key={p.id}>
                   <td className="px-3 py-2">{p.nombre}</td>
                   {rangos.map((r) => (
@@ -279,7 +283,9 @@ export default function PlanesPage() {
       </Seccion>
 
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
-        {dialogo?.tipo === "plan" && <PlanForm plan={dialogo.plan} rangos={rangos} precios={dialogo.plan ? tarifas.planes[dialogo.plan.id] ?? {} : {}} onCerrar={cerrar} onHecho={listo} />}
+        {dialogo?.tipo === "plan" && (
+          <PlanForm plan={dialogo.plan} rangos={rangos} marcas={marcas} precios={dialogo.plan ? tarifas.planes[dialogo.plan.id] ?? {} : {}} onCerrar={cerrar} onHecho={listo} />
+        )}
         {dialogo?.tipo === "eutanasia" && <EutanasiaForm rangos={rangos} actual={tarifas.eutanasia} onCerrar={cerrar} onHecho={listo} />}
         {dialogo?.tipo === "zona" && <ZonaForm zona={dialogo.zona} onCerrar={cerrar} onHecho={listo} />}
         {dialogo?.tipo === "recargo" && <RecargoForm actual={tarifas.recargo_punta} onCerrar={cerrar} onHecho={listo} />}
@@ -350,18 +356,35 @@ function leerFila(rangos: Rango[], valores: Record<string, string>): T.PreciosRa
   return out;
 }
 
-function PlanForm({ plan, rangos, precios, onCerrar, onHecho }: FormProps & { plan: T.Plan | null; rangos: Rango[]; precios: Record<string, string> }) {
+const PRINCIPAL = "principal";
+
+function PlanForm({
+  plan,
+  rangos,
+  marcas,
+  precios,
+  onCerrar,
+  onHecho,
+}: FormProps & { plan: T.Plan | null; rangos: Rango[]; marcas: T.Marca[]; precios: Record<string, string> }) {
   const [nombre, setNombre] = useState(plan?.nombre ?? "");
   const [descripcion, setDescripcion] = useState(plan?.descripcion ?? "");
+  const [marca, setMarca] = useState(plan?.marca_id ?? PRINCIPAL);
   const [activo, setActivo] = useState(plan ? plan.estado === "Activo" : true);
   const [valores, setValores] = useState<Record<string, string>>(() => Object.fromEntries(rangos.map((r) => [r.id, montoTexto(precios[r.id])])));
   const g = useGuardar(onHecho);
+  // Marcas activas, más la del plan si hoy está desactivada (para no perderla al editar).
+  const opcionesMarca = marcas.filter((m) => m.activa || m.id === plan?.marca_id);
 
   const guardar = () => {
     if (!nombre.trim()) return g.setError("Escribe el nombre del plan.");
     const fila = leerFila(rangos, valores);
     if (!fila) return g.setError("Revisa los precios: deben ser números positivos.");
-    const cuerpo = { nombre: nombre.trim(), descripcion: descripcion.trim() || null, estado: activo ? ("Activo" as const) : ("Inactivo" as const) };
+    const cuerpo = {
+      nombre: nombre.trim(),
+      descripcion: descripcion.trim() || null,
+      estado: activo ? ("Activo" as const) : ("Inactivo" as const),
+      marca_id: marca === PRINCIPAL ? null : marca,
+    };
     g.guardar(async () => {
       const p = plan ? await T.editarPlan(plan.id, cuerpo) : await T.crearPlan(cuerpo);
       await T.preciosPlan(p.id, fila);
@@ -382,6 +405,24 @@ function PlanForm({ plan, rangos, precios, onCerrar, onHecho }: FormProps & { pl
         <div className="space-y-1.5">
           <Label htmlFor="pl-desc">Descripción</Label>
           <Input id="pl-desc" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pl-marca">Marca</Label>
+          <Select value={marca} onValueChange={setMarca}>
+            <SelectTrigger id="pl-marca" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={PRINCIPAL}>Principal (Dulce Recuerdo)</SelectItem>
+              {opcionesMarca.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.nombre}
+                  {!m.activa ? " (inactiva)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-slate-500">Un plan de sub-marca solo se cotiza con sus veterinarias.</p>
         </div>
       </div>
       <FilaPrecios rangos={rangos} valores={valores} onCambio={(r, v) => setValores((x) => ({ ...x, [r]: v }))} prefijo="pl" />

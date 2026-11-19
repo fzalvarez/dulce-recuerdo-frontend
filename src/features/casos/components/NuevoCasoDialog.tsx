@@ -319,6 +319,10 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
   };
 
   const vetSeleccionada = opciones.veterinarias.find((v) => v.id === vetId);
+  // Planes que corresponden: los de la marca de la veterinaria, o los principales sin veterinaria (spec tarifas, R15).
+  const planesDisponibles = opciones.planes.filter((p) =>
+    esVet ? !!vetSeleccionada && p.marca_id === (vetSeleccionada.marca_id ?? null) : p.marca_id === null
+  );
 
   return (
     <>
@@ -503,8 +507,10 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
                   id="nc-plan"
                   value={planId}
                   onChange={(v) => { setPlanId(v); setCalculo(null); }}
-                  items={opciones.planes.map((p) => ({ value: p.id, label: p.nombre }))}
-                  placeholder={opciones.planes.length ? "Elegir" : "No hay planes activos"}
+                  items={planesDisponibles.map((p) => ({ value: p.id, label: p.nombre }))}
+                  placeholder={
+                    planesDisponibles.length ? "Elegir" : esVet && !vetSeleccionada ? "Elige primero la veterinaria" : "No hay planes activos para este caso"
+                  }
                 />
               </Campo>
             )}
@@ -575,9 +581,10 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
                   />
                 </Campo>
               )}
-              {vetSeleccionada && !vetSeleccionada.tiene_convenio && (
-                <p className="text-xs text-amber-700">Esta veterinaria no tiene tipo de convenio: el precio no se podrá calcular.</p>
+              {vetSeleccionada && !vetSeleccionada.tiene_convenio && !vetSeleccionada.marca_id && (
+                <p className="text-xs text-amber-700">Esta veterinaria no tiene convenio ni sub-marca: el precio no se podrá calcular.</p>
               )}
+              {vetSeleccionada?.marca_id && <p className="text-xs text-slate-500">Sub-marca: el precio sale de los planes de su marca.</p>}
             </div>
           </div>
         </Seccion>

@@ -137,8 +137,9 @@ export interface Pago {
 }
 
 export interface Opciones {
-  planes: { id: string; nombre: string }[];
-  veterinarias: { id: string; nombre: string; tiene_convenio: boolean }[];
+  /** marca_id null = plan principal; con marca, solo para veterinarias de esa marca. */
+  planes: { id: string; nombre: string; marca_id: string | null }[];
+  veterinarias: { id: string; nombre: string; tiene_convenio: boolean; marca_id: string | null }[];
   complementos: { id: string; nombre: string; precio: Monto }[];
   distritos: string[];
   urnas: OpcionUrna[];

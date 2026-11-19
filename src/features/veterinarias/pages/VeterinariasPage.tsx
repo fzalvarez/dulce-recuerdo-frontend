@@ -47,6 +47,7 @@ export default function VeterinariasPage() {
 
   const datos = recurso.data;
   const convenios = useMemo(() => new Map((datos?.catalogo.convenios ?? []).map((c) => [c.id, c.nombre])), [datos]);
+  const marcas = useMemo(() => new Map((datos?.marcas ?? []).map((m) => [m.id, m.nombre])), [datos]);
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return (datos?.veterinarias ?? []).filter((v) => !q || v.nombre.toLowerCase().includes(q));
@@ -103,7 +104,13 @@ export default function VeterinariasPage() {
                   {[v.telefono, v.email].filter(Boolean).join(" · ") || "—"}
                 </td>
                 <td className="px-5 py-3">
-                  {v.tipo_convenio_id ? convenios.get(v.tipo_convenio_id) ?? "—" : <span className="text-amber-700 text-xs">Sin convenio</span>}
+                  {v.marca_id ? (
+                    <span className="text-sm">Sub-marca · {marcas.get(v.marca_id) ?? "—"}</span>
+                  ) : v.tipo_convenio_id ? (
+                    convenios.get(v.tipo_convenio_id) ?? "—"
+                  ) : (
+                    <span className="text-amber-700 text-xs">Sin convenio ni sub-marca</span>
+                  )}
                 </td>
                 <td className="px-5 py-3">
                   <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", v.estado === "ACTIVA" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
@@ -149,7 +156,7 @@ export default function VeterinariasPage() {
       <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-2xl">
         {dialogo?.tipo === "nueva" && <AliadaDesdeCrm onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />}
         {dialogo?.tipo === "editar" && datos && (
-          <VetForm vet={dialogo.vet} catalogo={datos.catalogo} onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />
+          <VetForm vet={dialogo.vet} catalogo={datos.catalogo} marcas={datos.marcas} onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />
         )}
         {dialogo?.tipo === "precios" && datos && <PreciosPropios vet={dialogo.vet} catalogo={datos.catalogo} onCerrar={cerrar} />}
         {dialogo?.tipo === "facturacion" && <Facturacion vet={dialogo.vet} onCambio={recurso.recargar} />}
@@ -168,7 +175,19 @@ function Kpi({ titulo, valor }: { titulo: string; valor: string }) {
 }
 
 /** Edición de una aliada. El alta no existe aquí: toda aliada sale de una ficha del CRM (AliadaDesdeCrm). */
-function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; catalogo: V.Catalogo; onCerrar: () => void; onHecho: () => void }) {
+function VetForm({
+  vet,
+  catalogo,
+  marcas,
+  onCerrar,
+  onHecho,
+}: {
+  vet: V.Veterinaria;
+  catalogo: V.Catalogo;
+  marcas: V.Marca[];
+  onCerrar: () => void;
+  onHecho: () => void;
+}) {
   const [f, setF] = useState({
     nombre: vet.nombre,
     telefono: vet.telefono ?? "",
@@ -176,6 +195,7 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
     direccion: vet.direccion ?? "",
     observaciones: vet.observaciones ?? "",
     tipo_convenio_id: vet.tipo_convenio_id ?? "",
+    marca_id: vet.marca_id ?? "",
     activa: vet.estado === "ACTIVA",
   });
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +222,9 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
       email: f.email.trim() || null,
       direccion: f.direccion.trim() || null,
       observaciones: f.observaciones.trim() || null,
-      tipo_convenio_id: f.tipo_convenio_id || null,
+      // Convenio o sub-marca, nunca ambos (spec tarifas, R14).
+      tipo_convenio_id: f.marca_id ? null : f.tipo_convenio_id || null,
+      marca_id: f.marca_id || null,
       estado: f.activa ? "ACTIVA" : "INACTIVA",
     };
     setGuardando(true);
@@ -215,7 +237,7 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
     <>
       <DialogHeader>
         <DialogTitle>Editar veterinaria</DialogTitle>
-        <DialogDescription>Sin tipo de convenio no se puede calcular el precio de sus casos.</DialogDescription>
+        <DialogDescription>Usa convenio o sub-marca. Sin ninguno no se puede calcular el precio de sus casos.</DialogDescription>
       </DialogHeader>
       {vet.crm_codigo && (
         <p className="rounded-md bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
@@ -226,7 +248,7 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
         {texto("nombre", "Nombre")}
         <div className="space-y-1.5">
           <Label htmlFor="vt-convenio">Tipo de convenio</Label>
-          <Select value={f.tipo_convenio_id || "ninguno"} onValueChange={(v) => setF((x) => ({ ...x, tipo_convenio_id: v === "ninguno" ? "" : v }))}>
+          <Select disabled={!!f.marca_id} value={f.tipo_convenio_id || "ninguno"} onValueChange={(v) => setF((x) => ({ ...x, tipo_convenio_id: v === "ninguno" ? "" : v }))}>
             <SelectTrigger id="vt-convenio" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -240,6 +262,30 @@ function VetForm({ vet, catalogo, onCerrar, onHecho }: { vet: V.Veterinaria; cat
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="vt-marca">Sub-marca</Label>
+          <Select
+            disabled={!!f.tipo_convenio_id}
+            value={f.marca_id || "ninguna"}
+            onValueChange={(v) => setF((x) => ({ ...x, marca_id: v === "ninguna" ? "" : v }))}
+          >
+            <SelectTrigger id="vt-marca" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ninguna">Ninguna</SelectItem>
+              {marcas
+                .filter((m) => m.activa || m.id === vet.marca_id)
+                .map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.nombre}
+                    {!m.activa ? " (inactiva)" : ""}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          {f.tipo_convenio_id && <p className="text-[11px] text-slate-500">Quita el convenio para asignar una sub-marca.</p>}
         </div>
         {texto("telefono", "Teléfono")}
         {texto("email", "Correo")}
@@ -267,7 +313,9 @@ function PreciosPropios({ vet, catalogo, onCerrar }: { vet: V.Veterinaria; catal
   const actual = useRecurso(() => V.preciosPropios(vet.id), [vet.id]);
   if (actual.error) return <p className="text-sm text-red-600">{actual.error}</p>;
   if (!actual.data) return <p className="text-sm text-slate-500">Cargando…</p>;
-  return <PreciosPropiosForm vet={vet} catalogo={catalogo} actual={actual.data} onCerrar={onCerrar} />;
+  // Solo los planes que le corresponden: los de su sub-marca, o los principales (spec tarifas, R15).
+  const planes = catalogo.planes.filter((p) => p.marca_id === (vet.marca_id ?? null));
+  return <PreciosPropiosForm vet={vet} catalogo={{ ...catalogo, planes }} actual={actual.data} onCerrar={onCerrar} />;
 }
 
 function PreciosPropiosForm({ vet, catalogo, actual, onCerrar }: { vet: V.Veterinaria; catalogo: V.Catalogo; actual: Record<string, Record<string, string>>; onCerrar: () => void }) {

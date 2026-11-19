@@ -9,6 +9,15 @@ export interface Plan {
   nombre: string;
   descripcion: string | null;
   estado: "Activo" | "Inactivo";
+  /** null = plan de la marca principal; con marca, solo para sus veterinarias. */
+  marca_id: string | null;
+}
+
+/** Sub-marca con planes propios para sus veterinarias (p. ej. Latido Eterno). */
+export interface Marca {
+  id: string;
+  nombre: string;
+  activa: boolean;
 }
 
 export interface Zona {
@@ -44,9 +53,9 @@ export interface Tarifas {
   convenios: Convenio[];
 }
 
-export async function cargarTodo(): Promise<{ planes: Plan[]; tarifas: Tarifas }> {
-  const [p, t] = await Promise.all([api.get<Plan[]>("/planes"), api.get<Tarifas>("/tarifas")]);
-  return { planes: p.data, tarifas: t.data };
+export async function cargarTodo(): Promise<{ planes: Plan[]; tarifas: Tarifas; marcas: Marca[] }> {
+  const [p, t, m] = await Promise.all([api.get<Plan[]>("/planes"), api.get<Tarifas>("/tarifas"), api.get<Marca[]>("/marcas")]);
+  return { planes: p.data, tarifas: t.data, marcas: m.data };
 }
 
 // Planes

@@ -9,6 +9,8 @@ export interface Veterinaria {
   direccion: string | null;
   estado: "ACTIVA" | "INACTIVA";
   tipo_convenio_id: string | null;
+  /** Sub-marca con sus propios planes. Excluyente con el convenio. */
+  marca_id: string | null;
   observaciones: string | null;
   /** Ficha del CRM de la que viene (null si no viene de una). Nombre, teléfono y dirección se editan allí. */
   crm_id: string | null;
@@ -22,8 +24,15 @@ export type VeterinariaCuerpo = Omit<Veterinaria, "id" | "crm_id" | "crm_codigo"
 
 export interface Catalogo {
   convenios: { id: string; nombre: string; activo: boolean }[];
-  planes: { id: string; nombre: string }[];
+  /** marca_id null = plan principal; con marca, solo para veterinarias de esa marca. */
+  planes: { id: string; nombre: string; marca_id: string | null }[];
   rangos: { id: string; etiqueta: string }[];
+}
+
+export interface Marca {
+  id: string;
+  nombre: string;
+  activa: boolean;
 }
 
 export interface CasoPendiente {
@@ -48,13 +57,15 @@ export interface Factura {
   motivo_anulacion: string | null;
 }
 
-export async function cargar(): Promise<{ veterinarias: Veterinaria[]; catalogo: Catalogo; porCobrar: Factura[] }> {
-  const [v, c, f] = await Promise.all([
+export async function cargar(): Promise<{ veterinarias: Veterinaria[]; catalogo: Catalogo; porCobrar: Factura[]; marcas: Marca[] }> {
+  const [v, c, f, m] = await Promise.all([
     api.get<Veterinaria[]>("/veterinarias"),
     api.get<Catalogo>("/veterinarias/catalogo"),
     api.get<Factura[]>("/facturas-veterinaria", { params: { estado: "EMITIDA" } }),
+    // Las marcas viven en el módulo de planes: si el rol no lo tiene, la pantalla sigue sin ellas.
+    api.get<Marca[]>("/marcas").catch(() => ({ data: [] as Marca[] })),
   ]);
-  return { veterinarias: v.data, catalogo: c.data, porCobrar: f.data };
+  return { veterinarias: v.data, catalogo: c.data, porCobrar: f.data, marcas: m.data };
 }
 
 // Sin alta: las aliadas nacen de una ficha del CRM (POST /crm/comercial/{id}/convertir).
