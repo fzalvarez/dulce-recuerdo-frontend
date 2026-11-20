@@ -15,12 +15,14 @@ export interface Veterinaria {
   /** Ficha del CRM de la que viene (null si no viene de una). Nombre, teléfono y dirección se editan allí. */
   crm_id: string | null;
   crm_codigo: string | null;
+  /** Casos realizados o entregados con esta aliada. 0 = acuerdo sin ventas todavía. */
+  ventas_realizadas: number | null;
 }
 
 /** Campos que la aliada guarda por su cuenta. Nombre, teléfono y dirección vienen de la ficha del CRM. */
 export const CAMPOS_DE_FICHA = ["nombre", "telefono", "direccion"] as const;
 
-export type VeterinariaCuerpo = Omit<Veterinaria, "id" | "crm_id" | "crm_codigo">;
+export type VeterinariaCuerpo = Omit<Veterinaria, "id" | "crm_id" | "crm_codigo" | "ventas_realizadas">;
 
 export interface Catalogo {
   convenios: { id: string; nombre: string; activo: boolean }[];

@@ -41,6 +41,7 @@ const ESTADO_FACTURA: Record<V.Factura["estado"], string> = {
 export default function VeterinariasPage() {
   const recurso = useRecurso(V.cargar);
   const [busqueda, setBusqueda] = useState("");
+  const [ventas, setVentas] = useState<"TODAS" | "SIN" | "CON">("TODAS");
   const [dialogo, setDialogo] = useState<Dialogo | null>(null);
   const [ficha, setFicha] = useState<V.Veterinaria | null>(null);
   const cerrar = () => setDialogo(null);
@@ -50,8 +51,12 @@ export default function VeterinariasPage() {
   const marcas = useMemo(() => new Map((datos?.marcas ?? []).map((m) => [m.id, m.nombre])), [datos]);
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    return (datos?.veterinarias ?? []).filter((v) => !q || v.nombre.toLowerCase().includes(q));
-  }, [datos, busqueda]);
+    return (datos?.veterinarias ?? []).filter(
+      (v) =>
+        (!q || v.nombre.toLowerCase().includes(q)) &&
+        (ventas === "TODAS" || (ventas === "CON" ? (v.ventas_realizadas ?? 0) > 0 : (v.ventas_realizadas ?? 0) === 0))
+    );
+  }, [datos, busqueda, ventas]);
   const porCobrar = (datos?.porCobrar ?? []).reduce((acc, f) => acc + Number(f.total), 0);
 
   return (
@@ -74,9 +79,21 @@ export default function VeterinariasPage() {
         <Kpi titulo="Facturas por cobrar" valor={datos ? `${datos.porCobrar.length} · ${soles(porCobrar)}` : "—"} />
       </section>
 
-      <div className="relative max-w-md">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-        <Input className="pl-9" placeholder="Buscar veterinaria" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-md">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <Input className="pl-9" placeholder="Buscar veterinaria" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <BotonesOpcion<"TODAS" | "SIN" | "CON">
+          ariaLabel="Filtrar por ventas"
+          value={ventas}
+          onChange={setVentas}
+          opciones={[
+            { value: "TODAS", label: "Todas" },
+            { value: "SIN", label: "Sin ventas" },
+            { value: "CON", label: "Con ventas" },
+          ]}
+        />
       </div>
 
       {recurso.error && <p className="text-sm text-red-600">{recurso.error}</p>}
@@ -115,6 +132,15 @@ export default function VeterinariasPage() {
                 <td className="px-5 py-3">
                   <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", v.estado === "ACTIVA" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
                     {v.estado === "ACTIVA" ? "Activa" : "Inactiva"}
+                  </span>
+                  {/* Acuerdo firmado (aliada) vs. con al menos una venta realizada o entregada. */}
+                  <span
+                    className={cn(
+                      "ml-1.5 px-2 py-0.5 rounded-full text-label font-semibold",
+                      (v.ventas_realizadas ?? 0) > 0 ? "bg-brand-50 text-brand-700" : "bg-amber-50 text-amber-700"
+                    )}
+                  >
+                    {(v.ventas_realizadas ?? 0) > 0 ? `Con ventas · ${v.ventas_realizadas}` : "Sin ventas"}
                   </span>
                 </td>
                 <td className="px-5 py-3 text-right">
