@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboardIcon,
   BriefcaseIcon,
@@ -19,6 +19,7 @@ import {
   MapPinnedIcon,
   RouteIcon,
   ClipboardCheckIcon,
+  LogOutIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -87,7 +88,7 @@ function NavItem({
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-md text-[13.3px] font-medium transition-colors group",
+          "flex items-center gap-3 px-3 py-2.5 rounded-md text-[12px] font-medium transition-colors group",
           isActive
             ? "text-brand-500 bg-brand-50 border border-blue-100/80 font-semibold shadow-xs"
             : "text-slate-600 hover:text-brand-500 hover:bg-brand-50"
@@ -112,6 +113,12 @@ function NavItem({
 export function AppSidebar() {
   const getUserName = useAuthStore((s) => s.getUserName);
   const getUserEmail = useAuthStore((s) => s.getUserEmail);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+  const cerrarSesion = () => {
+    logout();
+    navigate("/auth/signin", { replace: true });
+  };
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobileSidebar = useSidebarStore((s) => s.closeMobileSidebar);
   const permitidos = useModulosPermitidos();
@@ -175,7 +182,7 @@ export function AppSidebar() {
           return (
             <div key={grupo.titulo} className="space-y-1">
               <div className="pt-4 pb-1">
-                <p className="px-3 text-[10.45px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                <p className="px-3 text-[9.4px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
                   {grupo.titulo}
                 </p>
               </div>
@@ -221,6 +228,15 @@ export function AppSidebar() {
               {getUserEmail() || "admin@dulcerecuerdo.pe"}
             </span>
           </div>
+          <button
+            type="button"
+            onClick={cerrarSesion}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+          >
+            <LogOutIcon className="size-4" />
+          </button>
         </div>
       </div>
     </aside>
