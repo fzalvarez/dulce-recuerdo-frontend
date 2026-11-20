@@ -1,0 +1,86 @@
+import api from "@/shared/lib/axios";
+import type { CategoriaGasto, Gasto } from "@/features/finanzas/types";
+
+/** Factura de compra tal como la devuelve el backend (spec facturas-compra). Montos como texto. */
+export interface FacturaCompra {
+  id: string;
+  numero_serie: string;
+  /** "YYYY-MM-DD" */
+  fecha: string;
+  ruc_proveedor: string;
+  razon_social: string;
+  concepto: string;
+  total: string;
+  igv: string;
+  base: string;
+  gasto_id: string | null;
+  tiene_adjunto: boolean;
+  adjunto_nombre: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FacturaCuerpo {
+  numero_serie: string;
+  fecha: string;
+  ruc_proveedor: string;
+  razon_social: string;
+  concepto: string;
+  total: string;
+  igv: string;
+}
+
+export interface FacturaFiltros {
+  q?: string;
+  desde?: string;
+  hasta?: string;
+}
+
+/** Tipos de adjunto que acepta el backend, y su tamaño máximo (5 MB). */
+export const TIPOS_ADJUNTO = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
+export const TAMANO_ADJUNTO_MAX = 5 * 1024 * 1024;
+
+export const listarFacturas = (f: FacturaFiltros) =>
+  api.get<FacturaCompra[]>("/facturas-compra", { params: f }).then((r) => r.data);
+
+export const crearFactura = (c: FacturaCuerpo & { gasto_id?: string | null; crear_gasto_categoria?: CategoriaGasto | null }) =>
+  api.post<FacturaCompra>("/facturas-compra", c).then((r) => r.data);
+
+export const editarFactura = (id: string, c: Partial<FacturaCuerpo>) =>
+  api.patch<FacturaCompra>(`/facturas-compra/${id}`, c).then((r) => r.data);
+
+export const eliminarFactura = (id: string) => api.delete(`/facturas-compra/${id}`);
+
+export const subirAdjunto = (id: string, archivo: File) => {
+  const datos = new FormData();
+  datos.append("archivo", archivo);
+  return api.put<FacturaCompra>(`/facturas-compra/${id}/adjunto`, datos).then((r) => r.data);
+};
+
+export const quitarAdjunto = (id: string) => api.delete(`/facturas-compra/${id}/adjunto`);
+
+/**
+ * Abre el adjunto en otra pestaña. La ventana se abre antes de pedir el archivo para que el
+ * navegador no la bloquee como ventana emergente.
+ */
+export async function abrirAdjunto(id: string): Promise<void> {
+  const ventana = window.open("", "_blank", "noopener");
+  try {
+    const r = await api.get<Blob>(`/facturas-compra/${id}/adjunto`, { responseType: "blob" });
+    const url = URL.createObjectURL(r.data);
+    if (ventana) ventana.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (e) {
+    ventana?.close();
+    throw e;
+  }
+}
+
+/** Gastos recientes, para vincularlos a una factura. */
+export const listarGastosRecientes = () => {
+  const hoy = new Date();
+  const hace = new Date(hoy);
+  hace.setDate(hace.getDate() - 180);
+  const iso = (d: Date) => `${d.toISOString().slice(0, 10)}T00:00:00`;
+  return api.get<Gasto[]>("/gastos", { params: { desde: iso(hace), hasta: `${hoy.toISOString().slice(0, 10)}T23:59:59` } }).then((r) => r.data);
+};

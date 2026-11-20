@@ -16,6 +16,7 @@ import ServiciosPage from "@/features/servicios/pages/ServiciosPage";
 import VehiculoPage from "@/features/vehiculos/pages/VehiculoPage";
 import EntregasPage from "@/features/entregas/pages/EntregasPage";
 import FinanzasPage from "@/features/finanzas/pages/FinanzasPage";
+import FacturasCompraPage from "@/features/facturas-compra/pages/FacturasCompraPage";
 import ActivosPage from "@/features/activos/pages/ActivosPage";
 import ReportesPage from "@/features/reportes/pages/ReportesPage";
 import ConfiguracionPage from "@/features/configuracion/pages/ConfiguracionPage";
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "vehiculos", element: <VehiculoPage /> },
           { path: "entregas", element: <EntregasPage /> },
           { path: "finanzas", element: <FinanzasPage /> },
+          { path: "finanzas/facturas-compra", element: <FacturasCompraPage /> },
           { path: "activos", element: <ActivosPage /> },
           { path: "reportes", element: <Navigate to="/reportes/cremaciones-mes" replace /> },
           { path: "reportes/:reporte", element: <ReportesPage /> },

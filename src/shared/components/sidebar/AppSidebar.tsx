@@ -20,6 +20,7 @@ import {
   RouteIcon,
   ClipboardCheckIcon,
   LogOutIcon,
+  ReceiptIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -57,6 +58,7 @@ const REPORTES_ITEMS = [
 // Finanzas: ingresos (desde servicios realizados) y gastos fijos mensuales.
 const FINANZAS_ITEMS = [
   { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas" },
+  { label: "Facturas de compra", icon: ReceiptIcon, to: "/finanzas/facturas-compra" },
 ];
 
 const CATALOGO_ITEMS = [
