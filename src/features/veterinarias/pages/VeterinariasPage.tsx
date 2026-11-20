@@ -104,7 +104,7 @@ export default function VeterinariasPage() {
             <tr>
               <th className="px-5 py-3 font-semibold">Veterinaria</th>
               <th className="px-5 py-3 font-semibold">Contacto</th>
-              <th className="px-5 py-3 font-semibold">Convenio</th>
+              <th className="px-5 py-3 font-semibold">Planes</th>
               <th className="px-5 py-3 font-semibold">Estado</th>
               <th className="px-5 py-3 font-semibold text-right">Acciones</th>
             </tr>
@@ -122,7 +122,7 @@ export default function VeterinariasPage() {
                 </td>
                 <td className="px-5 py-3">
                   {v.marca_id ? (
-                    <span className="text-sm">Sub-marca · {marcas.get(v.marca_id) ?? "—"}</span>
+                    marcas.get(v.marca_id) ?? "—"
                   ) : v.tipo_convenio_id ? (
                     convenios.get(v.tipo_convenio_id) ?? "—"
                   ) : (
