@@ -16,6 +16,7 @@ import {
   abrirAdjunto,
   crearFactura,
   editarFactura,
+  leerFacturaIA,
   listarGastosRecientes,
   quitarAdjunto,
   subirAdjunto,
@@ -52,6 +53,8 @@ export function FacturaCompraForm({
   const [quitarArchivo, setQuitarArchivo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [leyendo, setLeyendo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   // Gastos recientes: solo se usan si se vincula uno existente.
   const gastos = useRecurso(listarGastosRecientes, [factura?.id ?? "nueva"]);
 
@@ -121,6 +124,43 @@ export function FacturaCompraForm({
       await abrirAdjunto(factura.id);
     } catch (e) {
       notifyError(getApiErrorMessage(e, "No se pudo abrir el archivo."));
+    }
+  };
+
+  // IA: sugiere los campos a partir del archivo elegido. Solo rellena el formulario; no guarda nada.
+  const leerConIA = async () => {
+    if (!archivo) return;
+    setLeyendo(true);
+    setAviso(null);
+    try {
+      const sugerido = await leerFacturaIA(archivo);
+      setF((x) => ({
+        numero_serie: sugerido.numero_serie ?? x.numero_serie,
+        fecha: sugerido.fecha ?? x.fecha,
+        ruc_proveedor: sugerido.ruc_proveedor ?? x.ruc_proveedor,
+        razon_social: sugerido.razon_social ?? x.razon_social,
+        concepto: sugerido.concepto ?? x.concepto,
+        total: sugerido.total ?? x.total,
+        igv: sugerido.igv ?? x.igv,
+      }));
+      const etiquetas: Record<string, string> = {
+        numero_serie: "serie",
+        fecha: "fecha",
+        ruc_proveedor: "RUC",
+        razon_social: "razón social",
+        concepto: "concepto",
+        total: "total",
+        igv: "IGV",
+      };
+      const faltan = Object.keys(etiquetas).filter((k) => !sugerido[k as keyof typeof sugerido]);
+      setAviso(
+        `Datos sugeridos por IA (confianza ${sugerido.confianza}). Revísalos antes de guardar.` +
+          (faltan.length ? ` No se leyeron: ${faltan.map((k) => etiquetas[k]).join(", ")}.` : "")
+      );
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudo leer la factura con IA."));
+    } finally {
+      setLeyendo(false);
     }
   };
 
@@ -257,6 +297,12 @@ export function FacturaCompraForm({
           className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm dark:text-slate-300"
         />
         {archivo && <p className="text-xs text-slate-500">Se adjuntará: {archivo.name}</p>}
+        {archivo && (
+          <Button variant="outline" size="sm" onClick={leerConIA} disabled={leyendo || guardando}>
+            {leyendo ? "Leyendo factura…" : "Leer con IA"}
+          </Button>
+        )}
+        {aviso && <p className="text-xs text-emerald-700">{aviso}</p>}
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}

@@ -84,3 +84,23 @@ export const listarGastosRecientes = () => {
   const iso = (d: Date) => `${d.toISOString().slice(0, 10)}T00:00:00`;
   return api.get<Gasto[]>("/gastos", { params: { desde: iso(hace), hasta: `${hoy.toISOString().slice(0, 10)}T23:59:59` } }).then((r) => r.data);
 };
+
+/** Campos que sugiere la IA a partir del PDF o la foto. Nulo = no se pudo leer con claridad. */
+export interface FacturaExtraida {
+  numero_serie: string | null;
+  fecha: string | null;
+  ruc_proveedor: string | null;
+  razon_social: string | null;
+  concepto: string | null;
+  total: string | null;
+  igv: string | null;
+  confianza: "alta" | "media" | "baja";
+}
+
+/** Lee la factura con IA. No guarda nada: el usuario revisa los campos antes de confirmar. */
+export const leerFacturaIA = (archivo: File) => {
+  const datos = new FormData();
+  datos.append("archivo", archivo);
+  // Un PDF se procesa al subirlo: la lectura puede tardar más que el tiempo normal de una petición.
+  return api.post<FacturaExtraida>("/facturas-compra/leer", datos, { timeout: 200_000 }).then((r) => r.data);
+};
