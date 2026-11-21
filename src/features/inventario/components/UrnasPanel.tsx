@@ -1,3 +1,4 @@
+import { useModulosPermitidos } from "@/features/roles/store/roles.store";
 import { Fragment, useState } from "react";
 import { ArrowDownToLineIcon, LayoutGridIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -241,6 +242,7 @@ const clave = (f: FilaUrna) => `${f.linea}|${f.tamano}|${f.forma}`;
 
 /** Carga en bloque: cantidades por celda y un costo por fila (el costo no depende del color). */
 function CargaForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerrar: () => void; onHecho: () => void }) {
+  const verCostos = useModulosPermitidos().includes("finanzas");
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [costos, setCostos] = useState<Record<string, string>>({});
   const [fecha, setFecha] = useState(hoyISO());
@@ -371,7 +373,7 @@ function CargaForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerra
         </table>
       </div>
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        {unidades} urnas · {soles(total)}
+        {unidades} urnas{verCostos ? ` · ${soles(total)}` : ""}
       </p>
       <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Cargar stock" />
     </>

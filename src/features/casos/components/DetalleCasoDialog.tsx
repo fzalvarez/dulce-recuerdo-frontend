@@ -60,7 +60,9 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
   const pagos = useRecurso(() => casosApi.pagosDe(fila.id), [fila.id]);
   const d = detalle.data;
   const accion = accionPrincipal(fila.estado);
-  const pago = pagoBadge(Number(fila.precio_total), Number(fila.total_pagado));
+  // Sin precio visible (regla de 2 días sin finanzas) no se muestran cobros.
+  const verDinero = fila.precio_total !== null;
+  const pago = verDinero ? pagoBadge(Number(fila.precio_total), Number(fila.total_pagado)) : null;
   const abierto = fila.estado === "AGENDADO" || fila.estado === "REALIZADO";
 
   return (
@@ -71,7 +73,7 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
           <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", ESTADO_BADGE[fila.estado])}>
             {ESTADO_LABEL[fila.estado]}
           </span>
-          {fila.estado !== "CANCELADO" && (
+          {fila.estado !== "CANCELADO" && pago && (
             <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", pago.clase)}>{pago.texto}</span>
           )}
         </div>
@@ -110,7 +112,7 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
           {d?.caso.monto_devuelto && <Fila etiqueta="Devuelto" valor={soles(d.caso.monto_devuelto)} />}
         </Seccion>
 
-        <Seccion titulo="Precio">
+        {verDinero && <Seccion titulo="Precio">
           {d?.caso.desglose.map((l) => <Fila key={l.concepto} etiqueta={l.concepto} valor={soles(l.monto)} />)}
           <div className="mt-2 border-t border-slate-100 dark:border-white/10 pt-2">
             {d && d.caso.precio_total !== d.caso.precio_calculado && (
@@ -124,19 +126,19 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
             />
             {d?.margen && <Fila etiqueta="Margen (precio − materiales)" valor={soles(d.margen)} />}
           </div>
-        </Seccion>
+        </Seccion>}
 
-        <Seccion titulo="Pagos">
+        {verDinero && <Seccion titulo="Pagos">
           {pagos.data?.length === 0 && <p className="text-sm text-slate-500">Sin pagos registrados.</p>}
           {pagos.data?.map((p) => (
             <Fila key={p.id} etiqueta={`${fechaCorta(p.fecha)} · ${METODO_LABEL[p.metodo]}${p.factura_id ? " · factura" : ""}`} valor={soles(p.monto)} />
           ))}
-        </Seccion>
+        </Seccion>}
 
         {d && d.materiales.length > 0 && (
           <Seccion titulo="Materiales usados">
             {d.materiales.map((m) => (
-              <Fila key={m.articulo_id} etiqueta={`${m.nombre} × ${m.cantidad}`} valor={soles(m.costo_total)} />
+              <Fila key={m.articulo_id} etiqueta={`${m.nombre} × ${m.cantidad}`} valor={m.costo_total !== null ? soles(m.costo_total) : "—"} />
             ))}
           </Seccion>
         )}
@@ -161,7 +163,7 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
             {fila.urna_id ? "Cambiar urna" : "Elegir urna"}
           </Button>
         )}
-        {fila.estado !== "CANCELADO" && Number(fila.saldo) > 0 && (
+        {verDinero && fila.estado !== "CANCELADO" && Number(fila.saldo) > 0 && (
           <Button variant="outline" onClick={() => onAccion("pago")}>
             Registrar pago
           </Button>

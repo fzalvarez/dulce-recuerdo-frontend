@@ -167,8 +167,8 @@ export default function CasosPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {visibles.map((caso) => {
                 const siguiente = accionPrincipal(caso.estado);
-                const pago = pagoBadge(Number(caso.precio_total), Number(caso.total_pagado));
-                const saldo = Number(caso.saldo);
+                const pago = caso.precio_total !== null ? pagoBadge(Number(caso.precio_total), Number(caso.total_pagado)) : null;
+                const saldo = Number(caso.saldo ?? 0);
                 const datosMascota = [caso.peso_kg != null ? `${caso.peso_kg} kg` : null, caso.sexo].filter(Boolean).join(" · ");
                 return (
                   <tr key={caso.id} className={cn("hover:bg-slate-50/60 dark:hover:bg-white/5", caso.estado === "CANCELADO" && "opacity-70")}>
@@ -228,7 +228,7 @@ export default function CasosPage() {
                     <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{fechaCorta(fechaDelServicio(caso))}</td>
                     <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{fechaHora(caso.inicio)}</td>
                     <td className="px-5 py-3">
-                      {caso.estado === "CANCELADO" ? (
+                      {caso.estado === "CANCELADO" || pago === null ? (
                         <span className="text-xs text-slate-400">—</span>
                       ) : (
                         <div className="flex flex-col gap-1 items-start">

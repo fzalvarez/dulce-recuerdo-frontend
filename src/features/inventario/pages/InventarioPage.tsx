@@ -1,3 +1,4 @@
+import { useModulosPermitidos } from "@/features/roles/store/roles.store";
 import { useMemo, useState } from "react";
 import { ArrowDownToLineIcon, ArrowUpFromLineIcon, HistoryIcon, PencilIcon, PlusCircleIcon, SearchIcon, ScaleIcon, TruckIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
@@ -40,6 +41,7 @@ type Dialogo =
 
 /** Inventario: stock y costo cambian solo con movimientos (spec inventario). */
 export default function InventarioPage() {
+  const verCostos = useModulosPermitidos().includes("finanzas");
   const recurso = useRecurso(I.listar);
   const [busqueda, setBusqueda] = useState("");
   const [tipo, setTipo] = useState<TipoArticulo | "todos">("todos");
@@ -82,7 +84,7 @@ export default function InventarioPage() {
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Kpi titulo="Artículos" valor={String(articulos.length)} />
-        <Kpi titulo="Valor del stock" valor={soles(valor)} />
+        {verCostos && <Kpi titulo="Valor del stock" valor={soles(valor)} />}
         <Kpi titulo="Bajo el mínimo" valor={String(enAlerta)} alerta={enAlerta > 0} />
       </section>
 
@@ -145,8 +147,8 @@ export default function InventarioPage() {
                   <th className="px-4 py-3 font-semibold">Artículo</th>
                   <th className="px-4 py-3 font-semibold">Tipo</th>
                   <th className="px-4 py-3 font-semibold">Stock</th>
-                  <th className="px-4 py-3 font-semibold">Costo promedio</th>
-                  <th className="px-4 py-3 font-semibold">Valor</th>
+                  {verCostos && <th className="px-4 py-3 font-semibold">Costo promedio</th>}
+                  {verCostos && <th className="px-4 py-3 font-semibold">Valor</th>}
                   <th className="px-4 py-3 font-semibold text-right">Movimientos</th>
                 </tr>
               </thead>
@@ -176,8 +178,8 @@ export default function InventarioPage() {
                           <div className={cn("h-full", NIVEL[a.nivel].barra)} style={{ width: `${pct}%` }} />
                         </div>
                       </td>
-                      <td className="px-4 py-2.5">{soles(a.costo_promedio)}</td>
-                      <td className="px-4 py-2.5">{soles(a.valor_stock)}</td>
+                      {verCostos && <td className="px-4 py-2.5">{soles(a.costo_promedio)}</td>}
+                      {verCostos && <td className="px-4 py-2.5">{soles(a.valor_stock)}</td>}
                       <td className="px-4 py-2.5 text-right">
                         <div className="inline-flex gap-1">
                           <Button variant="ghost" size="icon-sm" title="Entrada (compra)" onClick={() => setDialogo({ tipo: "movimiento", articulo: a, movimiento: "entrada" })}>
@@ -336,8 +338,9 @@ function ArticuloForm({ articulo, onCerrar, onHecho }: { articulo: Articulo | nu
 const MOVIMIENTO_TITULO: Record<TipoMovimiento, string> = { entrada: "Entrada", salida: "Salida", ajuste: "Ajuste por conteo" };
 
 function MovimientoForm({ articulo, tipo, onCerrar, onHecho }: { articulo: Articulo; tipo: TipoMovimiento; onCerrar: () => void; onHecho: () => void }) {
+  const verCostos = useModulosPermitidos().includes("finanzas");
   const [cantidad, setCantidad] = useState(tipo === "ajuste" ? String(articulo.stock) : "1");
-  const [costo, setCosto] = useState(Number(articulo.costo_promedio) > 0 ? String(Number(articulo.costo_promedio)) : "");
+  const [costo, setCosto] = useState(verCostos && Number(articulo.costo_promedio) > 0 ? String(Number(articulo.costo_promedio)) : "");
   const [fecha, setFecha] = useState(hoyISO());
   const [proveedor, setProveedor] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -374,7 +377,7 @@ function MovimientoForm({ articulo, tipo, onCerrar, onHecho }: { articulo: Artic
       <DialogHeader>
         <DialogTitle>{MOVIMIENTO_TITULO[tipo]} · {articulo.nombre}</DialogTitle>
         <DialogDescription>
-          Stock actual: {articulo.stock} · costo promedio {soles(articulo.costo_promedio)}.
+          Stock actual: {articulo.stock}{verCostos ? ` · costo promedio ${soles(articulo.costo_promedio)}` : ""}.
           {tipo === "entrada" && " Si es una compra, crea su gasto en Ingresos y Gastos."}
           {tipo === "salida" && " Para lo usado en un servicio, marca el caso como realizado."}
         </DialogDescription>
@@ -417,6 +420,7 @@ function MovimientoForm({ articulo, tipo, onCerrar, onHecho }: { articulo: Artic
 }
 
 function Historial({ articulo, onCambio }: { articulo: Articulo; onCambio: () => void }) {
+  const verCostos = useModulosPermitidos().includes("finanzas");
   const lista = useRecurso(() => I.movimientos(articulo.id), [articulo.id]);
   const ultimo = lista.data?.[0];
 
@@ -434,7 +438,7 @@ function Historial({ articulo, onCambio }: { articulo: Articulo; onCambio: () =>
               <th className="py-2 pr-3 font-semibold">Fecha</th>
               <th className="py-2 px-3 font-semibold">Tipo</th>
               <th className="py-2 px-3 text-right font-semibold">Cantidad</th>
-              <th className="py-2 px-3 text-right font-semibold">Costo</th>
+              {verCostos && <th className="py-2 px-3 text-right font-semibold">Costo</th>}
               <th className="py-2 px-3 text-right font-semibold">Stock</th>
               <th className="py-2 pl-3 font-semibold">Detalle</th>
             </tr>
@@ -445,7 +449,7 @@ function Historial({ articulo, onCambio }: { articulo: Articulo; onCambio: () =>
                 <td className="py-2 pr-3 whitespace-nowrap">{fechaCorta(m.fecha)}</td>
                 <td className="py-2 px-3">{m.tipo === "ENTRADA" ? "Entrada" : m.tipo === "SALIDA" ? "Salida" : "Ajuste"}</td>
                 <td className="py-2 px-3 text-right tabular-nums">{m.tipo === "SALIDA" ? -m.cantidad : m.cantidad > 0 && m.tipo === "AJUSTE" ? `+${m.cantidad}` : m.cantidad}</td>
-                <td className="py-2 px-3 text-right tabular-nums">{soles(m.costo_total)}</td>
+                {verCostos && <td className="py-2 px-3 text-right tabular-nums">{soles(m.costo_total)}</td>}
                 <td className="py-2 px-3 text-right tabular-nums">{m.stock_resultante}</td>
                 <td className="py-2 pl-3 text-xs text-slate-500">
                   {m.caso_id ? "Uso en servicio" : m.motivo ?? m.proveedor ?? ""}

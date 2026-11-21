@@ -29,9 +29,10 @@ export interface CasoFila {
   telefono: string | null;
   dni: string | null;
   veterinaria: string | null;
-  precio_total: Monto;
-  total_pagado: Monto;
-  saldo: Monto;
+  /** Nulos si el servicio ya terminó hace más de 2 días y no tienes finanzas. */
+  precio_total: Monto | null;
+  total_pagado: Monto | null;
+  saldo: Monto | null;
   inicio: string | null;
   fecha_realizado: string | null;
   fecha_entrega: string | null;
@@ -58,8 +59,8 @@ export interface Caso {
   peso_kg: number;
   eutanasia_incluida: boolean;
   modalidad: Modalidad;
-  precio_calculado: Monto;
-  precio_total: Monto;
+  precio_calculado: Monto | null;
+  precio_total: Monto | null;
   motivo_ajuste: string | null;
   desglose: LineaDesglose[];
   direccion_origen: string | null;
@@ -102,8 +103,8 @@ export interface Material {
   nombre: string;
   tipo: string;
   cantidad: number;
-  costo_unitario: Monto;
-  costo_total: Monto;
+  costo_unitario: Monto | null;
+  costo_total: Monto | null;
 }
 
 export interface AgendaEntrada {
@@ -119,8 +120,8 @@ export interface CasoDetalle {
   cliente: Cliente;
   mascota: Mascota;
   veterinaria: { id: string; nombre: string } | null;
-  total_pagado: Monto;
-  saldo_pendiente: Monto;
+  total_pagado: Monto | null;
+  saldo_pendiente: Monto | null;
   proxima_agenda: AgendaEntrada | null;
   materiales: Material[];
   margen: Monto | null;
