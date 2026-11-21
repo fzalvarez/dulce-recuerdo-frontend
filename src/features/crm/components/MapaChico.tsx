@@ -48,12 +48,14 @@ export function MapaChico({
       mk.setLatLng(e.latlng);
       mover.current({ latitud: e.latlng.lat, longitud: e.latlng.lng });
     });
-    // Dentro de un modal el tamaño cambia al abrir: recalcular.
+    // Dentro de un modal el tamaño cambia al abrir (animación) y al cambiar de alto: recalcular.
     const obs = new ResizeObserver(() => m.invalidateSize());
     obs.observe(contenedor.current);
+    const tras = window.setTimeout(() => m.invalidateSize(), 300);
     mapa.current = m;
     marcador.current = mk;
     return () => {
+      window.clearTimeout(tras);
       obs.disconnect();
       m.remove();
       mapa.current = null;
@@ -72,6 +74,11 @@ export function MapaChico({
       mapa.current.setView([latitud, longitud], mapa.current.getZoom());
     }
   }, [latitud, longitud]);
+
+  // Cambio de alto (p. ej. al pasar de ver a editar): el mapa tiene que volver a medir su área.
+  useEffect(() => {
+    mapa.current?.invalidateSize();
+  }, [className, editable]);
 
   useEffect(() => {
     const mk = marcador.current;
