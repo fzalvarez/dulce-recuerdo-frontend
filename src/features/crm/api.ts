@@ -83,11 +83,15 @@ export interface CrmVeterinaria {
   veterinaria_id: string | null;
   /** Ya no existe: no se visita ni se convierte en aliada. */
   ya_no_existe: boolean;
+  /** Google (spec crm-ubicacion): identificador del lugar, precisión y fecha de la coordenada. */
+  place_id: string | null;
+  ubicacion_precision: string | null;
+  ubicacion_actualizada_at: string | null;
 }
 
 export type CrmVeterinariaCuerpo = Omit<
   CrmVeterinaria,
-  "id" | "codigo" | "distrito" | "ruta_id" | "ruta" | "ruta_orden" | "visitada_at" | "info_entregada_at" | "interesada_at" | "veterinaria_id"
+  "id" | "codigo" | "distrito" | "ruta_id" | "ruta" | "ruta_orden" | "visitada_at" | "info_entregada_at" | "interesada_at" | "veterinaria_id" | "ubicacion_actualizada_at"
 > & {
   distrito: string;
 };
@@ -123,19 +127,18 @@ export interface Ubicacion {
   longitud: number;
 }
 
-/**
- * Busca la dirección en OpenStreetMap (Nominatim). Devuelve null si no la encuentra.
- * Uso liviano: una búsqueda por clic, nunca en cada tecla.
- */
-export async function geocodificar(direccion: string, distrito: string | null): Promise<Ubicacion | null> {
-  const consulta = [direccion, distrito, "Lima", "Perú"].filter(Boolean).join(", ");
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pe&q=${encodeURIComponent(consulta)}`;
-  const r = await fetch(url, { headers: { "Accept-Language": "es" } });
-  if (!r.ok) return null;
-  const datos = (await r.json()) as { lat: string; lon: string }[];
-  if (!datos.length) return null;
-  return { latitud: Number(datos[0].lat), longitud: Number(datos[0].lon) };
+/** Ubicación encontrada por Google en el servidor. No se guarda hasta que el usuario la confirma. */
+export interface UbicacionBuscada extends Ubicacion {
+  place_id: string;
+  direccion_formateada: string;
+  /** ROOFTOP = exacta; otras = aproximada y hay que confirmarla en el mapa. */
+  precision: string;
+  aprox: boolean;
 }
+
+/** Busca la dirección con Google (en el servidor). 404 si no la encuentra en Lima. */
+export const buscarUbicacion = (direccion: string, distrito: string | null) =>
+  api.post<UbicacionBuscada>("/crm/ubicaciones/buscar", { direccion, distrito }).then((r) => r.data);
 
 // ---------- Rutas (spec crm-rutas del backend) ----------
 

@@ -17,7 +17,7 @@ import {
   crear,
   DISTRITOS_CRM,
   editar,
-  geocodificar,
+  buscarUbicacion,
   TIPOS,
   type Coincidencia,
   type CrmVeterinaria,
@@ -74,6 +74,10 @@ export function CrmVeterinariaForm({
   const [aprox, setAprox] = useState(veterinaria?.ubicacion_aprox ?? false);
   // Punto en edición: sale de "Ubicar" o de "Ajustar"; se guarda solo al confirmarlo.
   const [propuesta, setPropuesta] = useState<Ubicacion | null>(null);
+  // Google: lugar y precisión. Solo mientras la coordenada es la que devolvió Google (sin mover a mano).
+  const [placeId, setPlaceId] = useState<string | null>(veterinaria?.place_id ?? null);
+  const [precision, setPrecision] = useState<string | null>(veterinaria?.ubicacion_precision ?? null);
+  const [propuestaPlace, setPropuestaPlace] = useState<{ place_id: string; precision: string } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
   // Duplicados encontrados al guardar; con la lista a la vista, el segundo clic guarda igual.
@@ -137,14 +141,17 @@ export function CrmVeterinariaForm({
     const direccion = form.direccion.trim();
     if (!direccion) return;
     setBuscando(true);
-    const exacta = await geocodificar(direccion, distrito).catch(() => null);
-    const aprox = exacta ? null : distrito ? await geocodificar(distrito, null).catch(() => null) : null;
+    const exacta = await buscarUbicacion(direccion, distrito).catch(() => null);
+    const porDistrito = exacta || !distrito ? null : await buscarUbicacion(distrito, null).catch(() => null);
     setBuscando(false);
-    setPropuesta(exacta ?? aprox ?? LIMA);
+    const encontrada = exacta ?? porDistrito;
+    setPropuesta(encontrada ? { latitud: encontrada.latitud, longitud: encontrada.longitud } : LIMA);
+    // El lugar de Google solo vale si el punto es el de la dirección exacta.
+    setPropuestaPlace(exacta ? { place_id: exacta.place_id, precision: exacta.precision } : null);
     setAviso(
       exacta
         ? null
-        : aprox
+        : porDistrito
           ? `No se encontró la dirección exacta: el punto está en ${distrito}. Muévelo al lugar correcto.`
           : "No se encontró la dirección. Mueve el punto al lugar correcto."
     );
@@ -152,8 +159,11 @@ export function CrmVeterinariaForm({
 
   const confirmarUbicacion = () => {
     setUbicacion(propuesta);
+    setPlaceId(propuestaPlace?.place_id ?? null);
+    setPrecision(propuestaPlace?.precision ?? null);
     setAprox(false);
     setPropuesta(null);
+    setPropuestaPlace(null);
     setAviso(null);
   };
 
@@ -195,6 +205,8 @@ export function CrmVeterinariaForm({
       latitud: ubicacion?.latitud ?? null,
       longitud: ubicacion?.longitud ?? null,
       ubicacion_aprox: ubicacion ? aprox : false,
+      place_id: ubicacion ? placeId : null,
+      ubicacion_precision: ubicacion ? precision : null,
       horario,
       fuente: texto("fuente"),
       web: texto("web"),
@@ -299,7 +311,7 @@ export function CrmVeterinariaForm({
 
         {propuesta ? (
           <div className="col-span-2 sm:col-span-6 space-y-2">
-            <MapaChico {...propuesta} onMover={setPropuesta} className="h-52" />
+            <MapaChico {...propuesta} onMover={(p) => { setPropuesta(p); setPropuestaPlace(null); }} className="h-52" />
             {aviso && <p className="text-xs text-amber-700">{aviso}</p>}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">Arrastra el punto o haz clic en el mapa para corregirlo.</p>
@@ -310,6 +322,7 @@ export function CrmVeterinariaForm({
                   size="sm"
                   onClick={() => {
                     setPropuesta(null);
+                    setPropuestaPlace(null);
                     setAviso(null);
                   }}
                 >
@@ -342,14 +355,29 @@ export function CrmVeterinariaForm({
                     size="sm"
                     onClick={() => {
                       setUbicacion(null);
+                      setPlaceId(null);
+                      setPrecision(null);
                       setAprox(false);
                     }}
                   >
                     Quitar
                   </Button>
-                  <Button type="button" variant={aprox ? "operational" : "outline"} size="sm" onClick={() => setPropuesta(ubicacion)}>
+                  <Button type="button" variant={aprox ? "operational" : "outline"} size="sm" onClick={() => {
+                    setPropuesta(ubicacion);
+                    setPropuestaPlace(placeId ? { place_id: placeId, precision: precision ?? "" } : null);
+                  }}>
                     {aprox ? "Revisar y confirmar" : "Ajustar punto"}
                   </Button>
+                  {placeId && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.nombre.trim() || "veterinaria")}&query_place_id=${placeId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center px-2 text-xs text-brand-600 hover:underline"
+                    >
+                      Ver en Google Maps
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
