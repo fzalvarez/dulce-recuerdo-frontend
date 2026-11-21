@@ -1,4 +1,6 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { enCurso } from "@/features/casos/api";
 import {
   LayoutDashboardIcon,
   BriefcaseIcon,
@@ -30,7 +32,7 @@ import { moduloDeRuta } from "@/features/roles/utils/permisos";
 
 // Eutanasia y cremación: pipeline por Caso (evento único, no cliente recurrente).
 const DESPEDIDAS_ITEMS = [
-  { label: "Casos & Servicios", icon: BriefcaseIcon, to: "/casos" },
+  { label: "Servicios", icon: BriefcaseIcon, to: "/casos" },
   { label: "Agenda & Rutas", icon: CalendarIcon, to: "/agenda" },
   { label: "Convenios Veterinarios", icon: StethoscopeIcon, to: "/veterinarias" },
   { label: "Entregas", icon: TruckIcon, to: "/entregas" },
@@ -63,7 +65,7 @@ const FINANZAS_ITEMS = [
 ];
 
 const CATALOGO_ITEMS = [
-  { label: "Servicios", icon: ClipboardListIcon, to: "/servicios" },
+  { label: "Catálogo de servicios", icon: ClipboardListIcon, to: "/servicios" },
   { label: "Planes", icon: LayersIcon, to: "/planes" },
   { label: "Inventario", icon: PackageIcon, to: "/inventario" },
   { label: "Activos", icon: WrenchIcon, to: "/activos" },
@@ -71,18 +73,23 @@ const CATALOGO_ITEMS = [
   { label: "Usuarios", icon: UsersIcon, to: "/usuarios" },
 ];
 
+/** Bolita de estado junto al ítem: verde y encendida cuando hay algo en curso. */
+type Indicador = { activo: boolean; titulo: string };
+
 function NavItem({
   label,
   icon: Icon,
   to,
   end,
   onClick,
+  indicador,
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   to: string;
   end?: boolean;
   onClick: () => void;
+  indicador?: Indicador;
 }) {
   return (
     <NavLink
@@ -107,6 +114,17 @@ function NavItem({
             )}
           />
           <span>{label}</span>
+          {indicador && (
+            <span
+              role="img"
+              title={indicador.titulo}
+              aria-label={indicador.titulo}
+              className={cn(
+                "ml-auto w-2 h-2 rounded-full shrink-0",
+                indicador.activo ? "bg-emerald-500 ring-4 ring-emerald-100 animate-pulse" : "bg-slate-300"
+              )}
+            />
+          )}
         </>
       )}
     </NavLink>
@@ -131,6 +149,32 @@ export function AppSidebar() {
     const id = moduloDeRuta(to);
     return id !== null && permitidos.includes(id);
   };
+
+  // Bolita de Servicios: se consulta al entrar a cada pantalla, así se actualiza sola.
+  const { pathname } = useLocation();
+  const puedeVerServicios = visible("/casos");
+  const [enCursoTotal, setEnCursoTotal] = useState<number | null>(null);
+  useEffect(() => {
+    if (!puedeVerServicios) return;
+    let vigente = true;
+    enCurso()
+      .then((n) => {
+        if (vigente) setEnCursoTotal(n);
+      })
+      .catch(() => {
+        if (vigente) setEnCursoTotal(null);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [puedeVerServicios, pathname]);
+  const indicadorServicios: Indicador | undefined =
+    enCursoTotal === null
+      ? undefined
+      : {
+          activo: enCursoTotal > 0,
+          titulo: enCursoTotal > 0 ? `${enCursoTotal} servicio(s) en curso` : "Sin servicios en curso",
+        };
   const grupos = [
     { titulo: "Despedidas", items: DESPEDIDAS_ITEMS },
     { titulo: "Fichas", items: ATENCION_VETERINARIA_ITEMS },
@@ -190,7 +234,12 @@ export function AppSidebar() {
                 </p>
               </div>
               {items.map((item) => (
-                <NavItem key={item.to} {...item} onClick={closeMobileSidebar} />
+                <NavItem
+                  key={item.to}
+                  {...item}
+                  indicador={item.to === "/casos" ? indicadorServicios : undefined}
+                  onClick={closeMobileSidebar}
+                />
               ))}
             </div>
           );

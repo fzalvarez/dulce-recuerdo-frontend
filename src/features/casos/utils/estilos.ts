@@ -1,4 +1,11 @@
-import type { EstadoCaso } from "../types";
+import type { EstadoCaso, Modalidad } from "../types";
+
+/** Presencial en azul, no presencial en celeste, domicilio en violeta. */
+export const MODALIDAD_BADGE: Record<Modalidad, string> = {
+  PRESENCIAL: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
+  NO_PRESENCIAL: "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
+  DOMICILIO: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300",
+};
 
 export const ESTADO_BADGE: Record<EstadoCaso, string> = {
   AGENDADO: "bg-indigo-100 text-indigo-800",

@@ -21,6 +21,12 @@ export async function bandeja(params: { estado?: EstadoCaso; q?: string } = {}):
   return data;
 }
 
+/** Servicios en curso (agendados o realizados sin entregar). Para el indicador del menú. */
+export async function enCurso(): Promise<number> {
+  const { data } = await api.get<{ total: number }>("/casos/en-curso");
+  return data.total;
+}
+
 export async function detalle(id: string): Promise<CasoDetalle> {
   const { data } = await api.get<CasoDetalle>(`/casos/${id}/detalle`);
   return data;

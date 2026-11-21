@@ -3,7 +3,7 @@ import type { ModuloDef, ModuloId, RolDef, RolId } from "../types";
 /** Catálogo de módulos del panel, en el orden del menú. */
 export const MODULOS: ModuloDef[] = [
   { id: "dashboard", nombre: "Dashboard", ruta: "/", grupo: "General" },
-  { id: "casos", nombre: "Casos & Servicios", ruta: "/casos", grupo: "Despedidas" },
+  { id: "casos", nombre: "Servicios", ruta: "/casos", grupo: "Despedidas" },
   { id: "agenda", nombre: "Agenda & Rutas", ruta: "/agenda", grupo: "Despedidas" },
   { id: "veterinarias", nombre: "Convenios Veterinarios", ruta: "/veterinarias", grupo: "Despedidas" },
   { id: "entregas", nombre: "Entregas", ruta: "/entregas", grupo: "Despedidas" },
@@ -11,7 +11,7 @@ export const MODULOS: ModuloDef[] = [
   { id: "mascotas", nombre: "Mascotas", ruta: "/mascotas", grupo: "Fichas" },
   { id: "finanzas", nombre: "Ingresos y Gastos", ruta: "/finanzas", grupo: "Finanzas" },
   { id: "reportes", nombre: "Reportes", ruta: "/reportes", grupo: "Reportes" },
-  { id: "servicios", nombre: "Servicios", ruta: "/servicios", grupo: "Catálogos & Administración" },
+  { id: "servicios", nombre: "Catálogo de servicios", ruta: "/servicios", grupo: "Catálogos & Administración" },
   { id: "planes", nombre: "Planes", ruta: "/planes", grupo: "Catálogos & Administración" },
   { id: "inventario", nombre: "Inventario", ruta: "/inventario", grupo: "Catálogos & Administración" },
   { id: "activos", nombre: "Activos", ruta: "/activos", grupo: "Catálogos & Administración" },

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { PlusCircleIcon, SearchIcon } from "lucide-react";
+import { EyeIcon, PlusCircleIcon, SearchIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import {
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { NuevoCasoDialog } from "../components/NuevoCasoDialog";
 import { DetalleCasoDialog, type AccionCaso } from "../components/DetalleCasoDialog";
-import { ESTADO_BADGE, pagoBadge } from "../utils/estilos";
+import { ESTADO_BADGE, MODALIDAD_BADGE, pagoBadge } from "../utils/estilos";
+import { EspecieIcono } from "../components/EspecieIcono";
 
 type Filtro = "activos" | EstadoCaso | "todos";
 
@@ -80,10 +81,10 @@ export default function CasosPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Casos & Servicios" }]} />
+      <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Servicios" }]} />
 
       <ModuleHeader
-        title="Casos"
+        title="Servicios"
         description="Cada servicio contratado: agenda, pagos, realización y entrega de la urna."
         actions={
           <Button variant="operational" className="gap-1.5 h-10" onClick={() => setNuevoAbierto(true)}>
@@ -135,12 +136,12 @@ export default function CasosPage() {
           <table className="w-full text-left text-sm min-w-[860px]">
             <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-semibold">Caso</th>
+                <th className="px-5 py-3 font-semibold">Mascota / Cliente</th>
                 <th className="px-5 py-3 font-semibold">Servicio</th>
                 <th className="px-5 py-3 font-semibold">Agenda</th>
                 <th className="px-5 py-3 font-semibold">Pago</th>
                 <th className="px-5 py-3 font-semibold">Estado</th>
-                <th className="px-5 py-3 font-semibold text-right">Siguiente paso</th>
+                <th className="px-5 py-3 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -151,18 +152,28 @@ export default function CasosPage() {
                 return (
                   <tr key={caso.id} className={cn("hover:bg-slate-50/60 dark:hover:bg-white/5", caso.estado === "CANCELADO" && "opacity-70")}>
                     <td className="px-5 py-3">
-                      <button type="button" onClick={() => setDetalle(caso)} className="text-left">
-                        <span className="block font-semibold text-slate-900 dark:text-white hover:text-brand-500">
-                          {caso.mascota} · {caso.tutor}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {caso.especie ?? ""} · {caso.peso_kg} kg{caso.veterinaria ? ` · ${caso.veterinaria}` : ""}
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <EspecieIcono especie={caso.especie} />
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => setDetalle(caso)}
+                            className="block max-w-full truncate text-left font-semibold text-slate-900 dark:text-white hover:text-brand-500"
+                          >
+                            {caso.mascota}
+                          </button>
+                          <span className="block truncate text-xs text-slate-500">
+                            {caso.tutor} · {caso.telefono ?? "sin teléfono"}
+                          </span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-3">
-                      <span className="block text-slate-800 dark:text-slate-200">
-                        {SERVICIO_LABEL[caso.servicio]} · {MODALIDAD_LABEL[caso.modalidad]}
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-slate-800 dark:text-slate-200">{SERVICIO_LABEL[caso.servicio]}</span>
+                        <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap", MODALIDAD_BADGE[caso.modalidad])}>
+                          {MODALIDAD_LABEL[caso.modalidad]}
+                        </span>
                       </span>
                       <span className="text-xs text-slate-500">
                         {caso.plan_nombre ?? ""}
@@ -189,17 +200,21 @@ export default function CasosPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      {siguiente ? (
-                        <Button
-                          variant={siguiente.tipo === "realizado" ? "operational" : "outline"}
-                          size="sm"
-                          onClick={() => ejecutarAccion(caso, siguiente.tipo)}
-                        >
-                          {siguiente.texto}
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setDetalle(caso)} title="Ver ficha completa">
+                          <EyeIcon className="size-4" />
+                          Ver
                         </Button>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+                        {siguiente && (
+                          <Button
+                            variant={siguiente.tipo === "realizado" ? "operational" : "outline"}
+                            size="sm"
+                            onClick={() => ejecutarAccion(caso, siguiente.tipo)}
+                          >
+                            {siguiente.texto}
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
