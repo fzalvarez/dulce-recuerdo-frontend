@@ -8,6 +8,7 @@ import { useRecurso } from "@/shared/hooks/useRecurso";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { listarMarcas, type Marca } from "../api";
 import { MarcaForm } from "../components/MarcaForm";
+import { CargaHistorica } from "../components/CargaHistorica";
 
 /** Configuración del sistema. Hoy: sub-marcas (spec tarifas, R13). */
 export default function ConfiguracionPage() {
@@ -76,6 +77,10 @@ export default function ConfiguracionPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="mt-6">
+        <CargaHistorica />
       </section>
 
       <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)} ancho="sm:max-w-md">
