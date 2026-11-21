@@ -87,7 +87,8 @@ function fechaDeCorte(): string {
 
 /** Reportes calculados en el backend con datos reales (spec reportes). */
 export default function ReportesPage() {
-  const [desde, setDesde] = useState(() => desplazarMes(ULTIMO_CERRADO, -5));
+  // Por defecto, todo el histórico: las ventas cargadas son de 2024 y 2025.
+  const [desde, setDesde] = useState(PRIMER_MES_HISTORICO);
   const [hasta, setHasta] = useState(ULTIMO_CERRADO);
   const [origen, setOrigen] = useState<R.Origen>("todos");
   const [vistaElegida, setVistaElegida] = useState<Vista | null>(null);
@@ -285,6 +286,22 @@ export default function ReportesPage() {
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {!crem.cargando && c && c.total === 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          <span>No hay cremaciones en {periodoLabel}. Prueba otro periodo: las ventas históricas son de 2024 y 2025.</span>
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-2"
+            onClick={() => {
+              setDesde(PRIMER_MES_HISTORICO);
+              setHasta(ULTIMO_CERRADO);
+            }}
+          >
+            Ver todo el histórico
+          </button>
+        </div>
+      )}
 
       {/* Resumen del período */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
