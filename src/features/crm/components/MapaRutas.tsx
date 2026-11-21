@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { cn } from "@/lib/utils";
+import { listarSedesActivas } from "@/features/sedes/api";
+import { capaSedes } from "@/features/sedes/mapa";
+import { useRecurso } from "@/shared/hooks/useRecurso";
 
 export interface PuntoMapa {
   id: string;
@@ -53,6 +56,17 @@ export function MapaRutas({
   const mapa = useRef<L.Map | null>(null);
   const capa = useRef<L.LayerGroup | null>(null);
   const elegir = useRef(onElegir);
+  const sedes = useRecurso(listarSedesActivas);
+
+  // Sedes del negocio encima del mapa (features/sedes/mapa.ts). Se vuelve a dibujar al cambiar la lista.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !sedes.data) return;
+    const capa = capaSedes(sedes.data).addTo(m);
+    return () => {
+      capa.remove();
+    };
+  }, [sedes.data]);
   elegir.current = onElegir;
 
   useEffect(() => {

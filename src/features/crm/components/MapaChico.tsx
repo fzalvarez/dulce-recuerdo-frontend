@@ -4,6 +4,9 @@ import "leaflet/dist/leaflet.css";
 import { ExternalLinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Ubicacion } from "../api";
+import { listarSedesActivas } from "@/features/sedes/api";
+import { capaSedes } from "@/features/sedes/mapa";
+import { useRecurso } from "@/shared/hooks/useRecurso";
 
 // Pin dibujado en SVG: no depende de las imágenes de Leaflet, que se rompen al empaquetar.
 const PIN = L.divIcon({
@@ -24,6 +27,7 @@ export function MapaChico({
   className,
 }: Ubicacion & { onMover?: (p: Ubicacion) => void; className?: string }) {
   const contenedor = useRef<HTMLDivElement>(null);
+  const sedes = useRecurso(listarSedesActivas);
   const mapa = useRef<L.Map | null>(null);
   const marcador = useRef<L.Marker | null>(null);
   const mover = useRef(onMover);
@@ -86,6 +90,16 @@ export function MapaChico({
     if (editable) mk.dragging.enable();
     else mk.dragging.disable();
   }, [editable]);
+
+  // Sedes del negocio encima del mapa (features/sedes/mapa.ts). Se vuelve a dibujar al cambiar la lista.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !sedes.data) return;
+    const capa = capaSedes(sedes.data).addTo(m);
+    return () => {
+      capa.remove();
+    };
+  }, [sedes.data]);
 
   const enlace = `https://www.openstreetmap.org/?mlat=${latitud}&mlon=${longitud}#map=17/${latitud}/${longitud}`;
   return (

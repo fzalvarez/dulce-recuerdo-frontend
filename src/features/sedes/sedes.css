@@ -1,0 +1,30 @@
+/* Marcador de sede: el logo de Dulce Recuerdo dentro de un círculo blanco con borde. */
+.sede-marcador {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #1d4ed8;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sede-marcador img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.sede-etiqueta {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}

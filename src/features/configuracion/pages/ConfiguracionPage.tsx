@@ -9,6 +9,7 @@ import { Modal } from "@/features/casos/components/Dialogos";
 import { listarMarcas, type Marca } from "../api";
 import { MarcaForm } from "../components/MarcaForm";
 import { CargaHistorica } from "../components/CargaHistorica";
+import { SedesPanel } from "../components/SedesPanel";
 
 /** Configuración del sistema. Hoy: sub-marcas (spec tarifas, R13). */
 export default function ConfiguracionPage() {
@@ -77,6 +78,10 @@ export default function ConfiguracionPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="mt-6">
+        <SedesPanel />
       </section>
 
       <section className="mt-6">
