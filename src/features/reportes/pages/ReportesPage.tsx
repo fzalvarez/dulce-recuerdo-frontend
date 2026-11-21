@@ -27,7 +27,10 @@ import {
   etiquetaMesLarga,
   formatPct,
   formatPorcentaje,
+  mesesEntre,
+  PRIMER_MES_HISTORICO,
 } from "../utils/reportes";
+import { anualizarCremaciones, anualizarIngresos } from "../utils/anual";
 import "../reportes.css";
 
 type ReporteKey =
@@ -53,15 +56,30 @@ const REPORTES: { key: ReporteKey; slug: string; label: string }[] = [
   { key: "peso", slug: "peso-mascota", label: "Peso de la mascota" },
 ];
 
-type Longitud = 3 | 6 | 9 | 12;
-const LONGITUDES: Longitud[] = [3, 6, 9, 12];
+type Vista = "mes" | "anio";
+const ORIGENES: { valor: R.Origen; etiqueta: string }[] = [
+  { valor: "todos", etiqueta: "Todos los casos" },
+  { valor: "sistema", etiqueta: "Solo sistema" },
+  { valor: "historico", etiqueta: "Solo histórico 2024–2025" },
+];
+/** Con más meses que estos, el periodo se ve por año (el usuario puede cambiarlo). */
+const MAX_MESES_POR_MES = 18;
 
 const SERIE_PERIODO: SerieBarra = { key: "periodo", label: "Mes del período", color: "var(--serie-1)" };
 const SERIE_ANTERIOR: SerieBarra = { key: "anterior", label: "Mismo mes, año anterior", color: "var(--serie-2)" };
 
 const MES_EN_CURSO = claveMes(new Date());
-/** Opciones de cierre: los últimos 24 meses, del más reciente al más antiguo. */
-const OPCIONES_FIN: string[] = Array.from({ length: 24 }, (_, i) => desplazarMes(MES_EN_CURSO, -i));
+const ULTIMO_CERRADO = desplazarMes(MES_EN_CURSO, -1);
+/** Meses que se pueden elegir: del primer mes del histórico al mes en curso. */
+const MESES_ELEGIBLES = mesesEntre(PRIMER_MES_HISTORICO, MES_EN_CURSO);
+const PRESETS: { key: string; label: string; desde: string; hasta: string }[] = [
+  { key: "ultimos-6", label: "Últimos 6 meses", desde: desplazarMes(ULTIMO_CERRADO, -5), hasta: ULTIMO_CERRADO },
+  { key: "ultimos-12", label: "Últimos 12 meses", desde: desplazarMes(ULTIMO_CERRADO, -11), hasta: ULTIMO_CERRADO },
+  { key: "anio-2024", label: "Año 2024", desde: "2024-01", hasta: "2024-12" },
+  { key: "anio-2025", label: "Año 2025", desde: "2025-01", hasta: "2025-12" },
+  { key: "2024-2025", label: "2024–2025", desde: "2024-01", hasta: "2025-12" },
+  { key: "todo", label: "Todo el histórico", desde: PRIMER_MES_HISTORICO, hasta: ULTIMO_CERRADO },
+];
 
 function fechaDeCorte(): string {
   return new Date().toLocaleDateString("es-PE", { day: "numeric", month: "long" });
@@ -69,25 +87,39 @@ function fechaDeCorte(): string {
 
 /** Reportes calculados en el backend con datos reales (spec reportes). */
 export default function ReportesPage() {
-  const [finClave, setFinClave] = useState(() => desplazarMes(MES_EN_CURSO, -1));
-  const [longitud, setLongitud] = useState<Longitud>(6);
+  const [desde, setDesde] = useState(() => desplazarMes(ULTIMO_CERRADO, -5));
+  const [hasta, setHasta] = useState(ULTIMO_CERRADO);
+  const [origen, setOrigen] = useState<R.Origen>("todos");
+  const [vistaElegida, setVistaElegida] = useState<Vista | null>(null);
   const { reporte: slug } = useParams();
   const reporte: ReporteKey = REPORTES.find((r) => r.slug === slug)?.key ?? "mensual";
-  const clave = `${finClave}|${longitud}`;
+  const numMeses = mesesEntre(desde, hasta).length;
+  const vista: Vista = vistaElegida ?? (numMeses > MAX_MESES_POR_MES ? "anio" : "mes");
+  const esAnio = vista === "anio";
+  const rango: R.Rango = { desde, hasta, origen };
+  const clave = `${desde}|${hasta}|${origen}`;
 
-  const crem = useRecurso(() => R.cremaciones(finClave, longitud), [clave]);
+  const crem = useRecurso(() => R.cremaciones(rango), [clave]);
   const usaIngresos = reporte === "ingresos";
   const usaComposicion = ["top-veterinarias", "distritos", "planes", "peso"].includes(reporte);
-  const ing = useRecurso(() => (usaIngresos ? R.ingresos(finClave, longitud) : Promise.resolve(undefined)), [clave, usaIngresos]);
-  const comp = useRecurso(() => (usaComposicion ? R.composicion(finClave, longitud) : Promise.resolve(undefined)), [clave, usaComposicion]);
-  const vets = useRecurso(() => (reporte === "top-veterinarias" ? R.veterinarias(finClave, longitud) : Promise.resolve(undefined)), [clave, reporte]);
-  const opor = useRecurso(() => (reporte === "distritos" ? R.oportunidades(finClave, longitud) : Promise.resolve(undefined)), [clave, reporte]);
-  const abas = useRecurso(() => (reporte === "planes" ? R.abastecimiento(finClave) : Promise.resolve(undefined)), [finClave, reporte]);
+  const ing = useRecurso(() => (usaIngresos ? R.ingresos(rango) : Promise.resolve(undefined)), [clave, usaIngresos]);
+  const comp = useRecurso(() => (usaComposicion ? R.composicion(rango) : Promise.resolve(undefined)), [clave, usaComposicion]);
+  const vets = useRecurso(() => (reporte === "top-veterinarias" ? R.veterinarias(rango) : Promise.resolve(undefined)), [clave, reporte]);
+  const opor = useRecurso(() => (reporte === "distritos" ? R.oportunidades(rango) : Promise.resolve(undefined)), [clave, reporte]);
+  const abas = useRecurso(() => (reporte === "planes" ? R.abastecimiento(hasta) : Promise.resolve(undefined)), [hasta, reporte]);
 
   const c = crem.data;
-  const meses = useMemo(() => c?.meses ?? [], [c]);
-  const ventana = c?.periodo.meses ?? [finClave];
-  const periodoLabel = `${etiquetaMesLarga(ventana[0])} – ${etiquetaMesLarga(ventana[ventana.length - 1])}`;
+  const meses = useMemo(() => (c ? (esAnio ? anualizarCremaciones(c.meses) : c.meses) : []), [c, esAnio]);
+  const ingresosVista = useMemo(() => {
+    const filas = ing.data?.meses ?? [];
+    return esAnio ? anualizarIngresos(filas) : filas;
+  }, [ing.data, esAnio]);
+  const colMes = esAnio ? "Año" : "Mes";
+  const colPeriodo = esAnio ? "Año del período" : "Mes del período";
+  const colAnterior = esAnio ? "Año anterior" : "Mismo mes, año anterior";
+  const serieActual: SerieBarra = { ...SERIE_PERIODO, label: colPeriodo };
+  const serieAnterior: SerieBarra = { ...SERIE_ANTERIOR, label: colAnterior };
+  const periodoLabel = `${etiquetaMesLarga(desde)} – ${etiquetaMesLarga(hasta)}`;
   const incluyeParcial = !!c?.periodo.incluye_mes_en_curso;
   const totalPeriodo = c?.total ?? 0;
   const totalPrevio = c?.total_previo ?? 0;
@@ -101,12 +133,12 @@ export default function ReportesPage() {
     </span>
   ) : null;
 
-  // Reporte 1: variación contra el mes anterior.
+  // Reporte 1: variación contra el mes anterior (en la vista anual, contra el año anterior).
   const grupos1: GrupoBarra[] = meses.map((m) => ({
     etiqueta: etiquetaMesCorta(m.mes),
     parcial: m.parcial,
     valores: { total: m.total },
-    variacion: m.variacion_mes_anterior,
+    variacion: esAnio ? m.variacion_interanual : m.variacion_mes_anterior,
   }));
 
   // Reportes 2, 3 y 4: mes contra el mismo mes del año anterior.
@@ -121,7 +153,7 @@ export default function ReportesPage() {
   const grupos3 = interanual((m) => m.particulares, (m) => m.particulares_anio_anterior, (m) => m.variacion_interanual_particulares);
   const grupos4 = interanual((m) => m.veterinarias, (m) => m.veterinarias_anio_anterior, (m) => m.variacion_interanual_veterinarias);
 
-  const filasIngresos = (ing.data?.meses ?? []).map((f) => ({
+  const filasIngresos = ingresosVista.map((f) => ({
     clave: f.mes,
     etiqueta: etiquetaMesCorta(f.mes),
     parcial: f.parcial,
@@ -154,38 +186,99 @@ export default function ReportesPage() {
         description="Revisión de la empresa: cremaciones, canales, veterinarias, distritos, planes y peso."
       />
 
-      {/* Filtros: un solo bloque, como en Inventario */}
-      <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="filtro-periodo" className="whitespace-nowrap">Período:</Label>
-            <Select value={String(longitud)} onValueChange={(v) => setLongitud(Number(v) as Longitud)}>
-              <SelectTrigger id="filtro-periodo" className="w-44 whitespace-nowrap">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LONGITUDES.map((l) => (
-                  <SelectItem key={l} value={String(l)}>
-                    {l} meses
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Filtros: periodo (rápido o libre), origen de los casos y vista, en un solo bloque */}
+      <section className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs p-4 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-slate-500 mr-1">Periodo rápido:</span>
+          {PRESETS.map((p) => {
+            const activo = p.desde === desde && p.hasta === hasta;
+            return (
+              <button
+                key={p.key}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => {
+                  setDesde(p.desde);
+                  setHasta(p.hasta);
+                }}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                  activo
+                    ? "bg-brand-500 text-white shadow-sm font-semibold"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-white/5"
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="filtro-desde" className="whitespace-nowrap">Desde:</Label>
+              <Select value={desde} onValueChange={setDesde}>
+                <SelectTrigger id="filtro-desde" className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES_ELEGIBLES.filter((m) => m <= hasta).map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {etiquetaMesLarga(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="filtro-hasta" className="whitespace-nowrap">Hasta:</Label>
+              <Select value={hasta} onValueChange={setHasta}>
+                <SelectTrigger id="filtro-hasta" className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES_ELEGIBLES.filter((m) => m >= desde).map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {etiquetaMesLarga(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="filtro-origen" className="whitespace-nowrap">Casos:</Label>
+              <Select value={origen} onValueChange={(v) => setOrigen(v as R.Origen)}>
+                <SelectTrigger id="filtro-origen" className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORIGENES.map((o) => (
+                    <SelectItem key={o.valor} value={o.valor}>
+                      {o.etiqueta}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Label htmlFor="filtro-fin" className="whitespace-nowrap">Termina en:</Label>
-            <Select value={finClave} onValueChange={setFinClave}>
-              <SelectTrigger id="filtro-fin" className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {OPCIONES_FIN.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {etiquetaMesLarga(m)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <span className="text-sm text-slate-500">Ver por:</span>
+            <div role="group" aria-label="Ver por mes o por año" className="inline-flex rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden">
+              {(["mes", "anio"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={vista === v}
+                  onClick={() => setVistaElegida(v)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium transition-colors",
+                    vista === v ? "bg-brand-500 text-white" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                  )}
+                >
+                  {v === "mes" ? "Mes" : "Año"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <span className="text-sm text-slate-500">{periodoLabel}</span>
@@ -198,7 +291,7 @@ export default function ReportesPage() {
         <Resumen
           label="Cremaciones del período"
           valor={totalPeriodo.toLocaleString("es-PE")}
-          hint={incluyeParcial ? "Incluye un mes parcial" : `${longitud} meses`}
+          hint={incluyeParcial ? "Incluye un mes parcial" : `${numMeses} meses`}
         />
         <Resumen
           label="Promedio mensual"
@@ -234,11 +327,15 @@ export default function ReportesPage() {
 
       {reporte === "mensual" && (
         <ChartCard
-          titulo="Cremaciones por mes"
-          subtitulo={`Total mensual y variación frente al mes anterior · ${periodoLabel}`}
+          titulo={esAnio ? "Cremaciones por año" : "Cremaciones por mes"}
+          subtitulo={
+            esAnio
+              ? `Total anual y variación frente al año anterior · ${periodoLabel}`
+              : `Total mensual y variación frente al mes anterior · ${periodoLabel}`
+          }
           nota={notaParcial}
           tabla={{
-            columnas: ["Mes", "Cremaciones", "Variación vs. mes anterior"],
+            columnas: [colMes, "Cremaciones", esAnio ? "Variación vs. año anterior" : "Variación vs. mes anterior"],
             filas: grupos1.map((g) => [
               g.etiqueta + (g.parcial ? " (parcial)" : ""),
               g.valores.total,
@@ -250,14 +347,14 @@ export default function ReportesPage() {
             grupos={grupos1}
             series={[{ key: "total", label: "Cremaciones", color: "var(--serie-1)" }]}
             descripcion={`Cremaciones por mes, ${periodoLabel}`}
-            etiquetaVariacion="contra el mes anterior"
+            etiquetaVariacion={esAnio ? "contra el año anterior" : "contra el mes anterior"}
           />
         </ChartCard>
       )}
 
       {reporte === "ingresos" && (
         <ChartCard
-          titulo="Ingresos por mes"
+          titulo={esAnio ? "Ingresos por año" : "Ingresos por mes"}
           subtitulo={`Importe cobrado, cremaciones y precio promedio · ${periodoLabel}`}
           nota={
             <>
@@ -269,7 +366,7 @@ export default function ReportesPage() {
             </>
           }
           tabla={{
-            columnas: ["Mes", "Cremaciones", "Ingreso", "Cobrado", "Precio promedio"],
+            columnas: [colMes, "Cremaciones", "Ingreso", "Cobrado", "Precio promedio"],
             filas: [
               ...filasIngresos.map((f) => [
                 f.etiqueta + (f.parcial ? " (parcial)" : ""),
@@ -307,11 +404,11 @@ export default function ReportesPage() {
 
       {reporte === "interanual" && (
         <ChartCard
-          titulo="Cremaciones: mes contra el mismo mes del año anterior"
+          titulo={esAnio ? "Cremaciones: año contra año anterior" : "Cremaciones: mes contra el mismo mes del año anterior"}
           subtitulo={`Todos los canales · ${periodoLabel}`}
           nota={notaParcial}
           tabla={{
-            columnas: ["Mes", "Mes del período", "Mismo mes, año anterior", "Variación interanual"],
+            columnas: [colMes, colPeriodo, colAnterior, "Variación interanual"],
             filas: grupos2.map((g) => [
               g.etiqueta + (g.parcial ? " (parcial)" : ""),
               g.valores.periodo,
@@ -322,9 +419,9 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos2}
-            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
+            series={[serieAnterior, serieActual]}
             descripcion={`Cremaciones por mes frente al año anterior, ${periodoLabel}`}
-            etiquetaVariacion="contra el mismo mes del año anterior"
+            etiquetaVariacion={esAnio ? "contra el año anterior" : "contra el mismo mes del año anterior"}
           />
         </ChartCard>
       )}
@@ -335,7 +432,7 @@ export default function ReportesPage() {
           subtitulo={`Clientes directos, sin veterinaria · ${periodoLabel}`}
           nota={notaParcial}
           tabla={{
-            columnas: ["Mes", "Mes del período", "Mismo mes, año anterior", "Variación interanual"],
+            columnas: [colMes, colPeriodo, colAnterior, "Variación interanual"],
             filas: grupos3.map((g) => [
               g.etiqueta + (g.parcial ? " (parcial)" : ""),
               g.valores.periodo,
@@ -346,9 +443,9 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos3}
-            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
+            series={[serieAnterior, serieActual]}
             descripcion={`Cremaciones de particulares por mes frente al año anterior, ${periodoLabel}`}
-            etiquetaVariacion="contra el mismo mes del año anterior"
+            etiquetaVariacion={esAnio ? "contra el año anterior" : "contra el mismo mes del año anterior"}
           />
         </ChartCard>
       )}
@@ -359,7 +456,7 @@ export default function ReportesPage() {
           subtitulo={`Casos referidos por veterinarias · ${periodoLabel}`}
           nota={notaParcial}
           tabla={{
-            columnas: ["Mes", "Mes del período", "Mismo mes, año anterior", "Variación interanual"],
+            columnas: [colMes, colPeriodo, colAnterior, "Variación interanual"],
             filas: grupos4.map((g) => [
               g.etiqueta + (g.parcial ? " (parcial)" : ""),
               g.valores.periodo,
@@ -370,9 +467,9 @@ export default function ReportesPage() {
         >
           <BarrasVerticales
             grupos={grupos4}
-            series={[SERIE_ANTERIOR, SERIE_PERIODO]}
+            series={[serieAnterior, serieActual]}
             descripcion={`Cremaciones referidas por veterinarias por mes frente al año anterior, ${periodoLabel}`}
-            etiquetaVariacion="contra el mismo mes del año anterior"
+            etiquetaVariacion={esAnio ? "contra el año anterior" : "contra el mismo mes del año anterior"}
           />
         </ChartCard>
       )}

@@ -136,11 +136,24 @@ export interface ReporteAbastecimiento {
   conclusiones: string[];
 }
 
+/** todos: cualquier caso; sistema: creados en la app; historico: carga de ventas 2024–2025. */
+export type Origen = "todos" | "sistema" | "historico";
+
+/** Periodo de los reportes: meses "YYYY-MM", ambos incluidos, y origen de los casos. */
+export interface Rango {
+  desde: string;
+  hasta: string;
+  origen: Origen;
+}
+
 const get = <T,>(ruta: string, params: Record<string, string | number>) => api.get<T>(`/reportes/${ruta}`, { params }).then((r) => r.data);
 
-export const cremaciones = (fin: string, meses: number) => get<ReporteCremaciones>("cremaciones", { fin, meses });
-export const ingresos = (fin: string, meses: number) => get<ReporteIngresos>("ingresos", { fin, meses });
-export const composicion = (fin: string, meses: number) => get<ReporteComposicion>("composicion", { fin, meses });
-export const oportunidades = (fin: string, meses: number) => get<ReporteOportunidades>("oportunidades", { fin, meses });
-export const veterinarias = (fin: string, meses: number) => get<ReporteVeterinarias>("veterinarias", { fin, meses });
-export const abastecimiento = (fin: string) => get<ReporteAbastecimiento>("abastecimiento", { fin });
+const porRango = (r: Rango) => ({ desde: r.desde, hasta: r.hasta, origen: r.origen });
+
+export const cremaciones = (r: Rango) => get<ReporteCremaciones>("cremaciones", porRango(r));
+export const ingresos = (r: Rango) => get<ReporteIngresos>("ingresos", porRango(r));
+export const composicion = (r: Rango) => get<ReporteComposicion>("composicion", porRango(r));
+export const oportunidades = (r: Rango) => get<ReporteOportunidades>("oportunidades", porRango(r));
+export const veterinarias = (r: Rango) => get<ReporteVeterinarias>("veterinarias", porRango(r));
+/** Inventario: no depende del origen de los casos. */
+export const abastecimiento = (hasta: string) => get<ReporteAbastecimiento>("abastecimiento", { fin: hasta });

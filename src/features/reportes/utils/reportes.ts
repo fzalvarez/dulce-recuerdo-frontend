@@ -16,7 +16,19 @@ export function desplazarMes(clave: string, delta: number): string {
   return claveMes(new Date(y, m - 1 + delta, 1));
 }
 
+/** Primer mes con ventas cargadas (ventas históricas 2024–2025). */
+export const PRIMER_MES_HISTORICO = "2024-01";
+
+/** Meses de `desde` a `hasta`, ambos incluidos ("YYYY-MM" se compara como texto). */
+export function mesesEntre(desde: string, hasta: string): string[] {
+  const meses: string[] = [];
+  for (let m = desde; m <= hasta; m = desplazarMes(m, 1)) meses.push(m);
+  return meses;
+}
+
+/** Etiqueta corta: "mar 25" para un mes, "2025" para un año (vista anual). */
 export function etiquetaMesCorta(clave: string): string {
+  if (clave.length === 4) return clave;
   const [y, m] = clave.split("-").map(Number);
   return `${MESES_CORTOS[m - 1]} ${String(y).slice(2)}`;
 }
