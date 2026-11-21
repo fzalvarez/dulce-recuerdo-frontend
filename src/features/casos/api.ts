@@ -16,6 +16,23 @@ import type {
   Servicio,
 } from "./types";
 
+/** Una página de la bandeja: filas, total que cumple el filtro y conteos por estado. */
+export interface BandejaPagina {
+  items: CasoFila[];
+  total: number;
+  conteos: Record<string, number>;
+}
+
+export async function bandejaPagina(params: {
+  filtro: string;
+  q?: string;
+  offset: number;
+  limite: number;
+}): Promise<BandejaPagina> {
+  const { data } = await api.get<BandejaPagina>("/casos/bandeja/pagina", { params });
+  return data;
+}
+
 export async function bandeja(params: { estado?: EstadoCaso; q?: string } = {}): Promise<CasoFila[]> {
   const { data } = await api.get<CasoFila[]>("/casos/bandeja", { params });
   return data;

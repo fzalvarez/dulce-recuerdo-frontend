@@ -1,5 +1,13 @@
-import { useMemo, useState } from "react";
-import { EyeIcon, PhoneIcon, PlusCircleIcon, SearchIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  MessageCircleIcon,
+  PhoneIcon,
+  PlusCircleIcon,
+  SearchIcon,
+} from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +18,7 @@ import * as casosApi from "../api";
 import type { CasoFila, EstadoCaso } from "../types";
 import {
   accionPrincipal,
+  enlaceWhatsApp,
   ESTADO_LABEL,
   faltaUrna,
   fechaCorta,
@@ -43,44 +52,42 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: "todos", label: "Todos" },
 ];
 
+/** Servicios por página: la bandeja se pide de a 100 y el backend ordena y filtra. */
+const POR_PAGINA = 100;
+
 /**
- * Fecha que muestra la columna Fecha y con la que se ordena: el último movimiento del
- * servicio (entrega, realización, agenda o registro). Los casos históricos no tienen
- * registro propio, así que su fecha es la del servicio.
+ * Fecha que muestra la columna Fecha: el último movimiento del servicio (entrega,
+ * realización, agenda o registro). Los casos históricos usan la fecha de su servicio.
+ * El backend ordena la bandeja con la misma regla.
  */
 function fechaDelServicio(caso: CasoFila): string {
   return caso.fecha_entrega ?? caso.fecha_realizado ?? caso.inicio ?? caso.created_at;
 }
 
-function enFiltro(estado: EstadoCaso, filtro: Filtro): boolean {
-  if (filtro === "todos") return true;
-  if (filtro === "activos") return estado === "AGENDADO" || estado === "REALIZADO";
-  return estado === filtro;
-}
-
 export default function CasosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");
-  const recurso = useRecurso(() => casosApi.bandeja({ q: q || undefined }), [q]);
-  const casos = useMemo(() => recurso.data ?? [], [recurso.data]);
-
   const [filtro, setFiltro] = useState<Filtro>("activos");
+  const [pagina, setPagina] = useState(0);
+  const recurso = useRecurso(
+    () => casosApi.bandejaPagina({ filtro, q: q || undefined, offset: pagina * POR_PAGINA, limite: POR_PAGINA }),
+    [filtro, q, pagina]
+  );
   const [nuevoAbierto, setNuevoAbierto] = useState(false);
   const [detalle, setDetalle] = useState<CasoFila | null>(null);
   const [accion, setAccion] = useState<{ tipo: AccionCaso; caso: CasoFila } | null>(null);
 
-  const conteo = useMemo(
-    () => Object.fromEntries(FILTROS.map((f) => [f.key, casos.filter((c) => enFiltro(c.estado, f.key)).length])) as Record<Filtro, number>,
-    [casos]
-  );
-  // Los más recientes arriba.
-  const visibles = useMemo(
-    () =>
-      casos
-        .filter((c) => enFiltro(c.estado, filtro))
-        .sort((a, b) => new Date(fechaDelServicio(b)).getTime() - new Date(fechaDelServicio(a)).getTime()),
-    [casos, filtro]
-  );
+  const visibles = recurso.data?.items ?? [];
+  const total = recurso.data?.total ?? 0;
+  const conteo = recurso.data?.conteos ?? {};
+  const ultimaPagina = Math.max(0, Math.ceil(total / POR_PAGINA) - 1);
+  const primero = total ? pagina * POR_PAGINA + 1 : 0;
+  const ultimo = Math.min((pagina + 1) * POR_PAGINA, total);
+
+  const cambiarFiltro = (nuevo: Filtro) => {
+    setFiltro(nuevo);
+    setPagina(0);
+  };
 
   const ejecutarAccion = async (caso: CasoFila, tipo: AccionCaso) => {
     if (tipo === "entregado" && !faltaUrna(caso)) {
@@ -112,14 +119,14 @@ export default function CasosPage() {
       />
 
       <div className="flex flex-col md:flex-row md:items-center gap-4">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar casos">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar servicios">
           {FILTROS.map((f) => (
             <button
               key={f.key}
               type="button"
               role="tab"
               aria-selected={filtro === f.key}
-              onClick={() => setFiltro(f.key)}
+              onClick={() => cambiarFiltro(f.key)}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors",
                 filtro === f.key
@@ -127,7 +134,7 @@ export default function CasosPage() {
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-gray-900 dark:text-slate-300 dark:border-white/10"
               )}
             >
-              {f.label} <span className="opacity-70">({conteo[f.key] ?? 0})</span>
+              {f.label} <span className="opacity-70">({(conteo[f.key] ?? 0).toLocaleString("es-PE")})</span>
             </button>
           ))}
         </div>
@@ -136,6 +143,7 @@ export default function CasosPage() {
           onSubmit={(e) => {
             e.preventDefault();
             setQ(busqueda.trim());
+            setPagina(0);
           }}
         >
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -150,11 +158,11 @@ export default function CasosPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[1060px]">
+          <table className="w-full text-left text-sm min-w-[1000px]">
             <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-semibold">Mascota / Cliente</th>
-                <th className="px-5 py-3 font-semibold">Teléfono</th>
+                <th className="px-5 py-3 font-semibold">Mascota</th>
+                <th className="px-5 py-3 font-semibold">Cliente</th>
                 <th className="px-5 py-3 font-semibold">Servicio</th>
                 <th className="px-5 py-3 font-semibold">Fecha</th>
                 <th className="px-5 py-3 font-semibold">Agenda</th>
@@ -168,6 +176,7 @@ export default function CasosPage() {
                 const siguiente = accionPrincipal(caso.estado);
                 const pago = pagoBadge(Number(caso.precio_total), Number(caso.total_pagado));
                 const saldo = Number(caso.saldo);
+                const datosMascota = [caso.peso_kg != null ? `${caso.peso_kg} kg` : null, caso.sexo].filter(Boolean).join(" · ");
                 return (
                   <tr key={caso.id} className={cn("hover:bg-slate-50/60 dark:hover:bg-white/5", caso.estado === "CANCELADO" && "opacity-70")}>
                     <td className="px-5 py-3">
@@ -181,21 +190,34 @@ export default function CasosPage() {
                           >
                             {caso.mascota}
                           </button>
-                          <span className="block truncate text-xs text-slate-500">{caso.tutor}</span>
+                          <span className="block truncate text-xs text-slate-500">{datosMascota || "—"}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
+                    <td className="px-5 py-3">
+                      <span className="block truncate font-medium text-slate-900 dark:text-white">{caso.tutor}</span>
                       {caso.telefono ? (
-                        <a
-                          href={`tel:${caso.telefono.replace(/\s+/g, "")}`}
-                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-500 dark:text-slate-300"
-                        >
-                          <PhoneIcon className="size-3.5 text-slate-400" aria-hidden />
-                          {caso.telefono}
-                        </a>
+                        <span className="mt-0.5 flex items-center gap-3 whitespace-nowrap text-xs text-slate-600 dark:text-slate-300">
+                          <a
+                            href={`tel:${caso.telefono.replace(/\s+/g, "")}`}
+                            className="inline-flex items-center gap-1 hover:text-brand-500"
+                          >
+                            <PhoneIcon className="size-3.5 text-slate-400" aria-hidden />
+                            {caso.telefono}
+                          </a>
+                          <a
+                            href={enlaceWhatsApp(caso.telefono)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Escribir por WhatsApp"
+                            className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                          >
+                            <MessageCircleIcon className="size-3.5" aria-hidden />
+                            WhatsApp
+                          </a>
+                        </span>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-xs text-slate-400">Sin teléfono</span>
                       )}
                     </td>
                     <td className="px-5 py-3">
@@ -252,7 +274,7 @@ export default function CasosPage() {
               })}
               {recurso.cargando && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">Cargando casos…</td>
+                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">Cargando servicios…</td>
                 </tr>
               )}
               {recurso.error && (
@@ -262,14 +284,38 @@ export default function CasosPage() {
               )}
               {!recurso.cargando && !recurso.error && visibles.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">No hay casos en esta vista.</td>
+                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">No hay servicios en esta vista.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 text-xs text-slate-500">
-          {visibles.length} de {casos.length} casos{q ? ` para “${q}”` : ""}.
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-white/5 text-xs text-slate-500">
+          <span>
+            {total
+              ? `Mostrando ${primero.toLocaleString("es-PE")}–${ultimo.toLocaleString("es-PE")} de ${total.toLocaleString("es-PE")}`
+              : "Sin servicios"}
+            {q ? ` para “${q}”` : ""}.
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
+              <ChevronLeftIcon className="size-4" />
+              Anterior
+            </Button>
+            <span className="tabular-nums">
+              Página {pagina + 1} de {ultimaPagina + 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              disabled={pagina >= ultimaPagina}
+              onClick={() => setPagina((p) => p + 1)}
+            >
+              Siguiente
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

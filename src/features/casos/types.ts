@@ -24,6 +24,7 @@ export interface CasoFila {
   distrito_origen: string | null;
   mascota: string;
   especie: string | null;
+  sexo: string | null;
   tutor: string;
   telefono: string | null;
   dni: string | null;
@@ -78,7 +79,7 @@ export interface Caso {
 export interface Cliente {
   id: string;
   nombre_completo: string;
-  telefono: string;
+  telefono: string | null;
   dni: string | null;
   email: string | null;
   direccion: string | null;

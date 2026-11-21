@@ -83,6 +83,13 @@ export function accionPrincipal(estado: EstadoCaso): { tipo: "realizado" | "entr
 // ---------- Urna (spec urnas-variantes) ----------
 
 /** Una cremación sin urna no se puede entregar sin elegirla. */
+/** Enlace de WhatsApp (wa.me) para un teléfono peruano: 9 dígitos con prefijo 51. */
+export function enlaceWhatsApp(telefono: string): string {
+  let digitos = telefono.replace(/\D/g, "");
+  if (digitos.length === 9) digitos = `51${digitos}`;
+  return `https://wa.me/${digitos}`;
+}
+
 export function faltaUrna(caso: CasoFila): boolean {
   return caso.servicio === "CREMACION" && !caso.urna_id;
 }
