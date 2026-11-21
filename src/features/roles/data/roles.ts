@@ -10,6 +10,7 @@ export const MODULOS: ModuloDef[] = [
   { id: "clientes", nombre: "Clientes", ruta: "/clientes", grupo: "Fichas" },
   { id: "mascotas", nombre: "Mascotas", ruta: "/mascotas", grupo: "Fichas" },
   { id: "finanzas", nombre: "Ingresos y Gastos", ruta: "/finanzas", grupo: "Finanzas" },
+  { id: "gastos", nombre: "Registrar gastos", ruta: "/gastos", grupo: "Finanzas" },
   { id: "reportes", nombre: "Reportes", ruta: "/reportes", grupo: "Reportes" },
   { id: "servicios", nombre: "Catálogo de servicios", ruta: "/servicios", grupo: "Catálogos & Administración" },
   { id: "planes", nombre: "Planes", ruta: "/planes", grupo: "Catálogos & Administración" },

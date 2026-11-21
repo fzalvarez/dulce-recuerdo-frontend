@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { useRecurso } from "@/shared/hooks/useRecurso";
+import { useModulosPermitidos } from "@/features/roles/store/roles.store";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { getApiErrorMessage } from "@/shared/lib/http-error";
 import { notifyError } from "@/shared/utils";
@@ -57,8 +58,9 @@ export function FacturaCompraForm({
   const [guardando, setGuardando] = useState(false);
   const [leyendo, setLeyendo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  // Gastos recientes: solo se usan si se vincula uno existente.
-  const gastos = useRecurso(listarGastosRecientes, [factura?.id ?? "nueva"]);
+  // Gastos recientes: solo se usan si se vincula uno existente. Ver gastos exige finanzas.
+  const puedeVerGastos = useModulosPermitidos().includes("finanzas");
+  const gastos = useRecurso(async () => (puedeVerGastos ? listarGastosRecientes() : []), [factura?.id ?? "nueva", puedeVerGastos]);
 
   const campo = (k: keyof typeof f, valor: string) => setF((x) => ({ ...x, [k]: valor }));
 
@@ -211,11 +213,11 @@ export function FacturaCompraForm({
               ariaLabel="Gasto de la factura"
               value={vinculo}
               onChange={setVinculo}
-              columnas="grid-cols-3"
+              columnas={puedeVerGastos ? "grid-cols-3" : "grid-cols-2"}
               opciones={[
                 { value: "ninguno", label: "Sin gasto" },
                 { value: "nuevo", label: "Crear gasto" },
-                { value: "existente", label: "Vincular existente" },
+                ...(puedeVerGastos ? [{ value: "existente" as const, label: "Vincular existente" }] : []),
               ]}
             />
             {vinculo === "nuevo" && (

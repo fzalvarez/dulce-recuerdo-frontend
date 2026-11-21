@@ -61,7 +61,8 @@ const REPORTES_ITEMS = [
 const FINANZAS_ITEMS = [
   // end: solo se marca con la ruta exacta; si no, también se marcaría dentro de Facturas de compra.
   { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas", end: true },
-  { label: "Facturas de compra", icon: ReceiptIcon, to: "/finanzas/facturas-compra" },
+  { label: "Registrar gastos", icon: WalletIcon, to: "/gastos", end: true },
+  { label: "Facturas de compra", icon: ReceiptIcon, to: "/gastos/facturas" },
 ];
 
 const CATALOGO_ITEMS = [

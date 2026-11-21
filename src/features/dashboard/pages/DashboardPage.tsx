@@ -5,6 +5,8 @@ import api from "@/shared/lib/axios";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { soles } from "@/features/casos/utils/casos";
 import { BarraSegmentada, Dona, Leyenda, LineasDiarias, type Parte } from "../components/Graficos";
+import { useAuthStore } from "@/features/auth/store/auth.store";
+import { DashboardComercial } from "./DashboardComercial";
 import "../dashboard.css";
 
 type Nivel = "CRITICO" | "ATENCION" | "INFO";
@@ -15,7 +17,8 @@ interface Resumen {
   cremaciones: number;
   particulares: number;
   veterinarias: number;
-  cobrado: string;
+  /** Nulo si el rol no tiene el módulo de finanzas. */
+  cobrado: string | null;
 }
 
 interface Dashboard {
@@ -87,10 +90,12 @@ function TarjetaPeriodo({ titulo, subtitulo, resumen, previo, comparadoCon, extr
             <span className={cn("font-semibold", cambio.sube === true && "text-emerald-700", cambio.sube === false && "text-red-600")}>{cambio.texto}</span>
             <span className="block text-xs text-slate-500">{comparadoCon}</span>
           </p>
-          <div>
-            <p className="text-label font-semibold uppercase tracking-wider text-slate-500">Cobrado</p>
-            <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">{soles(resumen.cobrado)}</p>
-          </div>
+          {resumen.cobrado !== null && (
+            <div>
+              <p className="text-label font-semibold uppercase tracking-wider text-slate-500">Cobrado</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">{soles(resumen.cobrado)}</p>
+            </div>
+          )}
           {extra && <p className="text-xs text-slate-500">{extra}</p>}
         </div>
       </div>
@@ -135,7 +140,13 @@ function TarjetaHoy({ datos }: { datos: Dashboard }) {
 const cargar = () => api.get<Dashboard>("/dashboard").then((r) => r.data);
 
 /** Estado del día, la semana y el mes, calculado en el backend (spec reportes §4.4). */
+/** Cada rol tiene su propio tablero: el comercial ve su ruta; el resto, la operación. */
 export default function DashboardPage() {
+  const getUserRol = useAuthStore((s) => s.getUserRol);
+  return getUserRol() === "comercial" ? <DashboardComercial /> : <DashboardOperacion />;
+}
+
+function DashboardOperacion() {
   const recurso = useRecurso(cargar);
   const datos = recurso.data;
 

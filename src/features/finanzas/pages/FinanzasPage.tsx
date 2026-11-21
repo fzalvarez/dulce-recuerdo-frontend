@@ -449,7 +449,7 @@ function FijoForm({ fijo, onCerrar, onHecho }: { fijo: GastoFijo | null; onCerra
   );
 }
 
-function GastoForm({ gasto, onCerrar, onHecho }: { gasto: Gasto | null; onCerrar: () => void; onHecho: () => void }) {
+export function GastoForm({ gasto, onCerrar, onHecho }: { gasto: Gasto | null; onCerrar: () => void; onHecho: () => void }) {
   const [f, setF] = useState({
     fecha: gasto?.fecha.slice(0, 10) ?? hoyISO(),
     concepto: gasto?.concepto ?? "",
