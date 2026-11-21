@@ -59,21 +59,10 @@ export const subirAdjunto = (id: string, archivo: File) => {
 
 export const quitarAdjunto = (id: string) => api.delete(`/facturas-compra/${id}/adjunto`);
 
-/**
- * Abre el adjunto en otra pestaña. La ventana se abre antes de pedir el archivo para que el
- * navegador no la bloquee como ventana emergente.
- */
-export async function abrirAdjunto(id: string): Promise<void> {
-  const ventana = window.open("", "_blank", "noopener");
-  try {
-    const r = await api.get<Blob>(`/facturas-compra/${id}/adjunto`, { responseType: "blob" });
-    const url = URL.createObjectURL(r.data);
-    if (ventana) ventana.location.href = url;
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } catch (e) {
-    ventana?.close();
-    throw e;
-  }
+/** Descarga el adjunto y devuelve una URL local para mostrarlo (imagen o PDF). Libérala con URL.revokeObjectURL. */
+export async function cargarAdjunto(id: string): Promise<{ url: string; tipo: string }> {
+  const r = await api.get<Blob>(`/facturas-compra/${id}/adjunto`, { responseType: "blob" });
+  return { url: URL.createObjectURL(r.data), tipo: r.data.type };
 }
 
 /** Gastos recientes, para vincularlos a una factura. */

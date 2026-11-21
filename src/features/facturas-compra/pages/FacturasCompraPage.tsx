@@ -10,7 +10,8 @@ import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "@/features/casos/components/Dialogos";
 import { fechaCorta, soles } from "@/features/casos/utils/casos";
-import { abrirAdjunto, eliminarFactura, listarFacturas, type FacturaCompra } from "../api";
+import { eliminarFactura, listarFacturas, type FacturaCompra } from "../api";
+import { VisorAdjunto } from "../components/VisorAdjunto";
 import { FacturaCompraForm } from "../components/FacturaCompraForm";
 
 /** Facturas de compra registradas: comprobantes de proveedores con su archivo (dentro de Ingresos y Gastos). */
@@ -26,6 +27,7 @@ export default function FacturasCompraPage() {
   const [editando, setEditando] = useState<FacturaCompra | "nueva" | null>(null);
   const [borrando, setBorrando] = useState<FacturaCompra | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  const [visor, setVisor] = useState<FacturaCompra | null>(null);
 
   const facturas = recurso.data ?? [];
   const totalListado = facturas.reduce((acc, f) => acc + Number(f.total), 0);
@@ -133,7 +135,7 @@ export default function FacturasCompraPage() {
                 <td className="px-4 py-3 text-right">
                   <div className="inline-flex items-center gap-1">
                     {f.tiene_adjunto && (
-                      <Button variant="ghost" size="icon-sm" title={`Ver ${f.adjunto_nombre ?? "archivo"}`} onClick={() => abrirAdjunto(f.id).catch(() => undefined)}>
+                      <Button variant="ghost" size="icon-sm" title={`Ver ${f.adjunto_nombre ?? "archivo"}`} onClick={() => setVisor(f)}>
                         <PaperclipIcon className="size-4" />
                       </Button>
                     )}
@@ -157,6 +159,8 @@ export default function FacturasCompraPage() {
           </tbody>
         </table>
       </div>
+
+      <VisorAdjunto factura={visor} onCerrar={() => setVisor(null)} />
 
       <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)} ancho="sm:max-w-2xl">
         {editando && (

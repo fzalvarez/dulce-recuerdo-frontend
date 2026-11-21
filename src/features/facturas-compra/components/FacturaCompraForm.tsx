@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { reducirParaIA } from "../utils/imagen";
+import { VisorAdjunto } from "./VisorAdjunto";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +16,6 @@ import { notifyError } from "@/shared/utils";
 import { fechaCorta, hoyISO, soles } from "@/features/casos/utils/casos";
 import { CATEGORIA_LABEL, type CategoriaGasto } from "@/features/finanzas/types";
 import {
-  abrirAdjunto,
   crearFactura,
   editarFactura,
   leerFacturaIA,
@@ -120,14 +120,8 @@ export function FacturaCompraForm({
     onHecho();
   };
 
-  const verArchivo = async () => {
-    if (!factura) return;
-    try {
-      await abrirAdjunto(factura.id);
-    } catch (e) {
-      notifyError(getApiErrorMessage(e, "No se pudo abrir el archivo."));
-    }
-  };
+  const [viendo, setViendo] = useState(false);
+  const verArchivo = () => setViendo(true);
 
   // IA: sugiere los campos a partir del archivo elegido. Solo rellena el formulario; no guarda nada.
   const leerConIA = async () => {
@@ -307,6 +301,7 @@ export function FacturaCompraForm({
         {aviso && <p className="text-xs text-emerald-700">{aviso}</p>}
       </div>
 
+      <VisorAdjunto factura={viendo ? factura : null} onCerrar={() => setViendo(false)} />
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
         <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
