@@ -90,7 +90,9 @@ export function MapaChico({
   const enlace = `https://www.openstreetmap.org/?mlat=${latitud}&mlon=${longitud}#map=17/${latitud}/${longitud}`;
   return (
     <div className={cn("relative isolate overflow-hidden rounded-lg border border-slate-200", editable && "ring-2 ring-brand-500/40", className)}>
-      <div ref={contenedor} className={cn("h-full w-full", editable && "cursor-crosshair")} />
+      {/* Leaflet añade sus clases (leaflet-container, etc.) a este div. Nunca debe recibir un className
+          que cambie: React reescribe el atributo class y las borra, y el mapa se ve en blanco. */}
+      <div ref={contenedor} className="h-full w-full" />
       <a
         href={enlace}
         target="_blank"
