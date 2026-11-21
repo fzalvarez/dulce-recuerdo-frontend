@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
   EyeIcon,
   MessageCircleIcon,
   PhoneIcon,
@@ -40,6 +38,7 @@ import { NuevoCasoDialog } from "../components/NuevoCasoDialog";
 import { DetalleCasoDialog, type AccionCaso } from "../components/DetalleCasoDialog";
 import { ESTADO_BADGE, MODALIDAD_BADGE, pagoBadge } from "../utils/estilos";
 import { EspecieIcono } from "../components/EspecieIcono";
+import { Paginador, POR_PAGINA } from "@/shared/components/common/Paginador";
 
 type Filtro = "activos" | EstadoCaso | "todos";
 
@@ -51,9 +50,6 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: "CANCELADO", label: "Cancelados" },
   { key: "todos", label: "Todos" },
 ];
-
-/** Servicios por página: la bandeja se pide de a 100 y el backend ordena y filtra. */
-const POR_PAGINA = 100;
 
 /**
  * Fecha que muestra la columna Fecha: el último movimiento del servicio (entrega,
@@ -80,9 +76,6 @@ export default function CasosPage() {
   const visibles = recurso.data?.items ?? [];
   const total = recurso.data?.total ?? 0;
   const conteo = recurso.data?.conteos ?? {};
-  const ultimaPagina = Math.max(0, Math.ceil(total / POR_PAGINA) - 1);
-  const primero = total ? pagina * POR_PAGINA + 1 : 0;
-  const ultimo = Math.min((pagina + 1) * POR_PAGINA, total);
 
   const cambiarFiltro = (nuevo: Filtro) => {
     setFiltro(nuevo);
@@ -290,33 +283,7 @@ export default function CasosPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-white/5 text-xs text-slate-500">
-          <span>
-            {total
-              ? `Mostrando ${primero.toLocaleString("es-PE")}–${ultimo.toLocaleString("es-PE")} de ${total.toLocaleString("es-PE")}`
-              : "Sin servicios"}
-            {q ? ` para “${q}”` : ""}.
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
-              <ChevronLeftIcon className="size-4" />
-              Anterior
-            </Button>
-            <span className="tabular-nums">
-              Página {pagina + 1} de {ultimaPagina + 1}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              disabled={pagina >= ultimaPagina}
-              onClick={() => setPagina((p) => p + 1)}
-            >
-              Siguiente
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </div>
-        </div>
+        <Paginador total={total} pagina={pagina} onCambiar={setPagina} />
       </div>
 
       <NuevoCasoDialog open={nuevoAbierto} onOpenChange={setNuevoAbierto} onCreado={recurso.recargar} />

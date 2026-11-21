@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PencilIcon, SearchIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
@@ -10,26 +10,28 @@ import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import api from "@/shared/lib/axios";
 import { Modal } from "@/features/casos/components/Dialogos";
-import type { Cliente, Mascota } from "@/features/casos/types";
+import type { Mascota } from "@/features/casos/types";
+import { Paginador, POR_PAGINA } from "@/shared/components/common/Paginador";
+import type { Pagina } from "@/shared/types/pagina";
 
-async function cargar(q: string): Promise<{ mascotas: Mascota[]; clientes: Cliente[] }> {
-  const [m, c] = await Promise.all([
-    api.get<Mascota[]>("/mascotas", { params: q ? { q } : {} }),
-    api.get<Cliente[]>("/clientes"),
-  ]);
-  return { mascotas: m.data, clientes: c.data };
+/** Mascota con el nombre de su tutor, como la devuelve `/mascotas/pagina`. */
+type MascotaFila = Mascota & { tutor: string };
+
+/** Una página de mascotas. La búsqueda y la paginación las hace el servidor. */
+async function cargar(q: string, pagina: number): Promise<Pagina<MascotaFila>> {
+  const { data } = await api.get<Pagina<MascotaFila>>("/mascotas/pagina", {
+    params: { ...(q ? { q } : {}), limite: POR_PAGINA, offset: pagina * POR_PAGINA },
+  });
+  return data;
 }
 
 /** Mascotas registradas. Se crean junto al caso o desde la ficha del cliente. */
 export default function MascotasPage() {
   const [texto, setTexto] = useState("");
   const [q, setQ] = useState("");
-  const recurso = useRecurso(() => cargar(q), [q]);
+  const [pagina, setPagina] = useState(0);
+  const recurso = useRecurso(() => cargar(q, pagina), [q, pagina]);
   const [editando, setEditando] = useState<Mascota | null>(null);
-  const tutores = useMemo(
-    () => new Map((recurso.data?.clientes ?? []).map((c) => [c.id, c.nombre_completo])),
-    [recurso.data]
-  );
 
   return (
     <>
@@ -41,6 +43,7 @@ export default function MascotasPage() {
         onSubmit={(e) => {
           e.preventDefault();
           setQ(texto.trim());
+          setPagina(0);
         }}
       >
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -58,12 +61,12 @@ export default function MascotasPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {(recurso.data?.mascotas ?? []).map((m) => (
+            {(recurso.data?.items ?? []).map((m) => (
               <tr key={m.id}>
                 <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">
                   {m.nombre} <span className="text-xs text-slate-500">· {m.especie}</span>
                 </td>
-                <td className="px-5 py-3">{tutores.get(m.cliente_id) ?? "—"}</td>
+                <td className="px-5 py-3">{m.tutor || "—"}</td>
                 <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-300">
                   {[m.raza, m.sexo, m.color, m.peso_kg ? `${m.peso_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
                 </td>
@@ -80,7 +83,7 @@ export default function MascotasPage() {
                 <td colSpan={4} className="py-8 text-center text-sm text-red-600">{recurso.error}</td>
               </tr>
             )}
-            {!recurso.cargando && !recurso.error && recurso.data?.mascotas.length === 0 && (
+            {!recurso.cargando && !recurso.error && recurso.data?.total === 0 && (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-sm text-slate-400">Sin resultados.</td>
               </tr>
@@ -88,6 +91,14 @@ export default function MascotasPage() {
           </tbody>
         </table>
       </div>
+      {recurso.data && (
+        <Paginador
+          total={recurso.data.total}
+          pagina={pagina}
+          onCambiar={setPagina}
+          className="rounded-b-xl border border-t-0 border-slate-200/90 dark:border-white/10"
+        />
+      )}
 
       <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)}>
         {editando && <MascotaForm mascota={editando} onCerrar={() => setEditando(null)} onHecho={recurso.recargar} />}

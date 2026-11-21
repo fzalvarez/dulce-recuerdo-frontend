@@ -11,6 +11,8 @@ import { ejecutar } from "@/shared/utils/ejecutar";
 import api from "@/shared/lib/axios";
 import { Modal } from "@/features/casos/components/Dialogos";
 import type { Cliente } from "@/features/casos/types";
+import { Paginador, POR_PAGINA } from "@/shared/components/common/Paginador";
+import type { Pagina } from "@/shared/types/pagina";
 
 interface ClienteCuerpo {
   nombre_completo: string;
@@ -20,8 +22,11 @@ interface ClienteCuerpo {
   direccion: string | null;
 }
 
-async function listar(q: string): Promise<Cliente[]> {
-  const { data } = await api.get<Cliente[]>("/clientes", { params: q ? { q } : {} });
+/** Una página de clientes. La búsqueda y la paginación las hace el servidor. */
+async function listar(q: string, pagina: number): Promise<Pagina<Cliente>> {
+  const { data } = await api.get<Pagina<Cliente>>("/clientes/pagina", {
+    params: { ...(q ? { q } : {}), limite: POR_PAGINA, offset: pagina * POR_PAGINA },
+  });
   return data;
 }
 
@@ -29,7 +34,8 @@ async function listar(q: string): Promise<Cliente[]> {
 export default function ClientesPage() {
   const [texto, setTexto] = useState("");
   const [q, setQ] = useState("");
-  const recurso = useRecurso(() => listar(q), [q]);
+  const [pagina, setPagina] = useState(0);
+  const recurso = useRecurso(() => listar(q, pagina), [q, pagina]);
   const [editando, setEditando] = useState<Cliente | "nuevo" | null>(null);
   const [borrando, setBorrando] = useState<Cliente | null>(null);
 
@@ -59,6 +65,7 @@ export default function ClientesPage() {
         onSubmit={(e) => {
           e.preventDefault();
           setQ(texto.trim());
+          setPagina(0);
         }}
       >
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -76,7 +83,7 @@ export default function ClientesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {(recurso.data ?? []).map((c) => (
+            {(recurso.data?.items ?? []).map((c) => (
               <tr key={c.id}>
                 <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">{c.nombre_completo}</td>
                 <td className="px-5 py-3">{c.dni ?? "—"}</td>
@@ -102,7 +109,7 @@ export default function ClientesPage() {
                 <td colSpan={4} className="py-8 text-center text-sm text-red-600">{recurso.error}</td>
               </tr>
             )}
-            {!recurso.cargando && !recurso.error && recurso.data?.length === 0 && (
+            {!recurso.cargando && !recurso.error && recurso.data?.total === 0 && (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-sm text-slate-400">Sin resultados.</td>
               </tr>
@@ -110,6 +117,14 @@ export default function ClientesPage() {
           </tbody>
         </table>
       </div>
+      {recurso.data && (
+        <Paginador
+          total={recurso.data.total}
+          pagina={pagina}
+          onCambiar={setPagina}
+          className="rounded-b-xl border border-t-0 border-slate-200/90 dark:border-white/10"
+        />
+      )}
 
       <Modal open={editando !== null} onOpenChange={(o) => !o && setEditando(null)}>
         {editando && (
