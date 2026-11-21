@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { EyeIcon, PlusCircleIcon, SearchIcon } from "lucide-react";
+import { EyeIcon, PhoneIcon, PlusCircleIcon, SearchIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   accionPrincipal,
   ESTADO_LABEL,
   faltaUrna,
+  fechaCorta,
   fechaHora,
   MODALIDAD_LABEL,
   SERVICIO_LABEL,
@@ -42,6 +43,15 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: "todos", label: "Todos" },
 ];
 
+/**
+ * Fecha que muestra la columna Fecha y con la que se ordena: el último movimiento del
+ * servicio (entrega, realización, agenda o registro). Los casos históricos no tienen
+ * registro propio, así que su fecha es la del servicio.
+ */
+function fechaDelServicio(caso: CasoFila): string {
+  return caso.fecha_entrega ?? caso.fecha_realizado ?? caso.inicio ?? caso.created_at;
+}
+
 function enFiltro(estado: EstadoCaso, filtro: Filtro): boolean {
   if (filtro === "todos") return true;
   if (filtro === "activos") return estado === "AGENDADO" || estado === "REALIZADO";
@@ -63,7 +73,14 @@ export default function CasosPage() {
     () => Object.fromEntries(FILTROS.map((f) => [f.key, casos.filter((c) => enFiltro(c.estado, f.key)).length])) as Record<Filtro, number>,
     [casos]
   );
-  const visibles = useMemo(() => casos.filter((c) => enFiltro(c.estado, filtro)), [casos, filtro]);
+  // Los más recientes arriba.
+  const visibles = useMemo(
+    () =>
+      casos
+        .filter((c) => enFiltro(c.estado, filtro))
+        .sort((a, b) => new Date(fechaDelServicio(b)).getTime() - new Date(fechaDelServicio(a)).getTime()),
+    [casos, filtro]
+  );
 
   const ejecutarAccion = async (caso: CasoFila, tipo: AccionCaso) => {
     if (tipo === "entregado" && !faltaUrna(caso)) {
@@ -133,11 +150,13 @@ export default function CasosPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[860px]">
+          <table className="w-full text-left text-sm min-w-[1060px]">
             <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Mascota / Cliente</th>
+                <th className="px-5 py-3 font-semibold">Teléfono</th>
                 <th className="px-5 py-3 font-semibold">Servicio</th>
+                <th className="px-5 py-3 font-semibold">Fecha</th>
                 <th className="px-5 py-3 font-semibold">Agenda</th>
                 <th className="px-5 py-3 font-semibold">Pago</th>
                 <th className="px-5 py-3 font-semibold">Estado</th>
@@ -162,11 +181,22 @@ export default function CasosPage() {
                           >
                             {caso.mascota}
                           </button>
-                          <span className="block truncate text-xs text-slate-500">
-                            {caso.tutor} · {caso.telefono ?? "sin teléfono"}
-                          </span>
+                          <span className="block truncate text-xs text-slate-500">{caso.tutor}</span>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      {caso.telefono ? (
+                        <a
+                          href={`tel:${caso.telefono.replace(/\s+/g, "")}`}
+                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-500 dark:text-slate-300"
+                        >
+                          <PhoneIcon className="size-3.5 text-slate-400" aria-hidden />
+                          {caso.telefono}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-3">
                       <span className="flex flex-wrap items-center gap-1.5">
@@ -180,6 +210,7 @@ export default function CasosPage() {
                         {caso.distrito_origen ? ` · ${caso.distrito_origen}` : ""}
                       </span>
                     </td>
+                    <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{fechaCorta(fechaDelServicio(caso))}</td>
                     <td className="px-5 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{fechaHora(caso.inicio)}</td>
                     <td className="px-5 py-3">
                       {caso.estado === "CANCELADO" ? (
@@ -221,17 +252,17 @@ export default function CasosPage() {
               })}
               {recurso.cargando && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-slate-400">Cargando casos…</td>
+                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">Cargando casos…</td>
                 </tr>
               )}
               {recurso.error && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-red-600">{recurso.error}</td>
+                  <td colSpan={8} className="py-10 text-center text-sm text-red-600">{recurso.error}</td>
                 </tr>
               )}
               {!recurso.cargando && !recurso.error && visibles.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-slate-400">No hay casos en esta vista.</td>
+                  <td colSpan={8} className="py-10 text-center text-sm text-slate-400">No hay casos en esta vista.</td>
                 </tr>
               )}
             </tbody>
