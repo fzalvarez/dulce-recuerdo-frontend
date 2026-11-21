@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { reducirParaIA } from "../utils/imagen";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,7 +135,7 @@ export function FacturaCompraForm({
     setLeyendo(true);
     setAviso(null);
     try {
-      const sugerido = await leerFacturaIA(archivo);
+      const sugerido = await leerFacturaIA(await reducirParaIA(archivo));
       setF((x) => ({
         numero_serie: sugerido.numero_serie ?? x.numero_serie,
         fecha: sugerido.fecha ?? x.fecha,
@@ -192,7 +194,7 @@ export function FacturaCompraForm({
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="fc-concepto">Concepto</Label>
-          <Input id="fc-concepto" value={f.concepto} onChange={(e) => campo("concepto", e.target.value)} placeholder="Papel higiénico, guantes y desinfectante" />
+          <Textarea id="fc-concepto" rows={3} value={f.concepto} onChange={(e) => campo("concepto", e.target.value)} placeholder="Cerradura de pomo, bisagra, masilla, lija y hojas de cuchilla" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="fc-total">Total (S/, con IGV)</Label>

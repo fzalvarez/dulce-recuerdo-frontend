@@ -57,7 +57,8 @@ const REPORTES_ITEMS = [
 
 // Finanzas: ingresos (desde servicios realizados) y gastos fijos mensuales.
 const FINANZAS_ITEMS = [
-  { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas" },
+  // end: solo se marca con la ruta exacta; si no, también se marcaría dentro de Facturas de compra.
+  { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas", end: true },
   { label: "Facturas de compra", icon: ReceiptIcon, to: "/finanzas/facturas-compra" },
 ];
 
