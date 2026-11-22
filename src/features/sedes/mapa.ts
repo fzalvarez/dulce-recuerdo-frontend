@@ -15,13 +15,10 @@ export function capaSedes(sedes: Sede[]): L.LayerGroup {
     const icono = L.divIcon({
       className: "",
       html: `<div class="sede-marcador"><img src="${LOGO}" alt="" /></div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
     });
-    const etiqueta = document.createElement("span");
-    etiqueta.textContent = sede.nombre; // texto, no HTML: el nombre viene de configuración
-    L.marker([sede.latitud, sede.longitud], { icon: icono, zIndexOffset: 1000, alt: `Sede ${sede.nombre}`, keyboard: false })
-      .bindTooltip(etiqueta, { permanent: true, direction: "bottom", offset: [0, 22], className: "sede-etiqueta" })
+    L.marker([sede.latitud, sede.longitud], { icon: icono, zIndexOffset: 1000, title: sede.nombre, alt: `Sede ${sede.nombre}`, keyboard: false })
       .addTo(capa);
   }
   return capa;
