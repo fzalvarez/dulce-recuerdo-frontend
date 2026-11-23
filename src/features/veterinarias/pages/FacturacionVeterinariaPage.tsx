@@ -20,15 +20,62 @@ const ESTADO_FACTURA: Record<V.Factura["estado"], string> = {
   ANULADA: "bg-slate-200 text-slate-500",
 };
 
+/** Fila de la hoja: lo mismo para un servicio pendiente o uno ya facturado. */
+interface FilaHoja {
+  clave: string;
+  fecha: string | null;
+  mascota: string;
+  especie: string | null;
+  peso_kg: number | null;
+  precio: string;
+  estado: { texto: string; clase: string };
+  tutor: string;
+}
+
 /** Fecha como en el Excel de la veterinaria: dd/mm/aaaa. */
 function fechaHoja(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+const ESTADO_COBRO_PENDIENTE = { texto: "Pendiente", clase: "bg-red-600 text-white" };
+const ESTADO_COBRO_PARCIAL = { texto: "Parcial", clase: "bg-amber-300" };
+const ESTADO_EN_FACTURA: Record<V.Factura["estado"], { texto: string; clase: string }> = {
+  EMITIDA: { texto: "Facturado", clase: "bg-blue-200" },
+  PAGADA: { texto: "Pagado", clase: "bg-emerald-300" },
+  ANULADA: { texto: "Anulada", clase: "bg-slate-300" },
+};
+
+function filaDePendiente(p: V.CasoPendiente): FilaHoja {
+  return {
+    clave: p.caso_id,
+    fecha: p.fecha_realizado,
+    mascota: p.mascota,
+    especie: p.especie,
+    peso_kg: p.peso_kg,
+    precio: p.monto,
+    estado: Number(p.total_pagado) > 0 ? ESTADO_COBRO_PARCIAL : ESTADO_COBRO_PENDIENTE,
+    tutor: p.tutor,
+  };
+}
+
+function filaDeLinea(l: V.LineaFactura, factura: V.Factura["estado"]): FilaHoja {
+  return {
+    clave: l.caso_id,
+    fecha: l.fecha_realizado,
+    mascota: l.mascota,
+    especie: l.especie,
+    peso_kg: l.peso_kg,
+    precio: l.monto,
+    estado: ESTADO_EN_FACTURA[factura],
+    tutor: l.tutor,
+  };
+}
+
 /**
  * Facturación de una veterinaria aliada, en página completa: los servicios pendientes se listan
  * como en la hoja de cálculo que usan hoy, se marcan los que van en la factura y se emite.
+ * Cada factura emitida se puede abrir con el mismo formato.
  */
 export default function FacturacionVeterinariaPage() {
   const { vetId = "" } = useParams();
@@ -45,6 +92,8 @@ export default function FacturacionVeterinariaPage() {
   const [fecha, setFecha] = useState(hoyISO());
   const [cobro, setCobro] = useState<{ id: string; metodo: MetodoPago; fecha: string } | null>(null);
   const [anulando, setAnulando] = useState<{ id: string; motivo: string } | null>(null);
+  const [verId, setVerId] = useState<string | null>(null);
+  const detalle = useRecurso(async () => (verId ? V.detalleFactura(verId) : null), [verId]);
 
   const pendientes = useMemo(() => datos.data?.pendientes ?? [], [datos.data]);
   const elegidas = useMemo(() => pendientes.filter((p) => elegidos.includes(p.caso_id)), [pendientes, elegidos]);
@@ -56,7 +105,7 @@ export default function FacturacionVeterinariaPage() {
   const fechas = pendientes.map((p) => p.fecha_realizado).filter((f): f is string => !!f).map((f) => new Date(f).getTime());
   const desde = fechas.length ? fechaHoja(new Date(Math.min(...fechas)).toISOString()) : "—";
   const hasta = fechas.length ? fechaHoja(new Date(Math.max(...fechas)).toISOString()) : "—";
-  const nombreVet = (vet.data?.nombre ?? "").toUpperCase();
+  const nombreVet = vet.data?.nombre ?? "";
 
   const alternar = (id: string) => setElegidos((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const todos = (marcar: boolean) => setElegidos(marcar ? pendientes.map((p) => p.caso_id) : []);
@@ -84,6 +133,8 @@ export default function FacturacionVeterinariaPage() {
 
   if (datos.error) return <p className="text-sm text-red-600">{datos.error}</p>;
 
+  const facturaVista = verId ? datos.data?.facturas.find((f) => f.id === verId) : undefined;
+
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Despedidas" }, { label: "Convenios veterinarios", to: "/veterinarias" }, { label: "Facturación" }]} />
@@ -93,25 +144,13 @@ export default function FacturacionVeterinariaPage() {
       </Link>
 
       {/* Hoja de la veterinaria: siempre clara, como el Excel. */}
-      <div className="rounded-md border border-slate-300 bg-white p-4 text-slate-900 shadow-xs flex flex-col gap-4">
-        <div className="border-2 border-slate-800 text-center text-sm">
-          <p className="border-b border-slate-800 py-1 font-bold">CLÍNICA VETERINARIA {nombreVet}</p>
-          <p className="border-b border-slate-800 py-1 font-bold">RUC {ruc.data ?? "—"}</p>
-          <p className="py-1 font-bold">
-            Del {desde} al {hasta}
-          </p>
-        </div>
-
+      <Hoja nombreVet={nombreVet} ruc={ruc.data ?? null} desde={desde} hasta={hasta}>
         <h2 className="text-sm font-semibold text-slate-700">Servicios pendientes de facturar</h2>
         {pendientes.length === 0 && !datos.cargando && (
           <p className="text-sm text-slate-500">No hay servicios pendientes para esta veterinaria.</p>
         )}
         {pendientes.length > 0 && (
-          <TablaServicios
-            filas={pendientes}
-            nombreVet={vet.data?.nombre ?? ""}
-            seleccion={{ elegidos, alternar, todos }}
-          />
+          <TablaHoja filas={pendientes.map(filaDePendiente)} nombreVet={nombreVet} seleccion={{ elegidos, alternar, todos }} />
         )}
         {pendientes.length > 0 && (
           <p className="text-xs text-slate-500">
@@ -122,7 +161,7 @@ export default function FacturacionVeterinariaPage() {
         {elegidas.length > 0 && (
           <>
             <h2 className="text-sm font-semibold text-slate-700">Factura a emitir</h2>
-            <TablaServicios filas={elegidas} nombreVet={vet.data?.nombre ?? ""} />
+            <TablaHoja filas={elegidas.map(filaDePendiente)} nombreVet={nombreVet} />
 
             <div className="ml-auto w-full max-w-md border border-slate-800 text-sm">
               <div className="grid grid-cols-2 border-b border-slate-800">
@@ -165,7 +204,54 @@ export default function FacturacionVeterinariaPage() {
             </div>
           </>
         )}
-      </div>
+      </Hoja>
+
+      {verId && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+              Detalle de la factura {facturaVista?.numero_comprobante ?? (verId ? `#${verId.slice(0, 8)}` : "")}
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => setVerId(null)}>
+              Cerrar detalle
+            </Button>
+          </div>
+          {detalle.error && <p className="text-sm text-red-600">{detalle.error}</p>}
+          {detalle.data && (
+            <Hoja
+              nombreVet={nombreVet}
+              ruc={ruc.data ?? null}
+              desde={fechaHoja(detalle.data.lineas.map((l) => l.fecha_realizado).filter((f): f is string => !!f).sort()[0])}
+              hasta={fechaHoja(detalle.data.lineas.map((l) => l.fecha_realizado).filter((f): f is string => !!f).sort().at(-1))}
+            >
+              <p className="text-sm text-slate-700">
+                Fecha de emisión {fechaCorta(detalle.data.fecha_emision)}
+                {detalle.data.numero_comprobante ? ` · comprobante ${detalle.data.numero_comprobante}` : ""}
+              </p>
+              <TablaHoja
+                filas={detalle.data.lineas.map((l) => filaDeLinea(l, detalle.data!.estado))}
+                nombreVet={nombreVet}
+              />
+              <div className="ml-auto w-full max-w-md border border-slate-800 text-sm">
+                <div className="grid grid-cols-2 border-b border-slate-800">
+                  <span className="px-3 py-1.5 text-center font-semibold">SUMA</span>
+                  <span className="px-3 py-1.5 text-center tabular-nums">
+                    {soles(detalle.data.lineas.reduce((acc, l) => acc + Number(l.monto), 0))}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 border-b border-slate-800 bg-yellow-300">
+                  <span className="px-3 py-1.5 text-center font-semibold">DESCUENTO</span>
+                  <span className="px-3 py-1.5 text-center tabular-nums font-semibold">{soles(detalle.data.descuento)}</span>
+                </div>
+                <div className="grid grid-cols-2 bg-slate-900 text-white">
+                  <span className="px-3 py-1.5 text-center font-bold">DEUDA TOTAL</span>
+                  <span className="px-3 py-1.5 text-center font-bold tabular-nums">{soles(detalle.data.total)}</span>
+                </div>
+              </div>
+            </Hoja>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Facturas emitidas</h2>
@@ -179,6 +265,9 @@ export default function FacturacionVeterinariaPage() {
             </span>
             <span className="inline-flex items-center gap-2">
               <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", ESTADO_FACTURA[f.estado])}>{f.estado.toLowerCase()}</span>
+              <Button variant={verId === f.id ? "operational" : "outline"} size="sm" onClick={() => setVerId(verId === f.id ? null : f.id)}>
+                Ver detalle
+              </Button>
               {f.estado === "EMITIDA" && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setCobro({ id: f.id, metodo: "TRANSFERENCIA", fecha: hoyISO() })}>
@@ -219,6 +308,7 @@ export default function FacturacionVeterinariaPage() {
                   if (await ejecutar(() => V.cobrar(cobro.id, cobro.metodo, cobro.fecha), "Cobro registrado: los servicios quedan pagados.", "No se pudo registrar el cobro.")) {
                     setCobro(null);
                     datos.recargar();
+                    detalle.recargar();
                   }
                 }}
               >
@@ -244,6 +334,7 @@ export default function FacturacionVeterinariaPage() {
                 if (await ejecutar(() => V.anular(anulando.id, anulando.motivo.trim()), "Factura anulada: sus servicios vuelven a pendientes.", "No se pudo anular.")) {
                   setAnulando(null);
                   datos.recargar();
+                  detalle.recargar();
                 }
               }}
             >
@@ -256,18 +347,46 @@ export default function FacturacionVeterinariaPage() {
   );
 }
 
+/** Hoja de la veterinaria: nombre en mayúsculas, RUC y periodo, con el contenido debajo. Siempre clara. */
+function Hoja({
+  nombreVet,
+  ruc,
+  desde,
+  hasta,
+  children,
+}: {
+  nombreVet: string;
+  ruc: string | null;
+  desde: string;
+  hasta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-slate-300 bg-white p-4 text-slate-900 shadow-xs flex flex-col gap-4">
+      <div className="border-2 border-slate-800 text-center text-sm">
+        <p className="border-b border-slate-800 py-1 font-bold">CLÍNICA VETERINARIA {nombreVet.toUpperCase()}</p>
+        <p className="border-b border-slate-800 py-1 font-bold">RUC {ruc ?? "—"}</p>
+        <p className="py-1 font-bold">
+          Del {desde} al {hasta}
+        </p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 /** Tabla con las mismas columnas que la hoja de la veterinaria. Con `seleccion`, cada fila lleva casilla. */
-function TablaServicios({
+function TablaHoja({
   filas,
   nombreVet,
   seleccion,
 }: {
-  filas: V.CasoPendiente[];
+  filas: FilaHoja[];
   nombreVet: string;
   seleccion?: { elegidos: string[]; alternar: (id: string) => void; todos: (marcar: boolean) => void };
 }) {
   const celda = "border border-slate-400 px-2 py-1";
-  const todasMarcadas = !!seleccion && filas.length > 0 && filas.every((p) => seleccion.elegidos.includes(p.caso_id));
+  const todasMarcadas = !!seleccion && filas.length > 0 && filas.every((f) => seleccion.elegidos.includes(f.clave));
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm text-slate-900">
@@ -296,35 +415,30 @@ function TablaServicios({
           </tr>
         </thead>
         <tbody>
-          {filas.map((p, i) => {
-            const parcial = Number(p.total_pagado) > 0;
-            return (
-              <tr key={p.caso_id} className={cn(seleccion && seleccion.elegidos.includes(p.caso_id) && "bg-brand-50")}>
-                {seleccion && (
-                  <td className={cn(celda, "text-center")}>
-                    <input
-                      type="checkbox"
-                      aria-label={`Facturar ${p.mascota}`}
-                      className="size-4 accent-brand-500"
-                      checked={seleccion.elegidos.includes(p.caso_id)}
-                      onChange={() => seleccion.alternar(p.caso_id)}
-                    />
-                  </td>
-                )}
-                <td className={cn(celda, "text-center")}>{i + 1}</td>
-                <td className={cn(celda, "whitespace-nowrap")}>{fechaHoja(p.fecha_realizado)}</td>
-                <td className={celda}>{p.mascota}</td>
-                <td className={celda}>{p.especie ?? "—"}</td>
-                <td className={cn(celda, "text-right tabular-nums")}>{p.peso_kg != null ? p.peso_kg : "—"}</td>
-                <td className={cn(celda, "text-right tabular-nums whitespace-nowrap")}>{soles(p.monto)}</td>
-                <td className={cn(celda, "text-center font-semibold whitespace-nowrap", parcial ? "bg-amber-300" : "bg-red-600 text-white")}>
-                  {parcial ? "Parcial" : "Pendiente"}
+          {filas.map((f, i) => (
+            <tr key={f.clave} className={cn(seleccion && seleccion.elegidos.includes(f.clave) && "bg-brand-50")}>
+              {seleccion && (
+                <td className={cn(celda, "text-center")}>
+                  <input
+                    type="checkbox"
+                    aria-label={`Facturar ${f.mascota}`}
+                    className="size-4 accent-brand-500"
+                    checked={seleccion.elegidos.includes(f.clave)}
+                    onChange={() => seleccion.alternar(f.clave)}
+                  />
                 </td>
-                <td className={celda}>{p.tutor}</td>
-                <td className={celda}>{nombreVet}</td>
-              </tr>
-            );
-          })}
+              )}
+              <td className={cn(celda, "text-center")}>{i + 1}</td>
+              <td className={cn(celda, "whitespace-nowrap")}>{fechaHoja(f.fecha)}</td>
+              <td className={celda}>{f.mascota}</td>
+              <td className={celda}>{f.especie ?? "—"}</td>
+              <td className={cn(celda, "text-right tabular-nums")}>{f.peso_kg != null ? f.peso_kg : "—"}</td>
+              <td className={cn(celda, "text-right tabular-nums whitespace-nowrap")}>{soles(f.precio)}</td>
+              <td className={cn(celda, "text-center font-semibold whitespace-nowrap", f.estado.clase)}>{f.estado.texto}</td>
+              <td className={celda}>{f.tutor}</td>
+              <td className={celda}>{nombreVet}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

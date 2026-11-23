@@ -94,6 +94,24 @@ export async function facturacion(vetId: string): Promise<{ pendientes: CasoPend
 
 export const emitir = (c: { veterinaria_id: string; caso_ids: string[]; fecha_emision?: string; numero_comprobante?: string; descuento?: string }) =>
   api.post<Factura>("/facturas-veterinaria", c);
+/** Servicio dentro de una factura emitida, con los datos de la hoja. */
+export interface LineaFactura {
+  caso_id: string;
+  mascota: string;
+  monto: string;
+  fecha_realizado: string | null;
+  especie: string | null;
+  peso_kg: number | null;
+  tutor: string;
+}
+
+export interface FacturaDetalle extends Factura {
+  lineas: LineaFactura[];
+}
+
+export const detalleFactura = (id: string) =>
+  api.get<FacturaDetalle>(`/facturas-veterinaria/${id}`).then((r) => r.data);
+
 /** Una veterinaria aliada (la misma ficha que muestra la tabla de convenios). */
 export const obtener = (id: string) => api.get<Veterinaria>(`/veterinarias/${id}`).then((r) => r.data);
 /** RUC de la ficha del CRM de la que viene la aliada. */
