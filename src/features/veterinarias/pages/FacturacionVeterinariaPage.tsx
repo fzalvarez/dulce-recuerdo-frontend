@@ -13,6 +13,7 @@ import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import type { MetodoPago } from "@/features/casos/types";
 import { fechaCorta, hoyISO, METODO_LABEL, soles } from "@/features/casos/utils/casos";
 import * as V from "../api";
+import { ComprobanteDeConvenio } from "@/features/comprobantes/components/Comprobantes";
 
 const ESTADO_FACTURA: Record<V.Factura["estado"], string> = {
   EMITIDA: "bg-blue-100 text-blue-800",
@@ -80,8 +81,8 @@ function filaDeLinea(l: V.LineaFactura, factura: V.Factura["estado"]): FilaHoja 
 export default function FacturacionVeterinariaPage() {
   const { vetId = "" } = useParams();
   const vet = useRecurso(() => V.obtener(vetId), [vetId]);
-  const ruc = useRecurso(
-    () => (vet.data?.crm_id ? V.rucDeFicha(vet.data.crm_id) : Promise.resolve(null)),
+  const fiscal = useRecurso(
+    () => (vet.data?.crm_id ? V.datosFiscales(vet.data.crm_id) : Promise.resolve(null)),
     [vet.data?.crm_id ?? ""]
   );
   const datos = useRecurso(() => V.facturacion(vetId), [vetId]);
@@ -144,7 +145,7 @@ export default function FacturacionVeterinariaPage() {
       </Link>
 
       {/* Hoja de la veterinaria: siempre clara, como el Excel. */}
-      <Hoja nombreVet={nombreVet} ruc={ruc.data ?? null} desde={desde} hasta={hasta}>
+      <Hoja nombreVet={nombreVet} ruc={fiscal.data?.ruc ?? null} desde={desde} hasta={hasta}>
         <h2 className="text-sm font-semibold text-slate-700">Servicios pendientes de facturar</h2>
         {pendientes.length === 0 && !datos.cargando && (
           <p className="text-sm text-slate-500">No hay servicios pendientes para esta veterinaria.</p>
@@ -220,7 +221,7 @@ export default function FacturacionVeterinariaPage() {
           {detalle.data && (
             <Hoja
               nombreVet={nombreVet}
-              ruc={ruc.data ?? null}
+              ruc={fiscal.data?.ruc ?? null}
               desde={fechaHoja(detalle.data.lineas.map((l) => l.fecha_realizado).filter((f): f is string => !!f).sort()[0])}
               hasta={fechaHoja(detalle.data.lineas.map((l) => l.fecha_realizado).filter((f): f is string => !!f).sort().at(-1))}
             >
@@ -279,6 +280,14 @@ export default function FacturacionVeterinariaPage() {
                 </>
               )}
             </span>
+            {f.estado !== "ANULADA" && (
+              <div className="basis-full">
+                <ComprobanteDeConvenio
+                  facturaId={f.id}
+                  fiscal={{ ruc: fiscal.data?.ruc ?? "", razonSocial: fiscal.data?.razon_social ?? nombreVet, direccion: fiscal.data?.direccion ?? "" }}
+                />
+              </div>
+            )}
           </div>
         ))}
 

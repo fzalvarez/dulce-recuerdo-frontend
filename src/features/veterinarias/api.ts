@@ -114,8 +114,17 @@ export const detalleFactura = (id: string) =>
 
 /** Una veterinaria aliada (la misma ficha que muestra la tabla de convenios). */
 export const obtener = (id: string) => api.get<Veterinaria>(`/veterinarias/${id}`).then((r) => r.data);
-/** RUC de la ficha del CRM de la que viene la aliada. */
-export const rucDeFicha = (crmId: string) =>
-  api.get<{ ruc: string | null }>(`/crm/veterinarias/${crmId}`).then((r) => r.data.ruc);
+/** Datos fiscales de la ficha del CRM de la que viene la aliada (para la hoja y la factura electrónica). */
+export interface DatosFiscales {
+  ruc: string | null;
+  razon_social: string | null;
+  direccion: string | null;
+}
+export const datosFiscales = (crmId: string) =>
+  api.get<DatosFiscales>(`/crm/veterinarias/${crmId}`).then((r) => ({
+    ruc: r.data.ruc ?? null,
+    razon_social: r.data.razon_social ?? null,
+    direccion: r.data.direccion ?? null,
+  }));
 export const cobrar = (id: string, metodo: MetodoPago, fecha: string) => api.post(`/facturas-veterinaria/${id}/cobro`, { metodo, fecha });
 export const anular = (id: string, motivo: string) => api.post(`/facturas-veterinaria/${id}/anular`, { motivo });

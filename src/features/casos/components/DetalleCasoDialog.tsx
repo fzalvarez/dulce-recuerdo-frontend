@@ -18,6 +18,7 @@ import {
   urnaEditable,
 } from "../utils/casos";
 import { Modal } from "./Dialogos";
+import { ComprobanteDeServicio } from "@/features/comprobantes/components/Comprobantes";
 
 export type AccionCaso = "pago" | "realizado" | "entregado" | "cancelar" | "precio" | "urna";
 
@@ -134,6 +135,16 @@ function DetalleContenido({ fila, onCerrar, onAccion }: { fila: CasoFila; onCerr
             <Fila key={p.id} etiqueta={`${fechaCorta(p.fecha)} · ${METODO_LABEL[p.metodo]}${p.factura_id ? " · factura" : ""}`} valor={soles(p.monto)} />
           ))}
         </Seccion>}
+
+        {verDinero && d && (
+          <Seccion titulo="Comprobante electrónico">
+            <ComprobanteDeServicio
+              casoId={fila.id}
+              cliente={{ nombre: d.cliente.nombre_completo, dni: d.cliente.dni, direccion: d.cliente.direccion }}
+              bloqueado={fila.estado === "CANCELADO" ? "Un servicio cancelado no lleva comprobante." : null}
+            />
+          </Seccion>
+        )}
 
         {d && d.materiales.length > 0 && (
           <Seccion titulo="Materiales usados">
