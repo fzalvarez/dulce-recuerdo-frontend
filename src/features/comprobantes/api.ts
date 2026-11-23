@@ -54,6 +54,25 @@ export const emitirFacturaConvenio = (
 
 export const actualizar = (id: string) => api.post<Comprobante>(`/comprobantes/${id}/actualizar`).then((r) => r.data);
 
+/** Serie de emisión (Configuración). Una activa por tipo; los números de este ambiente (test o live). */
+export interface Serie {
+  id: string;
+  tipo: "BOLETA" | "FACTURA";
+  tipo_doc: "01" | "03";
+  serie: string;
+  correlativo_inicial: number;
+  activa: boolean;
+  emitidos: number;
+  ultimo: number | null;
+  siguiente: number;
+}
+
+export const listarSeries = () => api.get<Serie[]>("/comprobantes/series").then((r) => r.data);
+export const crearSerie = (c: { tipo: Serie["tipo"]; serie: string; correlativo_inicial: number; activa: boolean }) =>
+  api.post<Serie>("/comprobantes/series", c);
+export const editarSerie = (id: string, c: { serie?: string; correlativo_inicial?: number; activa?: boolean }) =>
+  api.patch<Serie>(`/comprobantes/series/${id}`, c);
+
 /** Abre el PDF en otra pestaña. Pasa por el backend: la clave de Intifact no llega al navegador. */
 export async function abrirPdf(id: string, formato: "a4" | "ticket80" = "a4") {
   const r = await api.get<Blob>(`/comprobantes/${id}/pdf`, { params: { formato }, responseType: "blob" });

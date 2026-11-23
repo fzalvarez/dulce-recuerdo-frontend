@@ -10,6 +10,7 @@ import { listarMarcas, type Marca } from "../api";
 import { MarcaForm } from "../components/MarcaForm";
 import { CargaHistorica } from "../components/CargaHistorica";
 import { SedesPanel } from "../components/SedesPanel";
+import { SeriesPanel } from "../components/SeriesPanel";
 
 /** Configuración del sistema. Hoy: sub-marcas (spec tarifas, R13). */
 export default function ConfiguracionPage() {
@@ -82,6 +83,10 @@ export default function ConfiguracionPage() {
 
       <section className="mt-6">
         <SedesPanel />
+      </section>
+
+      <section className="mt-6">
+        <SeriesPanel />
       </section>
 
       <section className="mt-6">
