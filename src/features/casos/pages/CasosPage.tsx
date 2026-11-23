@@ -18,7 +18,6 @@ import {
   accionPrincipal,
   enlaceWhatsApp,
   ESTADO_LABEL,
-  faltaUrna,
   fechaCorta,
   fechaHora,
   MODALIDAD_LABEL,
@@ -33,7 +32,6 @@ import {
   RealizadoDialog,
   UrnaDialog,
 } from "../components/Dialogos";
-import { ejecutar } from "@/shared/utils/ejecutar";
 import { NuevoCasoDialog } from "../components/NuevoCasoDialog";
 import { DetalleCasoDialog, type AccionCaso } from "../components/DetalleCasoDialog";
 import { ESTADO_BADGE, MODALIDAD_BADGE, pagoBadge } from "../utils/estilos";
@@ -60,6 +58,27 @@ function fechaDelServicio(caso: CasoFila): string {
   return caso.fecha_entrega ?? caso.fecha_realizado ?? caso.inicio ?? caso.created_at;
 }
 
+const COMPROBANTE: Record<string, { texto: string; clase: string }> = {
+  FACTURA: { texto: "Factura", clase: "bg-blue-100 text-blue-800" },
+  BOLETA: { texto: "Boleta", clase: "bg-violet-100 text-violet-800" },
+  NINGUNO: { texto: "Sin comprobante", clase: "bg-slate-200 text-slate-600" },
+};
+
+/** Comprobante de un servicio entregado. Sin dato se marca aparte para no confundirlo con «sin comprobante». */
+function ComprobanteChip({ valor }: { valor: string | null }) {
+  const c = valor ? COMPROBANTE[valor] : undefined;
+  return (
+    <span
+      className={cn(
+        "px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap",
+        c?.clase ?? "border border-dashed border-amber-400 text-amber-700"
+      )}
+    >
+      {c?.texto ?? "Sin dato"}
+    </span>
+  );
+}
+
 export default function CasosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");
@@ -83,11 +102,6 @@ export default function CasosPage() {
   };
 
   const ejecutarAccion = async (caso: CasoFila, tipo: AccionCaso) => {
-    if (tipo === "entregado" && !faltaUrna(caso)) {
-      const ok = await ejecutar(() => casosApi.marcarEntregado(caso.id), "Entrega registrada. Caso cerrado.", "No se pudo registrar la entrega.");
-      if (ok) recurso.recargar();
-      return;
-    }
     setAccion({ tipo, caso });
   };
 
@@ -244,6 +258,11 @@ export default function CasosPage() {
                       <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap", ESTADO_BADGE[caso.estado])}>
                         {ESTADO_LABEL[caso.estado]}
                       </span>
+                      {caso.estado === "ENTREGADO" && (
+                        <span className="mt-1 block">
+                          <ComprobanteChip valor={caso.comprobante} />
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">

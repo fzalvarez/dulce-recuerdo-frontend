@@ -13,6 +13,8 @@ export type Monto = string;
 
 /** Fila de `GET /casos/bandeja`. */
 export interface CasoFila {
+  /** Comprobante al entregar. Nulo si no se registró (histórico sin dato) o si aún no se entregó. */
+  comprobante: "BOLETA" | "FACTURA" | "NINGUNO" | null;
   id: string;
   estado: EstadoCaso;
   servicio: Servicio;

@@ -412,6 +412,7 @@ function EntregaForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: ()
   const [fecha, setFecha] = useState(hoyISO());
   const [hora, setHora] = useState(horaActual);
   const [urnaId, setUrnaId] = useState("");
+  const [boleta, setBoleta] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -419,7 +420,7 @@ function EntregaForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: ()
     if (pideUrna && !urnaId) return setError("Elige la urna: una cremación no se entrega sin urna.");
     setGuardando(true);
     const ok = await ejecutar(
-      () => casosApi.marcarEntregado(caso.id, combinarFechaHora(fecha, hora), pideUrna ? urnaId : null),
+      () => casosApi.marcarEntregado(caso.id, combinarFechaHora(fecha, hora), pideUrna ? urnaId : null, boleta),
       `Entrega de ${caso.mascota} registrada.`,
       "No se pudo registrar la entrega."
     );
@@ -458,6 +459,10 @@ function EntregaForm({ caso, onCerrar, onHecho }: { caso: CasoFila; onCerrar: ()
           {opciones.data && <SelectorUrna urnas={opciones.data.urnas} value={urnaId} onChange={setUrnaId} />}
         </div>
       )}
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input type="checkbox" className="size-4 accent-brand-500" checked={boleta} onChange={(e) => setBoleta(e.target.checked)} />
+        Se emitió boleta (si no, queda sin comprobante)
+      </label>
       {error && <p className="text-xs text-red-600">{error}</p>}
       <Pie onCancelar={onCerrar} texto="Confirmar entrega" guardando={guardando} onGuardar={guardar} />
     </>

@@ -144,8 +144,13 @@ export async function marcarRealizado(
 }
 
 /** Una cremación sin urna la elige al entregar (`urnaId`). */
-export async function marcarEntregado(id: string, fecha?: string, urnaId: string | null = null): Promise<Caso> {
-  const { data } = await api.post<Caso>(`/entregas/${id}`, { fecha, urna_id: urnaId });
+export async function marcarEntregado(
+  id: string,
+  fecha?: string,
+  urnaId: string | null = null,
+  boleta = false
+): Promise<Caso> {
+  const { data } = await api.post<Caso>(`/entregas/${id}`, { fecha, urna_id: urnaId, boleta_emitida: boleta });
   return data;
 }
 
