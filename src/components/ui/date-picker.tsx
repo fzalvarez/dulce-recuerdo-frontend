@@ -93,6 +93,8 @@ export function DatePicker({
             setOpen(false);
           }}
           disabled={disabledMatcher.length ? disabledMatcher : undefined}
+          // Siempre 6 semanas: así el calendario tiene el mismo alto en cualquier mes.
+          fixedWeeks
           autoFocus
         />
       </PopoverContent>
