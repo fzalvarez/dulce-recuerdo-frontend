@@ -5,7 +5,6 @@ import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -18,8 +17,8 @@ import { cn } from "@/lib/utils";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
 import { Modal } from "@/features/casos/components/Dialogos";
-import type { MetodoPago } from "@/features/casos/types";
-import { fechaCorta, hoyISO, METODO_LABEL, soles } from "@/features/casos/utils/casos";
+import { Link } from "react-router-dom";
+import { soles } from "@/features/casos/utils/casos";
 import * as V from "../api";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
 import { AliadaDesdeCrm } from "../components/AliadaDesdeCrm";
@@ -28,14 +27,7 @@ import { FichaAliada } from "../components/FichaAliada";
 type Dialogo =
   | { tipo: "nueva" }
   | { tipo: "editar"; vet: V.Veterinaria }
-  | { tipo: "precios"; vet: V.Veterinaria }
-  | { tipo: "facturacion"; vet: V.Veterinaria };
-
-const ESTADO_FACTURA: Record<V.Factura["estado"], string> = {
-  EMITIDA: "bg-amber-50 text-amber-700",
-  PAGADA: "bg-emerald-50 text-emerald-700",
-  ANULADA: "bg-slate-100 text-slate-500",
-};
+  | { tipo: "precios"; vet: V.Veterinaria };
 
 /** Veterinarias aliadas: convenio, precio propio y facturación (specs tarifas y facturacion). */
 export default function VeterinariasPage() {
@@ -157,9 +149,11 @@ export default function VeterinariasPage() {
                     <Button variant="ghost" size="icon-sm" title="Precio propio" onClick={() => setDialogo({ tipo: "precios", vet: v })}>
                       <TagIcon className="size-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDialogo({ tipo: "facturacion", vet: v })}>
-                      <ReceiptIcon className="size-4" />
-                      Facturación
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/veterinarias/${v.id}/facturacion`}>
+                        <ReceiptIcon className="size-4" />
+                        Facturación
+                      </Link>
                     </Button>
                   </div>
                 </td>
@@ -185,7 +179,6 @@ export default function VeterinariasPage() {
           <VetForm vet={dialogo.vet} catalogo={datos.catalogo} marcas={datos.marcas} onCerrar={cerrar} onHecho={() => { recurso.recargar(); cerrar(); }} />
         )}
         {dialogo?.tipo === "precios" && datos && <PreciosPropios vet={dialogo.vet} catalogo={datos.catalogo} onCerrar={cerrar} />}
-        {dialogo?.tipo === "facturacion" && <Facturacion vet={dialogo.vet} onCambio={recurso.recargar} />}
       </Modal>
     </>
   );
@@ -408,154 +401,6 @@ function PreciosPropiosForm({ vet, catalogo, actual, onCerrar }: { vet: V.Veteri
           {guardando ? "Guardando…" : "Guardar"}
         </Button>
       </DialogFooter>
-    </>
-  );
-}
-
-function Facturacion({ vet, onCambio }: { vet: V.Veterinaria; onCambio: () => void }) {
-  const datos = useRecurso(() => V.facturacion(vet.id), [vet.id]);
-  const [elegidos, setElegidos] = useState<string[]>([]);
-  const [numero, setNumero] = useState("");
-  const [fecha, setFecha] = useState(hoyISO());
-  const [cobro, setCobro] = useState<{ id: string; metodo: MetodoPago; fecha: string } | null>(null);
-  const [anulando, setAnulando] = useState<{ id: string; motivo: string } | null>(null);
-
-  const recargar = () => {
-    datos.recargar();
-    onCambio();
-  };
-  const pendientes = datos.data?.pendientes ?? [];
-  const totalElegido = pendientes.filter((p) => elegidos.includes(p.caso_id)).reduce((a, p) => a + Number(p.monto), 0);
-
-  const emitir = async () => {
-    const ok = await ejecutar(
-      () => V.emitir({ veterinaria_id: vet.id, caso_ids: elegidos, fecha_emision: fecha, numero_comprobante: numero.trim() || undefined }),
-      "Factura emitida.",
-      "No se pudo emitir la factura."
-    );
-    if (ok) {
-      setElegidos([]);
-      setNumero("");
-      recargar();
-    }
-  };
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Facturación · {vet.nombre}</DialogTitle>
-        <DialogDescription>Elige los casos realizados que quieres facturar ahora.</DialogDescription>
-      </DialogHeader>
-      {datos.error && <p className="text-sm text-red-600">{datos.error}</p>}
-
-      <section className="flex flex-col gap-2">
-        <h3 className="text-label font-semibold uppercase tracking-wider text-slate-500">Casos por facturar</h3>
-        {pendientes.length === 0 && <p className="text-sm text-slate-400">No hay casos pendientes.</p>}
-        {pendientes.map((p) => (
-          <label key={p.caso_id} className="flex items-center justify-between gap-3 text-sm border-b border-slate-100 dark:border-white/5 py-1.5">
-            <span className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="size-4 accent-brand-500"
-                checked={elegidos.includes(p.caso_id)}
-                onChange={(e) => setElegidos((l) => (e.target.checked ? [...l, p.caso_id] : l.filter((x) => x !== p.caso_id)))}
-              />
-              {p.mascota} · {p.tutor} · {fechaCorta(p.fecha_realizado)}
-            </span>
-            <span className="font-medium">{soles(p.monto)}</span>
-          </label>
-        ))}
-        {pendientes.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="fa-numero">N.º de comprobante (opcional)</Label>
-              <Input id="fa-numero" value={numero} onChange={(e) => setNumero(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fa-fecha">Fecha de emisión</Label>
-              <DatePicker id="fa-fecha" value={fecha} onChange={setFecha} />
-            </div>
-            <Button variant="operational" disabled={elegidos.length === 0} onClick={emitir}>
-              Emitir {elegidos.length ? `(${soles(totalElegido)})` : ""}
-            </Button>
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h3 className="text-label font-semibold uppercase tracking-wider text-slate-500">Facturas</h3>
-        {datos.data?.facturas.length === 0 && <p className="text-sm text-slate-400">Sin facturas.</p>}
-        {datos.data?.facturas.map((f) => (
-          <div key={f.id} className="flex flex-wrap items-center justify-between gap-2 text-sm border-b border-slate-100 dark:border-white/5 py-1.5">
-            <span>
-              {f.numero_comprobante ?? `#${f.id.slice(0, 8)}`} · {fechaCorta(f.fecha_emision)} · <strong>{soles(f.total)}</strong>
-              {f.estado === "PAGADA" && f.metodo_pago && ` · cobrada ${fechaCorta(f.fecha_pago)} (${METODO_LABEL[f.metodo_pago]})`}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold", ESTADO_FACTURA[f.estado])}>{f.estado.toLowerCase()}</span>
-              {f.estado === "EMITIDA" && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setCobro({ id: f.id, metodo: "TRANSFERENCIA", fecha: hoyISO() })}>
-                    Registrar cobro
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-red-600" onClick={() => setAnulando({ id: f.id, motivo: "" })}>
-                    Anular
-                  </Button>
-                </>
-              )}
-            </span>
-          </div>
-        ))}
-      </section>
-
-      {cobro && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end rounded-lg border border-slate-200 dark:border-white/10 p-3">
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium leading-none">Forma de pago</span>
-            <BotonesOpcion ariaLabel="Forma de pago" columnas="grid-cols-2" value={cobro.metodo} onChange={(v) => setCobro((c) => c && { ...c, metodo: v })} opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fa-fcobro">Fecha del cobro</Label>
-            <DatePicker id="fa-fcobro" value={cobro.fecha} onChange={(v) => setCobro((c) => c && { ...c, fecha: v })} />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setCobro(null)}>Cancelar</Button>
-            <Button
-              variant="operational"
-              onClick={async () => {
-                if (await ejecutar(() => V.cobrar(cobro.id, cobro.metodo, cobro.fecha), "Cobro registrado: los casos quedan pagados.", "No se pudo registrar el cobro.")) {
-                  setCobro(null);
-                  recargar();
-                }
-              }}
-            >
-              Confirmar
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {anulando && (
-        <div className="flex flex-col sm:flex-row gap-3 items-end rounded-lg border border-red-200 p-3">
-          <div className="space-y-1.5 flex-1">
-            <Label htmlFor="fa-motivo">Motivo de la anulación</Label>
-            <Input id="fa-motivo" value={anulando.motivo} onChange={(e) => setAnulando((a) => a && { ...a, motivo: e.target.value })} />
-          </div>
-          <Button variant="ghost" onClick={() => setAnulando(null)}>Cancelar</Button>
-          <Button
-            variant="destructive"
-            disabled={!anulando.motivo.trim()}
-            onClick={async () => {
-              if (await ejecutar(() => V.anular(anulando.id, anulando.motivo.trim()), "Factura anulada: sus casos vuelven a pendientes.", "No se pudo anular.")) {
-                setAnulando(null);
-                recargar();
-              }
-            }}
-          >
-            Anular
-          </Button>
-        </div>
-      )}
     </>
   );
 }

@@ -45,6 +45,10 @@ export interface CasoPendiente {
   precio_total: string;
   total_pagado: string;
   monto: string;
+  especie: string | null;
+  peso_kg: number | null;
+  /** REALIZADO o ENTREGADO. */
+  estado: string;
 }
 
 export interface Factura {
@@ -53,6 +57,8 @@ export interface Factura {
   numero_comprobante: string | null;
   fecha_emision: string;
   total: string;
+  /** Descuento manual: el total ya lo descuenta. */
+  descuento: string;
   estado: "EMITIDA" | "PAGADA" | "ANULADA";
   fecha_pago: string | null;
   metodo_pago: MetodoPago | null;
@@ -86,7 +92,12 @@ export async function facturacion(vetId: string): Promise<{ pendientes: CasoPend
   return { pendientes: p.data, facturas: f.data };
 }
 
-export const emitir = (c: { veterinaria_id: string; caso_ids: string[]; fecha_emision?: string; numero_comprobante?: string }) =>
+export const emitir = (c: { veterinaria_id: string; caso_ids: string[]; fecha_emision?: string; numero_comprobante?: string; descuento?: string }) =>
   api.post<Factura>("/facturas-veterinaria", c);
+/** Una veterinaria aliada (la misma ficha que muestra la tabla de convenios). */
+export const obtener = (id: string) => api.get<Veterinaria>(`/veterinarias/${id}`).then((r) => r.data);
+/** RUC de la ficha del CRM de la que viene la aliada. */
+export const rucDeFicha = (crmId: string) =>
+  api.get<{ ruc: string | null }>(`/crm/veterinarias/${crmId}`).then((r) => r.data.ruc);
 export const cobrar = (id: string, metodo: MetodoPago, fecha: string) => api.post(`/facturas-veterinaria/${id}/cobro`, { metodo, fecha });
 export const anular = (id: string, motivo: string) => api.post(`/facturas-veterinaria/${id}/anular`, { motivo });
