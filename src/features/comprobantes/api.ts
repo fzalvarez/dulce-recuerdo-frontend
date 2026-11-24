@@ -117,6 +117,81 @@ export interface PorEmitir {
 export const porEmitir = (f: { desde?: string; hasta?: string; q?: string; pagina: number; por_pagina: number }) =>
   api.get<PorEmitir>("/comprobantes/por-emitir", { params: f }).then((r) => r.data);
 
+// ---------- Clientes de facturación (directorio sin duplicar) ----------
+
+export type OrigenCliente = "TUTOR" | "VETERINARIA" | "EMPRESA";
+
+export interface ClienteFE {
+  origen: OrigenCliente;
+  /** Id de su ficha de origen: cliente (tutor), CRM (veterinaria) o empresa. */
+  id: string;
+  nombre: string;
+  nombre_comercial: string | null;
+  tipo_documento: string;
+  numero_documento: string | null;
+  ruc: string | null;
+  direccion: string | null;
+  email: string | null;
+  telefono: string | null;
+  notas: string | null;
+  estado_contribuyente: string | null;
+  historial: { boletas: number; facturas: number; total: string; ultimo: string | null };
+}
+
+export const listarClientes = (f: { q?: string; origen?: OrigenCliente; con_comprobantes?: boolean; pagina: number; por_pagina: number }) =>
+  api.get<{ items: ClienteFE[]; total: number }>("/comprobantes/clientes", { params: f }).then((r) => r.data);
+
+export interface Sugerencia {
+  origen: OrigenCliente;
+  id: string;
+  cliente_tipo_doc: TipoDocCliente;
+  cliente_num_doc: string;
+  cliente_razon_social: string;
+  cliente_direccion: string | null;
+  detalle: string | null;
+}
+
+export const buscarClientes = (q: string) =>
+  api.get<Sugerencia[]>("/comprobantes/clientes/buscar", { params: { q } }).then((r) => r.data);
+
+export interface EmpresaCuerpo {
+  ruc: string;
+  razon_social: string;
+  nombre_comercial: string | null;
+  direccion: string | null;
+  email: string | null;
+  telefono: string | null;
+  estado_contribuyente: string | null;
+  notas: string | null;
+}
+
+export const crearEmpresa = (c: EmpresaCuerpo) => api.post("/comprobantes/clientes/empresas", c);
+export const editarEmpresa = (id: string, c: Omit<EmpresaCuerpo, "ruc">) => api.patch(`/comprobantes/clientes/empresas/${id}`, c);
+
+export interface ResultadoImportacion {
+  aplicado: boolean;
+  leidas: number;
+  tutores_actualizados: number;
+  tutores_nuevos: number;
+  tutores_con_ruc: number;
+  veterinarias_actualizadas: number;
+  empresas_nuevas: number;
+  empresas_actualizadas: number;
+  sin_cambios: number;
+  omitidos_proveedores: number;
+  omitidos_sin_documento: number;
+  errores: string[];
+  muestra: { nombre: string; documento: string; accion: string; detalle: string | null }[];
+}
+
+/** Reporte de clientes de SUSII (CSV). Sin `aplicar`, solo muestra lo que haría. */
+export function importarClientes(archivo: File, aplicar: boolean) {
+  const datos = new FormData();
+  datos.append("archivo", archivo);
+  datos.append("aplicar", String(aplicar));
+  return api.post<ResultadoImportacion>("/comprobantes/clientes/importar", datos).then((r) => r.data);
+}
+
 /** Serie de emisión (Configuración). Una activa por tipo; los números de este ambiente (test o live). */
 export interface Serie {
   id: string;

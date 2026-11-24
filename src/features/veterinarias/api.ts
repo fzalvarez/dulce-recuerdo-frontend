@@ -121,10 +121,11 @@ export interface DatosFiscales {
   direccion: string | null;
 }
 export const datosFiscales = (crmId: string) =>
-  api.get<DatosFiscales>(`/crm/veterinarias/${crmId}`).then((r) => ({
+  api.get<DatosFiscales & { direccion_fiscal?: string | null }>(`/crm/veterinarias/${crmId}`).then((r) => ({
     ruc: r.data.ruc ?? null,
     razon_social: r.data.razon_social ?? null,
-    direccion: r.data.direccion ?? null,
+    // La dirección fiscal (SUNAT) si se registró; si no, la del local.
+    direccion: r.data.direccion_fiscal || r.data.direccion || null,
   }));
 export const cobrar = (id: string, metodo: MetodoPago, fecha: string) => api.post(`/facturas-veterinaria/${id}/cobro`, { metodo, fecha });
 export const anular = (id: string, motivo: string) => api.post(`/facturas-veterinaria/${id}/anular`, { motivo });

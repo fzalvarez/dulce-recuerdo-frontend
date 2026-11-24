@@ -83,9 +83,14 @@ export interface Cliente {
   id: string;
   nombre_completo: string;
   telefono: string | null;
+  /** Número del documento de identidad (ver tipo_documento). */
   dni: string | null;
   email: string | null;
   direccion: string | null;
+  tipo_documento?: "DNI" | "CE" | "PASAPORTE";
+  /** RUC propio (persona natural con negocio): para emitirle factura. */
+  ruc?: string | null;
+  notas?: string | null;
 }
 
 export interface Mascota {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BanIcon, EyeIcon, FileCode2Icon, FileTextIcon, ReceiptIcon, RefreshCwIcon, ShieldCheckIcon } from "lucide-react";
+import { BanIcon, EyeIcon, FileCode2Icon, FileTextIcon, ReceiptIcon, RefreshCwIcon, SearchIcon, ShieldCheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -351,6 +351,17 @@ export function EmitirComprobante({ origen: origenProp, onCerrar, onEmitido }: {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-4">
         {/* Datos */}
         <div className="flex flex-col gap-3">
+          <BuscadorCliente
+            soloRuc={convenio}
+            onElegir={(s) => {
+              if (!convenio) setTipo(s.cliente_tipo_doc === "6" ? "FACTURA" : "BOLETA");
+              setAnonimo(false);
+              setTipoDoc(s.cliente_tipo_doc);
+              setNumero(s.cliente_num_doc);
+              setRazon(s.cliente_razon_social);
+              setDireccion(s.cliente_direccion ?? "");
+            }}
+          />
           {!convenio && (
             <div className="space-y-1.5">
               <Label>Tipo de comprobante</Label>
@@ -446,6 +457,81 @@ export function EmitirComprobante({ origen: origenProp, onCerrar, onEmitido }: {
         </div>
       </DialogFooter>
     </>
+  );
+}
+
+/** Busca en el directorio de clientes (tutores, veterinarias y empresas) y llena el formulario. */
+function BuscadorCliente({ onElegir, soloRuc }: { onElegir: (s: C.Sugerencia) => void; soloRuc?: boolean }) {
+  const [texto, setTexto] = useState("");
+  const [opciones, setOpciones] = useState<C.Sugerencia[]>([]);
+  const [abierto, setAbierto] = useState(false);
+
+  useEffect(() => {
+    const q = texto.trim();
+    if (q.length < 2) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      try {
+        const r = await C.buscarClientes(q);
+        if (vigente) {
+          setOpciones(soloRuc ? r.filter((s) => s.cliente_tipo_doc === "6") : r);
+          setAbierto(true);
+        }
+      } catch {
+        if (vigente) setOpciones([]);
+      }
+    }, 300);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [texto, soloRuc]);
+
+  return (
+    <div className="relative space-y-1.5">
+      <Label htmlFor="ce-buscar">Buscar cliente registrado</Label>
+      <div className="relative">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+        <Input
+          id="ce-buscar"
+          className="pl-9"
+          autoComplete="off"
+          placeholder="Nombre, razón social, DNI o RUC"
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            if (e.target.value.trim().length < 2) setAbierto(false);
+          }}
+          onFocus={() => opciones.length && texto.trim().length >= 2 && setAbierto(true)}
+          onBlur={() => setTimeout(() => setAbierto(false), 150)}
+        />
+      </div>
+      {abierto && (
+        <ul className="absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-lg">
+          {opciones.map((s) => (
+            <li key={`${s.origen}-${s.id}-${s.cliente_num_doc}`}>
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onElegir(s);
+                  setTexto("");
+                  setAbierto(false);
+                }}
+              >
+                <span className="font-medium text-slate-900 dark:text-white">{s.cliente_razon_social}</span>
+                <span className="block text-xs text-slate-500">
+                  {C.TIPO_DOC_CLIENTE[s.cliente_tipo_doc] ?? "Doc."} {s.cliente_num_doc}
+                  {s.detalle ? ` · ${s.detalle}` : ""}
+                </span>
+              </button>
+            </li>
+          ))}
+          {opciones.length === 0 && <li className="px-3 py-2 text-sm text-slate-400">Sin coincidencias: escribe los datos abajo.</li>}
+        </ul>
+      )}
+    </div>
   );
 }
 

@@ -37,7 +37,7 @@ const SIN_TIPO = "ninguno";
 type PrioridadOpcion = Prioridad | "SIN";
 type UrgenciasOpcion = "SI" | "NO" | "SIN";
 
-const TEXTOS = ["nombre", "razon_social", "ruc", "contacto", "telefono", "telefono2", "direccion", "fuente", "web", "perfil", "estado_dato"] as const;
+const TEXTOS = ["nombre", "razon_social", "ruc", "direccion_fiscal", "email_facturacion", "contacto", "telefono", "telefono2", "direccion", "fuente", "web", "perfil", "estado_dato"] as const;
 type CampoTexto = (typeof TEXTOS)[number];
 
 const soloDigitos = (max: number) => (v: string) => v.replace(/\D/g, "").slice(0, max);
@@ -198,6 +198,8 @@ export function CrmVeterinariaForm({
       tipo,
       razon_social: texto("razon_social"),
       ruc: texto("ruc"),
+      direccion_fiscal: texto("direccion_fiscal"),
+      email_facturacion: texto("email_facturacion"),
       contacto: texto("contacto"),
       telefono: texto("telefono"),
       telefono2: texto("telefono2"),
@@ -278,6 +280,8 @@ export function CrmVeterinariaForm({
         </div>
         {campo("razon_social", "Razón social", { placeholder: "EMPRESA S.A.C.", className: "col-span-2 sm:col-span-2" })}
         {campo("ruc", "RUC", { digitos: 11, placeholder: "11 números", className: "col-span-2 sm:col-span-2" })}
+        {campo("direccion_fiscal", "Dirección fiscal (para facturar)", { placeholder: "Si difiere de la del local", className: "col-span-2 sm:col-span-2" })}
+        {campo("email_facturacion", "Correo de facturación", { placeholder: "facturas@…", className: "col-span-2 sm:col-span-2" })}
 
         {campo("contacto", "Persona de contacto", { placeholder: "Nombre y cargo", className: "col-span-2 sm:col-span-2" })}
         {campo("telefono", "Teléfono 1", { digitos: 15, telefono: true, placeholder: "999 999 999", className: "col-span-1 sm:col-span-2" })}

@@ -55,6 +55,9 @@ export interface CrmVeterinaria {
   tipo: TipoVeterinaria | null;
   razon_social: string | null;
   ruc: string | null;
+  /** Para facturar: dirección fiscal de SUNAT (puede no ser la del local) y correo de facturación. */
+  direccion_fiscal?: string | null;
+  email_facturacion?: string | null;
   contacto: string | null;
   telefono: string | null;
   telefono2: string | null;

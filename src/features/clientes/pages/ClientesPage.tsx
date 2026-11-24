@@ -5,6 +5,7 @@ import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
@@ -20,7 +21,12 @@ interface ClienteCuerpo {
   dni: string | null;
   email: string | null;
   direccion: string | null;
+  tipo_documento: "DNI" | "CE" | "PASAPORTE";
+  ruc: string | null;
+  notas: string | null;
 }
+
+const NOMBRE_DOC = { DNI: "DNI", CE: "Carné de extranjería", PASAPORTE: "Pasaporte" } as const;
 
 /** Una página de clientes. La búsqueda y la paginación las hace el servidor. */
 async function listar(q: string, pagina: number): Promise<Pagina<Cliente>> {
@@ -77,7 +83,7 @@ export default function ClientesPage() {
           <thead className="bg-slate-50 dark:bg-white/5 text-label uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-5 py-3 font-semibold">Nombre</th>
-              <th className="px-5 py-3 font-semibold">DNI</th>
+              <th className="px-5 py-3 font-semibold">Documento</th>
               <th className="px-5 py-3 font-semibold">Contacto</th>
               <th className="px-5 py-3 font-semibold text-right">Acciones</th>
             </tr>
@@ -86,7 +92,17 @@ export default function ClientesPage() {
             {(recurso.data?.items ?? []).map((c) => (
               <tr key={c.id}>
                 <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">{c.nombre_completo}</td>
-                <td className="px-5 py-3">{c.dni ?? "—"}</td>
+                <td className="px-5 py-3">
+                  {c.dni ? (
+                    <>
+                      <span className="text-xs text-slate-500">{c.tipo_documento && c.tipo_documento !== "DNI" ? `${c.tipo_documento} ` : ""}</span>
+                      {c.dni}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                  {c.ruc && <span className="block text-xs text-slate-500">RUC {c.ruc}</span>}
+                </td>
                 <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-300">
                   {c.telefono}
                   {c.email ? ` · ${c.email}` : ""}
@@ -163,7 +179,10 @@ function ClienteForm({ cliente, onCerrar, onHecho }: { cliente: Cliente | null; 
     dni: cliente?.dni ?? "",
     email: cliente?.email ?? "",
     direccion: cliente?.direccion ?? "",
+    ruc: cliente?.ruc ?? "",
+    notas: cliente?.notas ?? "",
   });
+  const [tipoDoc, setTipoDoc] = useState<ClienteCuerpo["tipo_documento"]>(cliente?.tipo_documento ?? "DNI");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -176,12 +195,17 @@ function ClienteForm({ cliente, onCerrar, onHecho }: { cliente: Cliente | null; 
 
   const guardar = async () => {
     if (!form.nombre_completo.trim() || !form.telefono.trim()) return setError("Nombre y teléfono son obligatorios.");
+    if (tipoDoc === "DNI" && form.dni.trim() && !/^\d{8}$/.test(form.dni.trim())) return setError("El DNI tiene 8 dígitos.");
+    if (form.ruc.trim() && !/^10\d{9}$/.test(form.ruc.trim())) return setError("El RUC de una persona tiene 11 dígitos y empieza con 10.");
     const cuerpo: ClienteCuerpo = {
       nombre_completo: form.nombre_completo.trim(),
       telefono: form.telefono.trim(),
       dni: form.dni.trim() || null,
       email: form.email.trim() || null,
       direccion: form.direccion.trim() || null,
+      tipo_documento: tipoDoc,
+      ruc: form.ruc.trim() || null,
+      notas: form.notas.trim() || null,
     };
     setGuardando(true);
     const ok = await ejecutar(
@@ -200,14 +224,52 @@ function ClienteForm({ cliente, onCerrar, onHecho }: { cliente: Cliente | null; 
     <>
       <DialogHeader>
         <DialogTitle>{cliente ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
-        <DialogDescription>El DNI no se puede repetir.</DialogDescription>
+        <DialogDescription>El documento no se puede repetir. Estos datos se usan al emitir su boleta o factura.</DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {campo("nombre_completo", "Nombre completo")}
         {campo("telefono", "Teléfono")}
-        {campo("dni", "DNI")}
+        <div className="space-y-1.5">
+          <Label htmlFor="cl-tipodoc">Documento de identidad</Label>
+          <div className="flex gap-2">
+            <select
+              id="cl-tipodoc"
+              className="h-9 rounded-md border border-slate-200 dark:border-white/10 bg-transparent px-2 text-sm"
+              value={tipoDoc}
+              onChange={(e) => setTipoDoc(e.target.value as ClienteCuerpo["tipo_documento"])}
+            >
+              {(Object.keys(NOMBRE_DOC) as ClienteCuerpo["tipo_documento"][]).map((t) => (
+                <option key={t} value={t}>
+                  {NOMBRE_DOC[t]}
+                </option>
+              ))}
+            </select>
+            <Input
+              aria-label="Número de documento"
+              inputMode={tipoDoc === "DNI" ? "numeric" : "text"}
+              maxLength={tipoDoc === "DNI" ? 8 : 20}
+              value={form.dni}
+              onChange={(e) => setForm((f) => ({ ...f, dni: tipoDoc === "DNI" ? e.target.value.replace(/\D/g, "") : e.target.value }))}
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="cl-ruc">RUC propio (opcional)</Label>
+          <Input
+            id="cl-ruc"
+            inputMode="numeric"
+            maxLength={11}
+            placeholder="10…, si pide factura a su nombre"
+            value={form.ruc}
+            onChange={(e) => setForm((f) => ({ ...f, ruc: e.target.value.replace(/\D/g, "") }))}
+          />
+        </div>
         {campo("email", "Correo", "email")}
-        <div className="sm:col-span-2">{campo("direccion", "Dirección")}</div>
+        {campo("direccion", "Dirección")}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="cl-notas">Notas</Label>
+          <Textarea id="cl-notas" rows={2} value={form.notas} onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))} />
+        </div>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
       <DialogFooter>
