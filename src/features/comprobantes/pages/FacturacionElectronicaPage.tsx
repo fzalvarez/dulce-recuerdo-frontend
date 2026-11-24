@@ -19,10 +19,11 @@ import { SeriesPanel } from "@/features/configuracion/components/SeriesPanel";
 import * as C from "../api";
 import { DetalleComprobante, EmitirComprobante, EstadoComprobante } from "../components/Comprobantes";
 import { ClientesPanel } from "../components/ClientesPanel";
+import { ReportesContablesPanel } from "../components/ReportesContablesPanel";
 
 const POR_PAGINA = 25;
 
-type Vista = "por-emitir" | "emitidos" | "clientes" | "series";
+type Vista = "por-emitir" | "emitidos" | "clientes" | "contables" | "series";
 
 /** Fecha corta. Las fechas sin hora (AAAA-MM-DD) se leen en Lima, no en UTC. */
 function fecha(iso: string | null): string {
@@ -71,6 +72,7 @@ export default function FacturacionElectronicaPage() {
     ["por-emitir", "Por emitir"],
     ["emitidos", "Comprobantes emitidos"],
     ["clientes", "Clientes"],
+    ["contables", "Reportes contables"],
     ...(verSeries ? ([["series", "Series y correlativos"]] as [Vista, string][]) : []),
   ];
 
@@ -101,6 +103,7 @@ export default function FacturacionElectronicaPage() {
       {vista === "por-emitir" && <PorEmitirPanel />}
       {vista === "emitidos" && <EmitidosPanel />}
       {vista === "clientes" && <ClientesPanel puedeImportar={verSeries} />}
+      {vista === "contables" && <ReportesContablesPanel />}
       {vista === "series" && verSeries && <SeriesPanel />}
     </>
   );

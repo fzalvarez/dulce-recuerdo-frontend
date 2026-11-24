@@ -192,6 +192,33 @@ export function importarClientes(archivo: File, aplicar: boolean) {
   return api.post<ResultadoImportacion>("/comprobantes/clientes/importar", datos).then((r) => r.data);
 }
 
+// ---------- Reportes contables ----------
+
+export interface MesContable {
+  mes: string;
+  boletas: number;
+  facturas: number;
+  notas: number;
+  anulados: number;
+  total: string;
+}
+
+export type ReporteContable = "resumen-totales" | "resumen-facturas" | "compendio-boletas" | "compendio-facturas" | "registro-ventas";
+
+export const mesesContables = () => api.get<MesContable[]>("/comprobantes/contables").then((r) => r.data);
+
+/** Descarga un reporte del mes con el nombre que da el servidor (el del PLE es el oficial de SUNAT). */
+export async function descargarReporte(mes: string, reporte: ReporteContable) {
+  const r = await api.get<Blob>(`/comprobantes/contables/${mes}/${reporte}`, { responseType: "blob", timeout: 180_000 });
+  const nombre = /filename="([^"]+)"/.exec(String(r.headers["content-disposition"] ?? ""))?.[1] ?? `${reporte}-${mes}`;
+  const url = URL.createObjectURL(r.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Serie de emisión (Configuración). Una activa por tipo; los números de este ambiente (test o live). */
 export interface Serie {
   id: string;
