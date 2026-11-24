@@ -51,7 +51,7 @@ function Seccion({ titulo, descripcion, accion, children }: { titulo: string; de
 function Tabla({ cabecera, children }: { cabecera: ReactNode[]; children: ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm min-w-[640px]">
+      <table className="w-full text-left text-sm min-w-[880px]">
         <thead className="text-label uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-white/5">
           <tr>
             {cabecera.map((c, i) => (
@@ -334,7 +334,7 @@ function useGuardar(onHecho: () => void) {
 
 function FilaPrecios({ rangos, valores, onCambio, prefijo }: { rangos: Rango[]; valores: Record<string, string>; onCambio: (rango: string, v: string) => void; prefijo: string }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {rangos.map((r) => (
         <div key={r.id} className="space-y-1">
           <Label htmlFor={`${prefijo}-${r.id}`} className="text-xs">{r.etiqueta}</Label>

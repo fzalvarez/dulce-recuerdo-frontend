@@ -374,7 +374,7 @@ function PreciosPropiosForm({ vet, catalogo, actual, onCerrar }: { vet: V.Veteri
       {catalogo.planes.map((p) => (
         <div key={p.id} className="flex flex-col gap-1">
           <span className="text-sm font-medium">{p.nombre}</span>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {catalogo.rangos.map((r) => (
               <div key={r.id} className="space-y-1">
                 <Label htmlFor={`pp-${p.id}-${r.id}`} className="text-xs">{r.etiqueta}</Label>
