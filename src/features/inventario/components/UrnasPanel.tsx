@@ -67,7 +67,7 @@ export function UrnasPanel({ onCambio }: { onCambio: () => void }) {
           return <TablaLinea key={linea} linea={linea} filas={filas} colores={datos.colores} />;
         })}
 
-      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-4xl">
+      <Modal open={dialogo !== null} onOpenChange={(o) => !o && cerrar()} ancho={dialogo === "carga" ? "sm:max-w-6xl" : "sm:max-w-4xl"}>
         {dialogo === "catalogo" && <CatalogoForm matriz={datos ?? SIN_URNAS} onCerrar={cerrar} onHecho={hecho} />}
         {dialogo === "carga" && datos && <CargaForm matriz={datos} onCerrar={cerrar} onHecho={hecho} />}
       </Modal>
@@ -240,6 +240,70 @@ function CatalogoForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCe
 
 const clave = (f: FilaUrna) => `${f.linea}|${f.tamano}|${f.forma}`;
 
+/**
+ * Celda de planilla: el input ocupa toda la celda, sin bordes propios. Se pinta de amarillo
+ * mientras tiene un valor por enviar.
+ */
+function Celda({ etiqueta, valor, decimal, fila, columna, onCambio }: {
+  etiqueta: string;
+  valor: string;
+  decimal?: boolean;
+  fila: number;
+  columna: number;
+  onCambio: (v: string) => void;
+}) {
+  const editada = valor.trim() !== "";
+  return (
+    <td className={cn("p-0 border-l border-slate-100 dark:border-white/5", editada && "bg-amber-100 dark:bg-amber-500/20")}>
+      <input
+        aria-label={etiqueta}
+        data-fila={fila}
+        data-columna={columna}
+        inputMode={decimal ? "decimal" : "numeric"}
+        autoComplete="off"
+        value={valor}
+        onChange={(e) => onCambio(decimal ? e.target.value.replace(",", ".") : e.target.value.replace(/\D/g, ""))}
+        onFocus={(e) => e.target.select()}
+        placeholder="·"
+        className={cn(
+          "w-full h-9 px-2 bg-transparent text-right tabular-nums outline-none placeholder:text-slate-300",
+          "focus:ring-2 focus:ring-inset focus:ring-brand-500",
+          editada && "font-semibold text-amber-900 dark:text-amber-200"
+        )}
+      />
+    </td>
+  );
+}
+
+/** Flechas y Enter mueven el foco entre celdas, como en una hoja de cálculo. */
+function moverConTeclado(e: React.KeyboardEvent<HTMLDivElement>) {
+  const el = e.target as HTMLElement;
+  if (el.dataset.fila === undefined) return;
+  const pasos: Record<string, [number, number]> = {
+    ArrowUp: [-1, 0], ArrowDown: [1, 0], Enter: [e.shiftKey ? -1 : 1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+  };
+  const paso = pasos[e.key];
+  if (!paso) return;
+  const input = el as HTMLInputElement;
+  // Izquierda/derecha solo saltan de celda cuando el cursor está en el borde del texto.
+  if (e.key === "ArrowLeft" && (input.selectionStart ?? 0) > 0 && input.selectionStart === input.selectionEnd) return;
+  if (e.key === "ArrowRight" && (input.selectionEnd ?? 0) < input.value.length && input.selectionStart === input.selectionEnd) return;
+  const fila = Number(el.dataset.fila);
+  const columna = Number(el.dataset.columna);
+  const contenedor = e.currentTarget;
+  // Busca la siguiente celda editable en esa dirección (salta las variantes inactivas).
+  for (let i = 1; i < 60; i++) {
+    const destino = contenedor.querySelector<HTMLInputElement>(
+      `input[data-fila="${fila + paso[0] * i}"][data-columna="${columna + paso[1] * i}"]`
+    );
+    if (destino) {
+      e.preventDefault();
+      destino.focus();
+      return;
+    }
+  }
+}
+
 /** Carga en bloque: cantidades por celda y un costo por fila (el costo no depende del color). */
 function CargaForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerrar: () => void; onHecho: () => void }) {
   const verCostos = useModulosPermitidos().includes("finanzas");
@@ -257,6 +321,9 @@ function CargaForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerra
     (acc, f) => acc + matriz.colores.reduce((a, c) => a + (cantidad(f, c) || 0), 0) * (Number(costos[clave(f)]) || 0),
     0
   );
+
+  // Orden de las filas tal como se dibujan (por línea), para moverse con el teclado.
+  const indiceFila = new Map(LINEAS.flatMap((l) => matriz.filas.filter((f) => f.linea === l)).map((f, i) => [clave(f), i]));
 
   const guardar = async () => {
     const filas: Parameters<typeof I.entradaUrnas>[0]["filas"] = [];
@@ -314,67 +381,83 @@ function CargaForm({ matriz, onCerrar, onHecho }: { matriz: MatrizUrnas; onCerra
         <input type="checkbox" className="size-4 accent-brand-500" checked={esCompra} onChange={(e) => setEsCompra(e.target.checked)} />
         Es una compra: registrar un gasto por cada urna (desmarcado = stock inicial, sin gasto)
       </label>
-      <div className="overflow-x-auto max-h-[50vh] rounded-lg border border-slate-200 dark:border-white/10">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-slate-50 dark:bg-gray-900 text-label uppercase tracking-wider text-slate-500">
+      <div
+        className="overflow-auto max-h-[55vh] rounded-lg border border-slate-200 dark:border-white/10"
+        onKeyDown={moverConTeclado}
+      >
+        <table className="w-full text-sm border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-gray-900 text-label uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="px-3 py-2 font-semibold">Urna</th>
-              <th className="px-3 py-2 font-semibold">Costo unit. (S/)</th>
-              {matriz.colores.map((c) => <th key={c} className="px-3 py-2 font-semibold text-center">{c}</th>)}
+              <th className="px-3 py-2 font-semibold text-left">Urna</th>
+              <th className="px-2 py-2 font-semibold text-right min-w-24 border-l border-slate-200 dark:border-white/10">Costo S/</th>
+              {matriz.colores.map((c) => (
+                <th key={c} className="px-2 py-2 font-semibold text-right min-w-18 border-l border-slate-200 dark:border-white/10">{c}</th>
+              ))}
+              <th className="px-3 py-2 font-semibold text-right border-l border-slate-200 dark:border-white/10">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+          <tbody>
             {LINEAS.map((linea) => {
               const filas = matriz.filas.filter((f) => f.linea === linea);
               if (filas.length === 0) return null;
               return (
                 <Fragment key={linea}>
                   <tr>
-                    <td colSpan={2 + matriz.colores.length} className="px-3 pt-3 pb-1 text-label font-semibold uppercase tracking-wider text-slate-400">
+                    <td colSpan={3 + matriz.colores.length} className="px-3 pt-3 pb-1 text-label font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-white/10">
                       {LINEA_LABEL[linea]}
                     </td>
                   </tr>
-                  {filas.map((f) => (
-                    <tr key={clave(f)}>
-                      <td className="px-3 py-1.5 whitespace-nowrap">{TAMANO_LABEL[f.tamano]} · {f.forma}</td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          aria-label={`Costo ${TAMANO_LABEL[f.tamano]} ${f.forma}`}
-                          className="w-24 h-8"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={costos[clave(f)] ?? ""}
-                          onChange={(e) => setCostos((x) => ({ ...x, [clave(f)]: e.target.value }))}
+                  {filas.map((f) => {
+                    const fila = indiceFila.get(clave(f)) ?? 0;
+                    const suma = matriz.colores.reduce((a, c) => a + (cantidad(f, c) || 0), 0);
+                    return (
+                      <tr key={clave(f)} className="border-b border-slate-100 dark:border-white/5">
+                        <td className="px-3 py-0 whitespace-nowrap text-slate-700 dark:text-slate-200">
+                          {TAMANO_LABEL[f.tamano]} · {f.forma}
+                        </td>
+                        <Celda
+                          etiqueta={`Costo ${TAMANO_LABEL[f.tamano]} ${f.forma}`}
+                          valor={costos[clave(f)] ?? ""}
+                          decimal
+                          fila={fila}
+                          columna={0}
+                          onCambio={(v) => setCostos((x) => ({ ...x, [clave(f)]: v }))}
                         />
-                      </td>
-                      {matriz.colores.map((c) => (
-                        <td key={c} className="px-3 py-1.5 text-center">
-                          {f.celdas[c]?.activo ? (
-                            <Input
-                              aria-label={`${TAMANO_LABEL[f.tamano]} ${f.forma} ${c}`}
-                              className="w-16 h-8 mx-auto text-center"
-                              type="number"
-                              min={0}
-                              value={cantidades[`${clave(f)}|${c}`] ?? ""}
-                              onChange={(e) => setCantidades((x) => ({ ...x, [`${clave(f)}|${c}`]: e.target.value }))}
+                        {matriz.colores.map((c, i) =>
+                          f.celdas[c]?.activo ? (
+                            <Celda
+                              key={c}
+                              etiqueta={`${TAMANO_LABEL[f.tamano]} ${f.forma} ${c}`}
+                              valor={cantidades[`${clave(f)}|${c}`] ?? ""}
+                              fila={fila}
+                              columna={i + 1}
+                              onCambio={(v) => setCantidades((x) => ({ ...x, [`${clave(f)}|${c}`]: v }))}
                             />
                           ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
+                            <td key={c} className="text-right px-3 text-slate-300 bg-slate-50/60 dark:bg-white/2 border-l border-slate-100 dark:border-white/5">—</td>
+                          )
+                        )}
+                        <td className="px-3 py-0 text-right tabular-nums font-medium border-l border-slate-100 dark:border-white/5">
+                          {suma > 0 ? suma : <span className="text-slate-300">0</span>}
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </Fragment>
               );
             })}
           </tbody>
         </table>
       </div>
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        {unidades} urnas{verCostos ? ` · ${soles(total)}` : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <span className="inline-flex items-center gap-2 text-xs text-slate-500">
+          <span className="inline-block size-3 rounded-sm bg-amber-100 ring-1 ring-amber-300 dark:bg-amber-500/20" />
+          Celdas con cambios por enviar · Enter o flechas para moverte
+        </span>
+        <span className="font-medium">
+          {unidades} urnas{verCostos ? ` · ${soles(total)}` : ""}
+        </span>
+      </div>
       <Pie onCerrar={onCerrar} onGuardar={guardar} guardando={guardando} error={error} texto="Cargar stock" />
     </>
   );
