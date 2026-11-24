@@ -136,6 +136,68 @@ export const crearSerie = (c: { tipo: Serie["tipo"]; serie: string; correlativo_
 export const editarSerie = (id: string, c: { serie?: string; correlativo_inicial?: number; activa?: boolean }) =>
   api.patch<Serie>(`/comprobantes/series/${id}`, c);
 
+/** Línea del comprobante: valor unitario sin IGV, precio unitario con IGV e importe de la línea. */
+export interface LineaComprobante {
+  descripcion: string;
+  cantidad: number;
+  valor_unitario: string;
+  precio_unitario: string;
+  igv: string;
+  total: string;
+}
+
+/** El comprobante como documento: lo que se emitiría (vista previa) o lo emitido (detalle). */
+export interface DocumentoComprobante {
+  tipo?: "BOLETA" | "FACTURA";
+  tipo_doc?: "01" | "03";
+  numero: string;
+  fecha_emision: string;
+  cliente_tipo_doc: string;
+  cliente_num_doc: string;
+  cliente_razon_social: string;
+  cliente_direccion: string | null;
+  precios_incluyen_igv: boolean;
+  items: LineaComprobante[];
+  descuento: string;
+  valor_venta: string;
+  igv: string;
+  total: string;
+  monto_en_letras: string | null;
+  ambiente: "test" | "live";
+}
+
+export interface ComprobanteDetalle extends ComprobanteFila, DocumentoComprobante {
+  tipo_doc: "01" | "03";
+  hash: string | null;
+  motivo_baja: string | null;
+  fecha_baja: string | null;
+  /** Días que quedan para anular ante SUNAT. 0 = corresponde nota de crédito. */
+  dias_para_anular: number;
+}
+
+export type CuerpoCaso = Parameters<typeof emitirParaCaso>[1];
+export type CuerpoConvenio = Parameters<typeof emitirFacturaConvenio>[1];
+
+export const vistaPreviaCaso = (casoId: string, cuerpo: CuerpoCaso) =>
+  api.post<DocumentoComprobante>(`/comprobantes/caso/${casoId}/vista-previa`, cuerpo).then((r) => r.data);
+export const vistaPreviaConvenio = (facturaId: string, cuerpo: CuerpoConvenio) =>
+  api.post<DocumentoComprobante>(`/comprobantes/factura-convenio/${facturaId}/vista-previa`, cuerpo).then((r) => r.data);
+
+export const detalle = (id: string) => api.get<ComprobanteDetalle>(`/comprobantes/${id}/detalle`).then((r) => r.data);
+export const anular = (id: string, motivo: string) => api.post<Comprobante>(`/comprobantes/${id}/anular`, { motivo }).then((r) => r.data);
+
+/** Descarga el XML firmado o el CDR de SUNAT con el nombre oficial del archivo. */
+export async function descargar(id: string, clase: "xml" | "cdr") {
+  const r = await api.get<Blob>(`/comprobantes/${id}/${clase}`, { responseType: "blob" });
+  const nombre = /filename="([^"]+)"/.exec(String(r.headers["content-disposition"] ?? ""))?.[1] ?? `${clase}-${id}`;
+  const url = URL.createObjectURL(r.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Abre el PDF en otra pestaña. Pasa por el backend: la clave de Intifact no llega al navegador. */
 export async function abrirPdf(id: string, formato: "a4" | "ticket80" = "a4") {
   const r = await api.get<Blob>(`/comprobantes/${id}/pdf`, { params: { formato }, responseType: "blob" });

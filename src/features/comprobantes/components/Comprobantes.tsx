@@ -1,83 +1,517 @@
-import { useState } from "react";
-import { FileTextIcon, ReceiptIcon, RefreshCwIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BanIcon, EyeIcon, FileCode2Icon, FileTextIcon, ReceiptIcon, RefreshCwIcon, ShieldCheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
+import { getApiErrorMessage } from "@/shared/lib/http-error";
+import { notifyError, notifySuccess } from "@/shared/utils";
 import { BotonesOpcion } from "@/shared/components/common/BotonesOpcion";
+import { Modal } from "@/features/casos/components/Dialogos";
 import { soles } from "@/features/casos/utils/casos";
 import * as C from "../api";
+import { Documento } from "./Documento";
+import { fechaDoc } from "../utils";
 
 const DOC_ANONIMO = "00000000";
+const nombreTipo = (tipoDoc: string) => (tipoDoc === "03" ? "Boleta" : "Factura");
 
-/** Estado SUNAT del comprobante. Lo intermedio (encolado, enviando) se muestra como «En envío». */
+// ---------- Estado y descargas ----------
+
+/** Estado SUNAT. Lo intermedio (encolado, enviando) se muestra como «En envío». */
 export function EstadoComprobante({ estado }: { estado: string }) {
   const estilo =
     estado === "ACEPTADO"
       ? { texto: "Aceptado SUNAT", clase: "bg-emerald-100 text-emerald-800" }
       : estado === "RECHAZADO"
         ? { texto: "Rechazado", clase: "bg-red-100 text-red-700" }
-        : estado === "ANULADO"
-          ? { texto: "Anulado", clase: "bg-slate-200 text-slate-500" }
-          : { texto: "En envío", clase: "bg-amber-100 text-amber-800" };
+        : estado === "ANULANDO"
+          ? { texto: "Anulación en curso", clase: "bg-orange-100 text-orange-800" }
+          : estado === "ANULADO"
+            ? { texto: "Anulado", clase: "bg-slate-200 text-slate-600" }
+            : estado === "ERROR" || estado === "COLA_FALLIDA"
+              ? { texto: "Error de envío", clase: "bg-red-100 text-red-700" }
+              : { texto: "En envío", clase: "bg-amber-100 text-amber-800" };
   return <span className={cn("px-2 py-0.5 rounded-full text-label font-semibold whitespace-nowrap", estilo.clase)}>{estilo.texto}</span>;
 }
 
-/** Comprobantes emitidos: número, cliente, total, estado SUNAT y PDF. */
-export function ListaComprobantes({ comprobantes, onCambio }: { comprobantes: C.Comprobante[]; onCambio: () => void }) {
+/** PDF A4, ticket, XML y CDR: lo mismo que ofrece cualquier facturador. */
+export function Descargas({ comprobante, compacto }: { comprobante: { id: string; estado: string }; compacto?: boolean }) {
+  const conCdr = ["ACEPTADO", "RECHAZADO", "ANULANDO", "ANULADO"].includes(comprobante.estado);
+  const bajar = (clase: "xml" | "cdr") =>
+    C.descargar(comprobante.id, clase).catch((e) => notifyError(getApiErrorMessage(e, `No se pudo descargar el ${clase.toUpperCase()}.`)));
+  const tam = compacto ? "sm" : "default";
   return (
-    <ul className="flex flex-col gap-2">
-      {comprobantes.map((c) => (
-        <li key={c.id} className="rounded-lg border border-slate-200 dark:border-white/10 p-3 flex flex-col gap-2 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-semibold text-slate-900 dark:text-white">
-              {c.tipo_doc === "03" ? "Boleta" : "Factura"} {c.numero}
-              {c.ambiente === "test" && (
-                <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-800">PRUEBA</span>
-              )}
-            </span>
-            <EstadoComprobante estado={c.estado} />
-          </div>
-          <p className="text-xs text-slate-500">
-            {C.TIPO_DOC_CLIENTE[c.cliente_tipo_doc as C.TipoDocCliente] ?? "Doc."} {c.cliente_num_doc} · {c.cliente_razon_social} ·{" "}
-            <strong className="text-slate-700 dark:text-slate-200">{soles(c.total)}</strong> (IGV {soles(c.igv)})
-          </p>
-          {c.estado === "RECHAZADO" && c.descripcion_respuesta && <p className="text-xs text-red-600">{c.descripcion_respuesta}</p>}
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => C.abrirPdf(c.id, "a4")}>
-              <FileTextIcon className="size-3.5" />
-              PDF A4
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => C.abrirPdf(c.id, "ticket80")}>
-              <ReceiptIcon className="size-3.5" />
-              Ticket
-            </Button>
-            {c.estado !== "ACEPTADO" && c.estado !== "ANULADO" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={async () => {
-                  if (await ejecutar(() => C.actualizar(c.id), "Estado actualizado.", "No se pudo consultar el estado.")) onCambio();
-                }}
-              >
-                <RefreshCwIcon className="size-3.5" />
-                Actualizar estado
-              </Button>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" size={tam} className="gap-1.5" onClick={() => C.abrirPdf(comprobante.id, "a4")}>
+        <FileTextIcon className="size-3.5" />
+        PDF A4
+      </Button>
+      <Button variant="outline" size={tam} className="gap-1.5" onClick={() => C.abrirPdf(comprobante.id, "ticket80")}>
+        <ReceiptIcon className="size-3.5" />
+        Ticket
+      </Button>
+      <Button variant="outline" size={tam} className="gap-1.5" onClick={() => bajar("xml")}>
+        <FileCode2Icon className="size-3.5" />
+        XML
+      </Button>
+      <Button variant="outline" size={tam} className="gap-1.5" disabled={!conCdr} title={conCdr ? "Constancia de recepción de SUNAT" : "SUNAT todavía no responde"} onClick={() => bajar("cdr")}>
+        <ShieldCheckIcon className="size-3.5" />
+        CDR
+      </Button>
+    </div>
   );
 }
 
+// ---------- Lista corta (dentro del servicio o de la factura de convenio) ----------
+
+export function ListaComprobantes({ comprobantes, onCambio }: { comprobantes: C.Comprobante[]; onCambio: () => void }) {
+  const [viendo, setViendo] = useState<string | null>(null);
+  return (
+    <>
+      <ul className="flex flex-col gap-2">
+        {comprobantes.map((c) => (
+          <li key={c.id} className="rounded-lg border border-slate-200 dark:border-white/10 p-3 flex flex-col gap-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {nombreTipo(c.tipo_doc)} <span className="font-mono">{c.numero}</span>
+                {c.ambiente === "test" && (
+                  <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-800">PRUEBA</span>
+                )}
+              </span>
+              <EstadoComprobante estado={c.estado} />
+            </div>
+            <p className="text-xs text-slate-500">
+              {fechaDoc(c.fecha_emision)} · {c.cliente_razon_social} · <strong className="text-slate-700 dark:text-slate-200">{soles(c.total)}</strong>
+            </p>
+            {C.NO_VIGENTES.includes(c.estado) && c.descripcion_respuesta && <p className="text-xs text-red-600">{c.descripcion_respuesta}</p>}
+            <Button variant="outline" size="sm" className="self-start gap-1.5" onClick={() => setViendo(c.id)}>
+              <EyeIcon className="size-3.5" />
+              Ver comprobante
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <Modal open={viendo !== null} onOpenChange={(o) => !o && setViendo(null)} ancho="sm:max-w-3xl">
+        {viendo && <DetalleComprobante id={viendo} onCambio={onCambio} />}
+      </Modal>
+    </>
+  );
+}
+
+// ---------- Detalle de un comprobante emitido ----------
+
+/** El comprobante emitido: documento, estado SUNAT, descargas y anulación. */
+export function DetalleComprobante({ id, onCambio }: { id: string; onCambio?: () => void }) {
+  const recurso = useRecurso(() => C.detalle(id), [id]);
+  const d = recurso.data;
+  const [anulando, setAnulando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+
+  const refrescar = () => {
+    recurso.recargar();
+    onCambio?.();
+  };
+  const consultar = async () => {
+    setOcupado(true);
+    if (await ejecutar(() => C.actualizar(id), "Estado consultado en SUNAT.", "No se pudo consultar el estado.")) refrescar();
+    setOcupado(false);
+  };
+  const confirmarAnulacion = async () => {
+    setOcupado(true);
+    const ok = await ejecutar(
+      () => C.anular(id, motivo.trim()),
+      "Anulación enviada a SUNAT.",
+      "No se pudo anular el comprobante."
+    );
+    setOcupado(false);
+    if (ok) {
+      setAnulando(false);
+      refrescar();
+    }
+  };
+
+  if (recurso.error) return <p className="text-sm text-red-600">{recurso.error}</p>;
+  if (!d) return <p className="text-sm text-slate-500">Cargando comprobante…</p>;
+
+  const enCurso = !["ACEPTADO", "ANULADO", ...C.NO_VIGENTES].includes(d.estado);
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex flex-wrap items-center gap-2">
+          {nombreTipo(d.tipo_doc)} <span className="font-mono">{d.numero}</span>
+          <EstadoComprobante estado={d.estado} />
+        </DialogTitle>
+        <DialogDescription>
+          {d.origen === "CONVENIO" ? `Factura de convenio · ${d.referencia ?? ""}` : `Servicio ${d.referencia ?? ""}${d.mascota ? ` · ${d.mascota}` : ""}`}
+        </DialogDescription>
+      </DialogHeader>
+
+      {(d.codigo_respuesta || d.descripcion_respuesta) && (
+        <p
+          className={cn(
+            "rounded-md px-3 py-2 text-xs",
+            C.NO_VIGENTES.includes(d.estado) ? "bg-red-50 text-red-700" : "bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300"
+          )}
+        >
+          <span className="font-semibold">Respuesta SUNAT{d.codigo_respuesta ? ` (${d.codigo_respuesta})` : ""}:</span>{" "}
+          {d.descripcion_respuesta ?? "—"}
+        </p>
+      )}
+      {d.motivo_baja && (
+        <p className="rounded-md bg-orange-50 px-3 py-2 text-xs text-orange-800">
+          <span className="font-semibold">Anulación pedida el {fechaDoc(d.fecha_baja)}:</span> {d.motivo_baja}
+        </p>
+      )}
+
+      <Documento doc={d} />
+
+      <Descargas comprobante={d} compacto />
+
+      {d.hash && <p className="text-[11px] text-slate-400 break-all">Código hash: {d.hash}</p>}
+
+      <DialogFooter className="flex-wrap gap-2 sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {(enCurso || d.estado === "ANULANDO") && (
+            <Button variant="ghost" className="gap-1.5" disabled={ocupado} onClick={consultar}>
+              <RefreshCwIcon className="size-4" />
+              Consultar estado en SUNAT
+            </Button>
+          )}
+        </div>
+        {d.estado === "ACEPTADO" &&
+          (d.dias_para_anular > 0 ? (
+            <Button variant="outline" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setAnulando(true)}>
+              <BanIcon className="size-4" />
+              Anular comprobante
+            </Button>
+          ) : (
+            <p className="text-xs text-slate-500 max-w-72">
+              Pasó el plazo de 7 días para anular ante SUNAT: para corregirlo corresponde una nota de crédito.
+            </p>
+          ))}
+      </DialogFooter>
+
+      {anulando && (
+        <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50/60 p-3 dark:border-red-500/30 dark:bg-red-500/10">
+          <p className="text-sm text-red-800 dark:text-red-300">
+            Se enviará a SUNAT la {d.tipo_doc === "03" ? "anulación por resumen diario" : "comunicación de baja"} de{" "}
+            <strong className="font-mono">{d.numero}</strong> por {soles(d.total)}. Quedan {d.dias_para_anular} día(s) de plazo. No se
+            puede deshacer; si el servicio sigue cobrándose, después emite un comprobante nuevo.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="baja-motivo">Motivo (lo recibe SUNAT)</Label>
+            <Textarea id="baja-motivo" rows={2} maxLength={250} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej. Error en los datos del cliente" />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setAnulando(false)} disabled={ocupado}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" disabled={motivo.trim().length < 3 || ocupado} onClick={confirmarAnulacion}>
+              {ocupado ? "Enviando…" : "Confirmar anulación"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ---------- Emisión con vista previa ----------
+
+type Cliente = { nombre: string; dni: string | null; direccion: string | null };
+
+export type OrigenEmision =
+  | { tipo: "servicio"; casoId: string; cliente: Cliente | null; tipoInicial?: "BOLETA" | "FACTURA"; titulo?: string }
+  | { tipo: "convenio"; facturaId: string; fiscal: { ruc: string; razonSocial: string; direccion: string }; titulo?: string };
+
 /**
- * Comprobante electrónico de un servicio: lo emitido y, si no hay uno vigente, el formulario para
- * emitir boleta (cliente particular) o factura (con RUC). Prellena con la ficha del cliente.
+ * Emisión como en un facturador: a la izquierda los datos del cliente; a la derecha el comprobante
+ * tal como saldrá (número, detalle, IGV, total y monto en letras), calculado sin enviar nada.
+ * Solo con el documento a la vista se confirma el envío a SUNAT; luego se muestra el resultado.
+ */
+export function EmitirComprobante({ origen: origenProp, onCerrar, onEmitido }: { origen: OrigenEmision; onCerrar: () => void; onEmitido?: () => void }) {
+  // Fijo durante la emisión: la vista previa no se recalcula si el padre vuelve a dibujar.
+  const [origen] = useState(origenProp);
+  const convenio = origen.tipo === "convenio";
+  const inicial = origen.tipo === "servicio" ? (origen.tipoInicial ?? "BOLETA") : "FACTURA";
+  const [tipo, setTipo] = useState<"BOLETA" | "FACTURA">(inicial);
+  const [tipoDoc, setTipoDoc] = useState<C.TipoDocCliente>(inicial === "FACTURA" ? "6" : "1");
+  const datoInicial = (t: "BOLETA" | "FACTURA") =>
+    origen.tipo === "convenio"
+      ? { numero: origen.fiscal.ruc, razon: origen.fiscal.razonSocial, direccion: origen.fiscal.direccion }
+      : t === "FACTURA"
+        ? { numero: "", razon: "", direccion: origen.cliente?.direccion ?? "" }
+        : { numero: origen.cliente?.dni ?? "", razon: origen.cliente?.nombre ?? "", direccion: origen.cliente?.direccion ?? "" };
+  const [numero, setNumero] = useState(datoInicial(inicial).numero);
+  const [razon, setRazon] = useState(datoInicial(inicial).razon);
+  const [direccion, setDireccion] = useState(datoInicial(inicial).direccion);
+  const [anonimo, setAnonimo] = useState(false);
+  const [previa, setPrevia] = useState<C.DocumentoComprobante | null>(null);
+  const [errorPrevia, setErrorPrevia] = useState<string | null>(null);
+  const [calculando, setCalculando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [emitido, setEmitido] = useState<C.Comprobante | null>(null);
+
+  const cambiarTipo = (t: "BOLETA" | "FACTURA") => {
+    setTipo(t);
+    setAnonimo(false);
+    setTipoDoc(t === "FACTURA" ? "6" : "1");
+    const d = datoInicial(t);
+    setNumero(d.numero);
+    setRazon(d.razon);
+  };
+
+  const docCliente = anonimo ? "1" : tipoDoc;
+  const numCliente = anonimo ? DOC_ANONIMO : numero.trim();
+  const razonCliente = anonimo ? "CONSUMIDOR FINAL" : razon.trim();
+  const largo: Partial<Record<C.TipoDocCliente, number>> = { "1": 8, "6": 11 };
+  const faltante = !razonCliente
+    ? `Escribe ${tipo === "FACTURA" ? "la razón social" : "el nombre del cliente"}.`
+    : largo[docCliente] && !new RegExp(`^\\d{${largo[docCliente]}}$`).test(numCliente)
+      ? `El ${C.TIPO_DOC_CLIENTE[docCliente]} tiene ${largo[docCliente]} dígitos.`
+      : !numCliente
+        ? "Escribe el número de documento."
+        : null;
+
+  // Vista previa: se recalcula al cambiar los datos (con una pausa para no consultar por cada tecla).
+  useEffect(() => {
+    if (faltante || emitido) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      setCalculando(true);
+      try {
+        const doc =
+          origen.tipo === "servicio"
+            ? await C.vistaPreviaCaso(origen.casoId, {
+                tipo,
+                cliente_tipo_doc: docCliente,
+                cliente_num_doc: numCliente,
+                cliente_razon_social: razonCliente,
+                cliente_direccion: direccion.trim() || null,
+              })
+            : await C.vistaPreviaConvenio(origen.facturaId, {
+                cliente_num_doc: numCliente,
+                cliente_razon_social: razonCliente,
+                cliente_direccion: direccion.trim() || null,
+              });
+        if (vigente) {
+          setPrevia(doc);
+          setErrorPrevia(null);
+        }
+      } catch (e) {
+        if (vigente) {
+          setPrevia(null);
+          setErrorPrevia(getApiErrorMessage(e, "No se pudo calcular el comprobante."));
+        }
+      } finally {
+        if (vigente) setCalculando(false);
+      }
+    }, 450);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [origen, tipo, docCliente, numCliente, razonCliente, direccion, faltante, emitido]);
+
+  const emitir = async () => {
+    setEnviando(true);
+    try {
+      const cuerpo = { cliente_num_doc: numCliente, cliente_razon_social: razonCliente, cliente_direccion: direccion.trim() || null };
+      const c =
+        origen.tipo === "servicio"
+          ? await C.emitirParaCaso(origen.casoId, { ...cuerpo, tipo, cliente_tipo_doc: docCliente })
+          : await C.emitirFacturaConvenio(origen.facturaId, cuerpo);
+      setEmitido(c);
+      notifySuccess(`${nombreTipo(c.tipo_doc)} ${c.numero} enviada a SUNAT.`);
+      onEmitido?.();
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudo emitir el comprobante."));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (emitido) return <ResultadoEmision comprobante={emitido} onCerrar={onCerrar} />;
+
+  const listo = !faltante && previa && !errorPrevia && !calculando;
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{convenio ? "Emitir factura electrónica" : "Emitir comprobante electrónico"}</DialogTitle>
+        <DialogDescription>{origen.titulo ?? "Revisa el comprobante antes de enviarlo a SUNAT."}</DialogDescription>
+      </DialogHeader>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-4">
+        {/* Datos */}
+        <div className="flex flex-col gap-3">
+          {!convenio && (
+            <div className="space-y-1.5">
+              <Label>Tipo de comprobante</Label>
+              <BotonesOpcion
+                ariaLabel="Tipo de comprobante"
+                columnas="grid-cols-2"
+                value={tipo}
+                onChange={cambiarTipo}
+                opciones={[
+                  { value: "BOLETA", label: "Boleta", detalle: "Persona natural, DNI" },
+                  { value: "FACTURA", label: "Factura", detalle: "Empresa o persona con RUC" },
+                ]}
+              />
+            </div>
+          )}
+          {tipo === "BOLETA" && (
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" className="size-4 accent-brand-500" checked={anonimo} onChange={(e) => setAnonimo(e.target.checked)} />
+              Consumidor final, sin documento (solo menos de S/ 700)
+            </label>
+          )}
+          {!anonimo && (
+            <div className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ce-tipodoc">Documento</Label>
+                <Select value={tipoDoc} onValueChange={(v) => setTipoDoc(v as C.TipoDocCliente)} disabled={tipo === "FACTURA"}>
+                  <SelectTrigger id="ce-tipodoc" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(C.TIPO_DOC_CLIENTE) as C.TipoDocCliente[]).map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {C.TIPO_DOC_CLIENTE[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ce-numero">Número</Label>
+                <Input
+                  id="ce-numero"
+                  inputMode="numeric"
+                  maxLength={tipoDoc === "6" ? 11 : tipoDoc === "1" ? 8 : 20}
+                  className="tabular-nums"
+                  value={numero}
+                  onChange={(e) => setNumero(tipoDoc === "1" || tipoDoc === "6" ? e.target.value.replace(/\D/g, "") : e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ce-razon">{tipo === "FACTURA" ? "Razón social" : "Nombre completo"}</Label>
+                <Input id="ce-razon" value={razon} onChange={(e) => setRazon(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ce-direccion">Dirección {tipo === "FACTURA" ? "fiscal" : "(opcional)"}</Label>
+                <Input id="ce-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+              </div>
+            </div>
+          )}
+          {faltante && <p className="text-xs text-amber-700">{faltante}</p>}
+        </div>
+
+        {/* Comprobante */}
+        <div className="flex flex-col gap-2">
+          <p className="text-label uppercase tracking-wider font-semibold text-slate-500">Así saldrá el comprobante</p>
+          {errorPrevia ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorPrevia}</p>
+          ) : previa ? (
+            <div className={cn("transition-opacity", calculando && "opacity-50")}>
+              <Documento doc={previa} borrador />
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+              {calculando ? "Calculando…" : "Completa los datos del cliente para ver el comprobante."}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <DialogFooter className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-slate-500 max-w-md">
+          {listo && previa
+            ? `Se enviará a SUNAT la ${tipo === "BOLETA" ? "boleta" : "factura"} ${previa.numero} por ${soles(previa.total)} a nombre de ${previa.cliente_razon_social}. Una vez aceptada, solo se corrige anulándola (hasta 7 días) o con nota de crédito.`
+            : "El comprobante se envía solo cuando lo confirmes."}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onCerrar} disabled={enviando}>
+            Cancelar
+          </Button>
+          <Button variant="operational" disabled={!listo || enviando} onClick={emitir}>
+            {enviando ? "Enviando a SUNAT…" : "Emitir y enviar a SUNAT"}
+          </Button>
+        </div>
+      </DialogFooter>
+    </>
+  );
+}
+
+/** Después de emitir: estado SUNAT y descargas, como la pantalla final de un facturador. */
+function ResultadoEmision({ comprobante, onCerrar }: { comprobante: C.Comprobante; onCerrar: () => void }) {
+  const [c, setC] = useState(comprobante);
+  const [consultando, setConsultando] = useState(false);
+  const aceptado = c.estado === "ACEPTADO";
+  const fallido = C.NO_VIGENTES.includes(c.estado);
+  const consultar = async () => {
+    setConsultando(true);
+    try {
+      setC(await C.actualizar(c.id));
+    } catch (e) {
+      notifyError(getApiErrorMessage(e, "No se pudo consultar el estado."));
+    } finally {
+      setConsultando(false);
+    }
+  };
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex flex-wrap items-center gap-2">
+          {nombreTipo(c.tipo_doc)} <span className="font-mono">{c.numero}</span>
+          <EstadoComprobante estado={c.estado} />
+        </DialogTitle>
+        <DialogDescription>
+          {aceptado
+            ? "SUNAT aceptó el comprobante. Ya puedes entregarlo al cliente."
+            : fallido
+              ? "SUNAT no aceptó el comprobante. Revisa el motivo, corrige los datos y vuelve a emitir."
+              : "Enviado. SUNAT suele responder en segundos; consulta el estado en un momento."}
+        </DialogDescription>
+      </DialogHeader>
+      {c.descripcion_respuesta && (
+        <p className={cn("rounded-md px-3 py-2 text-xs", fallido ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800")}>
+          {c.descripcion_respuesta}
+        </p>
+      )}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="text-slate-500">Cliente</dt>
+        <dd>{c.cliente_razon_social} · {C.TIPO_DOC_CLIENTE[c.cliente_tipo_doc as C.TipoDocCliente] ?? "Doc."} {c.cliente_num_doc}</dd>
+        <dt className="text-slate-500">Total</dt>
+        <dd className="font-semibold">{soles(c.total)} <span className="font-normal text-slate-500">(IGV {soles(c.igv)})</span></dd>
+      </dl>
+      {!fallido && <Descargas comprobante={c} />}
+      <DialogFooter>
+        {!aceptado && !fallido && (
+          <Button variant="ghost" className="gap-1.5" disabled={consultando} onClick={consultar}>
+            <RefreshCwIcon className="size-4" />
+            Consultar estado
+          </Button>
+        )}
+        <Button variant="operational" onClick={onCerrar}>
+          Listo
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// ---------- Dentro del servicio y de la factura de convenio ----------
+
+/**
+ * Comprobante electrónico de un servicio: lo emitido y, si no hay uno vigente, el botón para emitir
+ * (abre la emisión con vista previa).
  */
 export function ComprobanteDeServicio({
   casoId,
@@ -86,7 +520,7 @@ export function ComprobanteDeServicio({
   onEmitido,
 }: {
   casoId: string;
-  cliente: { nombre: string; dni: string | null; direccion: string | null } | null;
+  cliente: Cliente | null;
   /** Motivo por el que no se puede emitir (p. ej. servicio cancelado o facturado por convenio). */
   bloqueado?: string | null;
   onEmitido?: () => void;
@@ -94,210 +528,74 @@ export function ComprobanteDeServicio({
   const recurso = useRecurso(() => C.listar({ caso_id: casoId }), [casoId]);
   const comprobantes = recurso.data ?? [];
   const vigente = comprobantes.some((c) => !C.NO_VIGENTES.includes(c.estado));
+  const [emitiendo, setEmitiendo] = useState(false);
 
   return (
     <div className="flex flex-col gap-3">
       {recurso.error && <p className="text-xs text-red-600">{recurso.error}</p>}
       {comprobantes.length > 0 && <ListaComprobantes comprobantes={comprobantes} onCambio={recurso.recargar} />}
-      {!vigente && !recurso.cargando && (bloqueado ? (
-        <p className="text-xs text-slate-500">{bloqueado}</p>
-      ) : (
-        <FormularioEmision
-          casoId={casoId}
-          cliente={cliente}
-          onHecho={() => {
-            recurso.recargar();
-            onEmitido?.();
-          }}
-        />
-      ))}
+      {!vigente &&
+        !recurso.cargando &&
+        (bloqueado ? (
+          <p className="text-xs text-slate-500">{bloqueado}</p>
+        ) : (
+          <Button variant="operational" size="sm" className="self-start gap-1.5" onClick={() => setEmitiendo(true)}>
+            <ReceiptIcon className="size-3.5" />
+            Emitir boleta o factura
+          </Button>
+        ))}
+      <Modal open={emitiendo} onOpenChange={(o) => !o && setEmitiendo(false)} ancho="sm:max-w-5xl">
+        {emitiendo && (
+          <EmitirComprobante
+            origen={{ tipo: "servicio", casoId, cliente }}
+            onCerrar={() => setEmitiendo(false)}
+            onEmitido={() => {
+              recurso.recargar();
+              onEmitido?.();
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
 
-/** Formulario para emitir boleta o factura de un servicio. Prellena con la ficha del cliente. */
-export function FormularioEmision({
-  casoId,
-  cliente,
-  tipoInicial = "BOLETA",
-  onHecho,
-}: {
-  casoId: string;
-  cliente: { nombre: string; dni: string | null; direccion: string | null } | null;
-  /** Lo que el cliente pidió al entregar, si se registró. */
-  tipoInicial?: "BOLETA" | "FACTURA";
-  onHecho: () => void;
-}) {
-  const [tipo, setTipo] = useState<"BOLETA" | "FACTURA">(tipoInicial);
-  const [tipoDoc, setTipoDoc] = useState<C.TipoDocCliente>(tipoInicial === "FACTURA" ? "6" : "1");
-  const [numero, setNumero] = useState(tipoInicial === "FACTURA" ? "" : (cliente?.dni ?? ""));
-  const [razon, setRazon] = useState(tipoInicial === "FACTURA" ? "" : (cliente?.nombre ?? ""));
-  const [direccion, setDireccion] = useState(cliente?.direccion ?? "");
-  const [anonimo, setAnonimo] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-
-  const cambiarTipo = (t: "BOLETA" | "FACTURA") => {
-    setTipo(t);
-    setAnonimo(false);
-    if (t === "FACTURA") {
-      setTipoDoc("6");
-      setNumero("");
-      setRazon("");
-    } else {
-      setTipoDoc("1");
-      setNumero(cliente?.dni ?? "");
-      setRazon(cliente?.nombre ?? "");
-    }
-  };
-
-  const emitir = async () => {
-    setGuardando(true);
-    const ok = await ejecutar(
-      () =>
-        C.emitirParaCaso(casoId, {
-          tipo,
-          cliente_tipo_doc: anonimo ? "1" : tipoDoc,
-          cliente_num_doc: anonimo ? DOC_ANONIMO : numero.trim(),
-          cliente_razon_social: anonimo ? "CONSUMIDOR FINAL" : razon.trim(),
-          cliente_direccion: direccion.trim() || null,
-        }),
-      tipo === "BOLETA" ? "Boleta emitida." : "Factura emitida.",
-      "No se pudo emitir el comprobante."
-    );
-    setGuardando(false);
-    if (ok) onHecho();
-  };
-
-  const completo = anonimo || (numero.trim() && razon.trim());
-  return (
-    <div className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-300 dark:border-white/15 p-3">
-      <BotonesOpcion
-        ariaLabel="Tipo de comprobante"
-        columnas="grid-cols-2"
-        value={tipo}
-        onChange={cambiarTipo}
-        opciones={[
-          { value: "BOLETA", label: "Boleta" },
-          { value: "FACTURA", label: "Factura" },
-        ]}
-      />
-      {tipo === "BOLETA" && (
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input type="checkbox" className="size-4 accent-brand-500" checked={anonimo} onChange={(e) => setAnonimo(e.target.checked)} />
-          Consumidor final, sin documento (solo menos de S/ 700)
-        </label>
-      )}
-      {!anonimo && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="ce-tipodoc">Documento</Label>
-            <Select value={tipoDoc} onValueChange={(v) => setTipoDoc(v as C.TipoDocCliente)} disabled={tipo === "FACTURA"}>
-              <SelectTrigger id="ce-tipodoc" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(C.TIPO_DOC_CLIENTE) as C.TipoDocCliente[]).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {C.TIPO_DOC_CLIENTE[t]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ce-numero">Número</Label>
-            <Input id="ce-numero" inputMode="numeric" value={numero} onChange={(e) => setNumero(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ce-razon">{tipo === "FACTURA" ? "Razón social" : "Nombre"}</Label>
-            <Input id="ce-razon" value={razon} onChange={(e) => setRazon(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ce-direccion">Dirección (opcional)</Label>
-            <Input id="ce-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-          </div>
-        </div>
-      )}
-      <Button variant="operational" className="self-start" disabled={!completo || guardando} onClick={emitir}>
-        {guardando ? "Emitiendo…" : tipo === "BOLETA" ? "Emitir boleta" : "Emitir factura"}
-      </Button>
-    </div>
-  );
-}
-
-/**
- * Factura electrónica de una factura de convenio. Prellena RUC, razón social y dirección con la ficha
- * del CRM de la veterinaria; se revisan antes de emitir.
- */
+/** Factura electrónica de una factura de convenio. Datos fiscales prellenados de la ficha del CRM. */
 export function ComprobanteDeConvenio({
   facturaId,
   fiscal,
-  abrir = false,
   onEmitido,
 }: {
   facturaId: string;
   fiscal: { ruc: string; razonSocial: string; direccion: string };
-  /** Abre el formulario de entrada (desde el módulo de facturación). */
-  abrir?: boolean;
   onEmitido?: () => void;
 }) {
   const recurso = useRecurso(() => C.listar({ factura_veterinaria_id: facturaId }), [facturaId]);
   const comprobantes = recurso.data ?? [];
   const vigente = comprobantes.some((c) => !C.NO_VIGENTES.includes(c.estado));
-  const [abierto, setAbierto] = useState(abrir);
-  const [ruc, setRuc] = useState(fiscal.ruc);
-  const [razon, setRazon] = useState(fiscal.razonSocial);
-  const [direccion, setDireccion] = useState(fiscal.direccion);
-  const [guardando, setGuardando] = useState(false);
-
-  const emitir = async () => {
-    setGuardando(true);
-    const ok = await ejecutar(
-      () => C.emitirFacturaConvenio(facturaId, { cliente_num_doc: ruc.trim(), cliente_razon_social: razon.trim(), cliente_direccion: direccion.trim() || null }),
-      "Factura electrónica emitida.",
-      "No se pudo emitir la factura electrónica."
-    );
-    setGuardando(false);
-    if (ok) {
-      setAbierto(false);
-      recurso.recargar();
-      onEmitido?.();
-    }
-  };
+  const [emitiendo, setEmitiendo] = useState(false);
 
   return (
     <div className="mt-2 flex flex-col gap-2">
       {comprobantes.length > 0 && <ListaComprobantes comprobantes={comprobantes} onCambio={recurso.recargar} />}
-      {!vigente && !recurso.cargando && !abierto && (
-        <Button variant="outline" size="sm" className="self-start gap-1.5" onClick={() => setAbierto(true)}>
+      {!vigente && !recurso.cargando && (
+        <Button variant="outline" size="sm" className="self-start gap-1.5" onClick={() => setEmitiendo(true)}>
           <ReceiptIcon className="size-3.5" />
           Emitir factura electrónica
         </Button>
       )}
-      {!vigente && abierto && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end rounded-lg border border-dashed border-slate-300 dark:border-white/15 p-3">
-          <div className="space-y-1.5">
-            <Label htmlFor={`fe-ruc-${facturaId}`}>RUC</Label>
-            <Input id={`fe-ruc-${facturaId}`} inputMode="numeric" maxLength={11} value={ruc} onChange={(e) => setRuc(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor={`fe-razon-${facturaId}`}>Razón social</Label>
-            <Input id={`fe-razon-${facturaId}`} value={razon} onChange={(e) => setRazon(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-3">
-            <Label htmlFor={`fe-dir-${facturaId}`}>Dirección (opcional)</Label>
-            <Input id={`fe-dir-${facturaId}`} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-          </div>
-          <div className="flex gap-2 sm:col-span-3">
-            <Button variant="ghost" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button variant="operational" size="sm" disabled={!/^\d{11}$/.test(ruc.trim()) || !razon.trim() || guardando} onClick={emitir}>
-              {guardando ? "Emitiendo…" : "Emitir factura"}
-            </Button>
-          </div>
-        </div>
-      )}
+      <Modal open={emitiendo} onOpenChange={(o) => !o && setEmitiendo(false)} ancho="sm:max-w-5xl">
+        {emitiendo && (
+          <EmitirComprobante
+            origen={{ tipo: "convenio", facturaId, fiscal }}
+            onCerrar={() => setEmitiendo(false)}
+            onEmitido={() => {
+              recurso.recargar();
+              onEmitido?.();
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

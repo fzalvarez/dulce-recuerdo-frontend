@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileTextIcon, ReceiptIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
+import { EyeIcon, FileTextIcon, ReceiptIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
 import { ModuleHeader } from "@/shared/components/common/ModuleHeader";
 import { Paginador } from "@/shared/components/common/Paginador";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useRecurso } from "@/shared/hooks/useRecurso";
 import { ejecutar } from "@/shared/utils/ejecutar";
@@ -18,7 +17,7 @@ import { soles } from "@/features/casos/utils/casos";
 import { datosFiscales } from "@/features/veterinarias/api";
 import { SeriesPanel } from "@/features/configuracion/components/SeriesPanel";
 import * as C from "../api";
-import { ComprobanteDeConvenio, EstadoComprobante, FormularioEmision } from "../components/Comprobantes";
+import { DetalleComprobante, EmitirComprobante, EstadoComprobante } from "../components/Comprobantes";
 
 const POR_PAGINA = 25;
 
@@ -121,15 +120,12 @@ function PorEmitirPanel() {
   const [emision, setEmision] = useState<Emision | null>(null);
 
   const recurso = useRecurso(
-    () => C.porEmitir({ desde: desde || undefined, hasta: hasta || undefined, q: q || undefined, pagina: pagina + 1, por_pagina: POR_PAGINA }),
+    () =>
+      C.porEmitir({ desde: desde || undefined, hasta: hasta || undefined, q: q || undefined, pagina: pagina + 1, por_pagina: POR_PAGINA }),
     [desde, hasta, q, pagina]
   );
   const datos = recurso.data;
   const cerrar = () => setEmision(null);
-  const hecho = () => {
-    cerrar();
-    recurso.recargar();
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -269,57 +265,47 @@ function PorEmitirPanel() {
         </Tarjeta>
       </section>
 
-      <Modal open={emision !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-lg">
+      <Modal open={emision !== null} onOpenChange={(o) => !o && cerrar()} ancho="sm:max-w-5xl">
         {emision?.tipo === "servicio" && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Emitir comprobante · {emision.servicio.mascota}</DialogTitle>
-              <DialogDescription>
-                {emision.servicio.codigo ?? "Servicio"} · {emision.servicio.cliente} · precio {soles(emision.servicio.precio_total)}. El
-                IGV lo calcula el sistema según el plan.
-              </DialogDescription>
-            </DialogHeader>
-            <FormularioEmision
-              casoId={emision.servicio.caso_id}
-              cliente={{ nombre: emision.servicio.cliente, dni: emision.servicio.cliente_dni, direccion: emision.servicio.cliente_direccion }}
-              tipoInicial={emision.servicio.comprobante_pedido === "FACTURA" ? "FACTURA" : "BOLETA"}
-              onHecho={hecho}
-            />
-          </>
+          <EmitirComprobante
+            origen={{
+              tipo: "servicio",
+              casoId: emision.servicio.caso_id,
+              cliente: { nombre: emision.servicio.cliente, dni: emision.servicio.cliente_dni, direccion: emision.servicio.cliente_direccion },
+              tipoInicial: emision.servicio.comprobante_pedido === "FACTURA" ? "FACTURA" : "BOLETA",
+              titulo: `${emision.servicio.mascota} · ${emision.servicio.codigo ?? "servicio"} del ${fecha(emision.servicio.fecha)} · ${emision.servicio.cliente}`,
+            }}
+            onCerrar={cerrar}
+            onEmitido={recurso.recargar}
+          />
         )}
-        {emision?.tipo === "convenio" && <EmisionConvenio convenio={emision.convenio} onHecho={hecho} />}
+        {emision?.tipo === "convenio" && <EmisionConvenio convenio={emision.convenio} onCerrar={cerrar} onEmitido={recurso.recargar} />}
       </Modal>
     </div>
   );
 }
 
-function EmisionConvenio({ convenio, onHecho }: { convenio: C.ConvenioPorEmitir; onHecho: () => void }) {
+function EmisionConvenio({ convenio, onCerrar, onEmitido }: { convenio: C.ConvenioPorEmitir; onCerrar: () => void; onEmitido: () => void }) {
   const fiscal = useRecurso(
     () => (convenio.crm_id ? datosFiscales(convenio.crm_id) : Promise.resolve({ ruc: null, razon_social: null, direccion: null })),
     [convenio.crm_id]
   );
+  if (fiscal.cargando) return <p className="text-sm text-slate-500">Cargando datos fiscales de la veterinaria…</p>;
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Factura electrónica · {convenio.veterinaria}</DialogTitle>
-        <DialogDescription>
-          Factura de convenio del {fecha(convenio.fecha_emision)} por {soles(convenio.total)}. Revisa los datos fiscales de la ficha del CRM.
-        </DialogDescription>
-      </DialogHeader>
-      {fiscal.cargando && <p className="text-sm text-slate-500">Cargando datos fiscales…</p>}
-      {!fiscal.cargando && (
-        <ComprobanteDeConvenio
-          facturaId={convenio.factura_id}
-          fiscal={{
-            ruc: fiscal.data?.ruc ?? "",
-            razonSocial: fiscal.data?.razon_social ?? convenio.veterinaria,
-            direccion: fiscal.data?.direccion ?? "",
-          }}
-          abrir
-          onEmitido={onHecho}
-        />
-      )}
-    </>
+    <EmitirComprobante
+      origen={{
+        tipo: "convenio",
+        facturaId: convenio.factura_id,
+        fiscal: {
+          ruc: fiscal.data?.ruc ?? "",
+          razonSocial: fiscal.data?.razon_social ?? convenio.veterinaria,
+          direccion: fiscal.data?.direccion ?? "",
+        },
+        titulo: `${convenio.veterinaria} · factura de convenio del ${fecha(convenio.fecha_emision)} por ${soles(convenio.total)}. Datos fiscales tomados de la ficha del CRM.`,
+      }}
+      onCerrar={onCerrar}
+      onEmitido={onEmitido}
+    />
   );
 }
 
@@ -345,6 +331,7 @@ function EmitidosPanel() {
   const setDesde = conReinicio(setDesdeBase, primera);
   const setHasta = conReinicio(setHastaBase, primera);
   const [texto, setTexto, q] = useBusqueda(primera);
+  const [viendo, setViendo] = useState<string | null>(null);
 
   const recurso = useRecurso(
     () =>
@@ -416,7 +403,14 @@ function EmitidosPanel() {
             {(datos?.items ?? []).map((c) => (
               <tr key={c.id} className="align-top">
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <p className="font-mono font-semibold text-slate-900 dark:text-white">{c.numero}</p>
+                  <button
+                    type="button"
+                    onClick={() => setViendo(c.id)}
+                    className="font-mono font-semibold text-brand-600 hover:underline"
+                    title="Ver comprobante"
+                  >
+                    {c.numero}
+                  </button>
                   <p className="text-xs text-slate-500">
                     {c.tipo_doc === "03" ? "Boleta" : "Factura"}
                     {c.ambiente === "test" && (
@@ -449,6 +443,9 @@ function EmitidosPanel() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon-sm" title="Ver comprobante" onClick={() => setViendo(c.id)}>
+                      <EyeIcon className="size-4" />
+                    </Button>
                     <Button variant="ghost" size="icon-sm" title="PDF A4" onClick={() => C.abrirPdf(c.id, "a4")}>
                       <FileTextIcon className="size-4" />
                     </Button>
@@ -482,6 +479,10 @@ function EmitidosPanel() {
           </div>
         )}
       </Tarjeta>
+
+      <Modal open={viendo !== null} onOpenChange={(o) => !o && setViendo(null)} ancho="sm:max-w-3xl">
+        {viendo && <DetalleComprobante id={viendo} onCambio={recurso.recargar} />}
+      </Modal>
     </div>
   );
 }
