@@ -54,6 +54,69 @@ export const emitirFacturaConvenio = (
 
 export const actualizar = (id: string) => api.post<Comprobante>(`/comprobantes/${id}/actualizar`).then((r) => r.data);
 
+/** Fila del registro: el comprobante y de dónde viene (servicio o factura de convenio). */
+export interface ComprobanteFila extends Comprobante {
+  origen: "SERVICIO" | "CONVENIO";
+  /** Servicio: código del caso. Convenio: nombre de la veterinaria. */
+  referencia: string | null;
+  mascota: string | null;
+}
+
+export interface RegistroPagina {
+  items: ComprobanteFila[];
+  total: number;
+  monto_aceptado: string;
+}
+
+/** Filtro de estado del registro: uno de SUNAT o los grupos PENDIENTE (en envío) y FALLIDO. */
+export type FiltroEstado = "ACEPTADO" | "PENDIENTE" | "FALLIDO" | "ANULADO";
+
+export interface FiltroRegistro {
+  tipo?: "BOLETA" | "FACTURA";
+  estado?: FiltroEstado;
+  desde?: string;
+  hasta?: string;
+  q?: string;
+  pagina: number;
+  por_pagina: number;
+}
+
+export const registro = (f: FiltroRegistro) =>
+  api.get<RegistroPagina>("/comprobantes/registro", { params: f }).then((r) => r.data);
+
+export interface ServicioPorEmitir {
+  caso_id: string;
+  codigo: string | null;
+  fecha: string | null;
+  estado: string;
+  mascota: string;
+  cliente: string;
+  cliente_dni: string | null;
+  cliente_direccion: string | null;
+  precio_total: string;
+  /** Lo que se marcó al entregar (BOLETA, FACTURA) o null si no se registró. */
+  comprobante_pedido: string | null;
+}
+
+export interface ConvenioPorEmitir {
+  factura_id: string;
+  veterinaria_id: string;
+  veterinaria: string;
+  crm_id: string | null;
+  fecha_emision: string;
+  total: string;
+  estado: string;
+}
+
+export interface PorEmitir {
+  servicios: ServicioPorEmitir[];
+  total_servicios: number;
+  convenios: ConvenioPorEmitir[];
+}
+
+export const porEmitir = (f: { desde?: string; hasta?: string; q?: string; pagina: number; por_pagina: number }) =>
+  api.get<PorEmitir>("/comprobantes/por-emitir", { params: f }).then((r) => r.data);
+
 /** Serie de emisión (Configuración). Una activa por tipo; los números de este ambiente (test o live). */
 export interface Serie {
   id: string;

@@ -12,6 +12,7 @@ export type ModuloId =
   | "mascotas"
   | "finanzas"
   | "gastos"
+  | "facturacion"
   | "reportes"
   | "servicios"
   | "planes"

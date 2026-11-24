@@ -23,6 +23,7 @@ import {
   ClipboardCheckIcon,
   LogOutIcon,
   ReceiptIcon,
+  FileCheckIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -63,6 +64,7 @@ const FINANZAS_ITEMS = [
   { label: "Ingresos y Gastos", icon: WalletIcon, to: "/finanzas", end: true },
   { label: "Registrar gastos", icon: WalletIcon, to: "/gastos", end: true },
   { label: "Facturas de compra", icon: ReceiptIcon, to: "/gastos/facturas" },
+  { label: "Facturación electrónica", icon: FileCheckIcon, to: "/facturacion" },
 ];
 
 const CATALOGO_ITEMS = [

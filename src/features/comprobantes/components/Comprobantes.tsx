@@ -115,19 +115,23 @@ export function ComprobanteDeServicio({
   );
 }
 
-function FormularioEmision({
+/** Formulario para emitir boleta o factura de un servicio. Prellena con la ficha del cliente. */
+export function FormularioEmision({
   casoId,
   cliente,
+  tipoInicial = "BOLETA",
   onHecho,
 }: {
   casoId: string;
   cliente: { nombre: string; dni: string | null; direccion: string | null } | null;
+  /** Lo que el cliente pidió al entregar, si se registró. */
+  tipoInicial?: "BOLETA" | "FACTURA";
   onHecho: () => void;
 }) {
-  const [tipo, setTipo] = useState<"BOLETA" | "FACTURA">("BOLETA");
-  const [tipoDoc, setTipoDoc] = useState<C.TipoDocCliente>("1");
-  const [numero, setNumero] = useState(cliente?.dni ?? "");
-  const [razon, setRazon] = useState(cliente?.nombre ?? "");
+  const [tipo, setTipo] = useState<"BOLETA" | "FACTURA">(tipoInicial);
+  const [tipoDoc, setTipoDoc] = useState<C.TipoDocCliente>(tipoInicial === "FACTURA" ? "6" : "1");
+  const [numero, setNumero] = useState(tipoInicial === "FACTURA" ? "" : (cliente?.dni ?? ""));
+  const [razon, setRazon] = useState(tipoInicial === "FACTURA" ? "" : (cliente?.nombre ?? ""));
   const [direccion, setDireccion] = useState(cliente?.direccion ?? "");
   const [anonimo, setAnonimo] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -228,14 +232,19 @@ function FormularioEmision({
 export function ComprobanteDeConvenio({
   facturaId,
   fiscal,
+  abrir = false,
+  onEmitido,
 }: {
   facturaId: string;
   fiscal: { ruc: string; razonSocial: string; direccion: string };
+  /** Abre el formulario de entrada (desde el módulo de facturación). */
+  abrir?: boolean;
+  onEmitido?: () => void;
 }) {
   const recurso = useRecurso(() => C.listar({ factura_veterinaria_id: facturaId }), [facturaId]);
   const comprobantes = recurso.data ?? [];
   const vigente = comprobantes.some((c) => !C.NO_VIGENTES.includes(c.estado));
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abrir);
   const [ruc, setRuc] = useState(fiscal.ruc);
   const [razon, setRazon] = useState(fiscal.razonSocial);
   const [direccion, setDireccion] = useState(fiscal.direccion);
@@ -252,6 +261,7 @@ export function ComprobanteDeConvenio({
     if (ok) {
       setAbierto(false);
       recurso.recargar();
+      onEmitido?.();
     }
   };
 
