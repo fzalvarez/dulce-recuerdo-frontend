@@ -257,3 +257,20 @@
     -webkit-appearance: none;
   }
 }
+
+/* Textos grises 20% más oscuros (luminosidad × 0.8) en modo claro.
+   Solo afecta a las clases de color de texto: fondos y bordes siguen con la paleta.
+   :where() deja la especificidad en una clase, así hover:, group-hover: y dark:
+   siguen ganando. text-slate-900 (texto negro) no cambia. */
+@layer utilities {
+  :where(:root:not(.dark)) .text-slate-300 { color: oklch(from var(--color-slate-300) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-slate-400 { color: oklch(from var(--color-slate-400) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-slate-500 { color: oklch(from var(--color-slate-500) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-slate-600 { color: oklch(from var(--color-slate-600) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-slate-700 { color: oklch(from var(--color-slate-700) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-slate-800 { color: oklch(from var(--color-slate-800) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-gray-400 { color: oklch(from var(--color-gray-400) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-gray-500 { color: oklch(from var(--color-gray-500) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-gray-600 { color: oklch(from var(--color-gray-600) calc(l * 0.8) c h); }
+  :where(:root:not(.dark)) .text-gray-700 { color: oklch(from var(--color-gray-700) calc(l * 0.8) c h); }
+}

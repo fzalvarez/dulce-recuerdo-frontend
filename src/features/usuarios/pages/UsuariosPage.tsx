@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { usePreferenciasStore } from "@/shared/store/preferencias.store";
 import {
   UsersIcon,
   UserPlusIcon,
@@ -267,6 +268,7 @@ function UsuarioModal({
 
 export default function UsuariosPage() {
   const navigate = useNavigate();
+  const mostrarDescripcion = usePreferenciasStore((s) => s.mostrarDescripciones);
   const recurso = useRecurso(listarUsuarios);
   const usuarios = useMemo(() => recurso.data ?? [], [recurso.data]);
   const [busqueda, setBusqueda] = useState("");
@@ -347,10 +349,12 @@ export default function UsuariosPage() {
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
             Usuarios y Accesos
           </h1>
-          <p className="text-xs text-slate-500 max-w-2xl">
-            Gestión de cuentas del equipo operativo: roles, permisos y estado de acceso al panel
-            de control.
-          </p>
+          {mostrarDescripcion && (
+            <p className="text-xs text-slate-500 max-w-2xl">
+              Gestión de cuentas del equipo operativo: roles, permisos y estado de acceso al panel
+              de control.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="outline" className="gap-1.5 h-10" onClick={() => navigate("/usuarios/roles")}>

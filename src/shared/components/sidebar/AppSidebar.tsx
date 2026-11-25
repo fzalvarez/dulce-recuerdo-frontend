@@ -190,7 +190,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-full w-[260px] bg-white border-r border-slate-200 flex flex-col z-50 select-none transition-transform duration-200 ease-in-out",
+        "fixed left-0 top-0 h-full w-[247px] bg-white border-r border-slate-200 flex flex-col z-50 select-none transition-transform duration-200 ease-in-out",
         "lg:translate-x-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}

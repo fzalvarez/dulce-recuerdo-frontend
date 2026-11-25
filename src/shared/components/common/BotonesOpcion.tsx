@@ -5,6 +5,8 @@ export interface OpcionBoton<T extends string> {
   value: T;
   label: ReactNode;
   icon?: ComponentType<{ className?: string }>;
+  /** Clases de color del ícono (p. ej. "text-orange-500") para distinguir opciones. */
+  iconClassName?: string;
   /** Texto pequeño bajo la etiqueta (por ejemplo, el stock). */
   detalle?: ReactNode;
   disabled?: boolean;
@@ -54,7 +56,7 @@ export function BotonesOpcion<T extends string>({
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-transparent dark:text-slate-300 dark:hover:bg-white/5"
             )}
           >
-            {Icono && <Icono className="size-5" />}
+            {Icono && <Icono className={cn("size-5", o.iconClassName)} />}
             <span className={cn(conIcono && "text-xs leading-tight text-center")}>{o.label}</span>
             {o.detalle && <span className="text-[11px] font-normal text-slate-500 leading-none">{o.detalle}</span>}
           </button>

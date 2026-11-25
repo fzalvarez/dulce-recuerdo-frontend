@@ -1,12 +1,16 @@
 import { useState } from "react";
 import {
+  BanknoteIcon,
   BuildingIcon,
   CatIcon,
+  CreditCardIcon,
   DogIcon,
   HouseIcon,
+  LandmarkIcon,
   MessageCircleIcon,
   PawPrintIcon,
   SearchIcon,
+  SmartphoneIcon,
   StethoscopeIcon,
   VideoIcon,
 } from "lucide-react";
@@ -85,10 +89,13 @@ function Grupo({ label, children, className }: { label: string; children: React.
 }
 
 const ESPECIES = [
-  { value: "Canino", label: "Perro", icon: DogIcon },
-  { value: "Felino", label: "Gato", icon: CatIcon },
-  { value: "Otro", label: "Otro", icon: PawPrintIcon },
+  // Mismos colores que EspecieIcono en las tablas: perro marrón, gato naranja, otro amarillo.
+  { value: "Canino", label: "Perro", icon: DogIcon, iconClassName: "text-amber-800 dark:text-amber-600" },
+  { value: "Felino", label: "Gato", icon: CatIcon, iconClassName: "text-orange-500" },
+  { value: "Otro", label: "Otro", icon: PawPrintIcon, iconClassName: "text-yellow-500" },
 ];
+
+const METODO_ICONO = { EFECTIVO: BanknoteIcon, YAPE: SmartphoneIcon, POS: CreditCardIcon, TRANSFERENCIA: LandmarkIcon } as const;
 
 const MODALIDAD_ICONO = { PRESENCIAL: BuildingIcon, NO_PRESENCIAL: VideoIcon, DOMICILIO: HouseIcon } as const;
 
@@ -656,9 +663,10 @@ function NuevoCasoForm({ opciones, onCerrar, onCreado }: { opciones: Opciones; o
             <Grupo label="Forma de pago">
               <BotonesOpcion
                 ariaLabel="Forma de pago"
+                columnas="grid-cols-2 sm:grid-cols-4"
                 value={pago.metodo}
                 onChange={(v) => setPago((p) => ({ ...p, metodo: v }))}
-                opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m] }))}
+                opciones={(Object.keys(METODO_LABEL) as MetodoPago[]).map((m) => ({ value: m, label: METODO_LABEL[m], icon: METODO_ICONO[m] }))}
               />
             </Grupo>
           </div>

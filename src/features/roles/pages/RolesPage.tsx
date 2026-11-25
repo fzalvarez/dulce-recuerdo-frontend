@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePreferenciasStore } from "@/shared/store/preferencias.store";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, LoaderIcon, ShieldCheckIcon } from "lucide-react";
 import { Breadcrumbs } from "@/shared/components/common/Breadcrumbs";
@@ -56,6 +57,7 @@ export default function RolesPage() {
 
 function MatrizRoles({ guardado, onGuardado }: { guardado: PorRol; onGuardado: () => void }) {
   const navigate = useNavigate();
+  const mostrarDescripcion = usePreferenciasStore((s) => s.mostrarDescripciones);
   const setModulosSesion = useAuthStore((s) => s.setModulos);
   const [borrador, setBorrador] = useState<PorRol>(guardado);
   const [guardando, setGuardando] = useState(false);
@@ -97,10 +99,12 @@ function MatrizRoles({ guardado, onGuardado }: { guardado: PorRol; onGuardado: (
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
             Roles y permisos
           </h1>
-          <p className="text-xs text-slate-500 max-w-2xl">
-            Marca a qué módulos puede entrar cada rol. Los cuatro roles son fijos; cada usuario
-            tiene uno solo.
-          </p>
+          {mostrarDescripcion && (
+            <p className="text-xs text-slate-500 max-w-2xl">
+              Marca a qué módulos puede entrar cada rol. Los cuatro roles son fijos; cada usuario
+              tiene uno solo.
+            </p>
+          )}
         </div>
         <Button variant="outline" className="gap-1.5 h-10 shrink-0" onClick={() => navigate("/usuarios")}>
           <ArrowLeftIcon className="size-4" />
